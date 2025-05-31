@@ -1,0 +1,48 @@
+source: {decl};
+
+decl: decl_id [":" decl_lit] [";"];
+
+decl_id: ids ":" ( $type_id
+			 | $type
+			 | $enum
+			 | $record
+			 | $union
+			 | $templ
+			 | $package
+			 | $import
+			 | $union
+			 );
+
+decl_lit: ( $any_lit
+		  | any_type_lit
+		  | templ_lit
+		  );
+
+any_type_lit: ( derived_type_lit
+			  | record_lit
+			  | enum_lit
+			  | union_lit
+			  );
+
+derived_type_lit: $type "(" $type_id ")";
+
+record_lit: $record "{" {record_props}  "}";
+
+enum_lit: $enum "{" {enum_vars} "}";
+
+union_lit: $union "{" {union_types} "}";
+
+templ_lit: $templ "(" $type_id ")" "{" {$elements} "}";
+
+record_prop: var_ids ":" $type_id;
+
+record_props: record_prop {";" record_prop};
+
+enum_vars: $var_id {";" $var_id};
+
+union_types: $type_id {";" $type_id};
+
+// Utils
+
+ids: $any_id {"," $any_id};
+var_ids: $var_id {"," $var_id};
