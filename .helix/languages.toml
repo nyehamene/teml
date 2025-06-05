@@ -1,0 +1,12 @@
+[[language]]
+name = "grammar"
+scope = "source.grammar"
+injection-regex = "grammar"
+file-types = ["grammar"]
+comment-tokens = "//"
+indent = { tab-width = 2, unit = "  " }
+roots = ["token.grammar", "ast.grammar"]
+
+[[grammar]]
+name = "grammar"
+source = { path = "/home/nyehamene/proj/tree-sitter-grammar" }
