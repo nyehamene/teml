@@ -20,6 +20,6 @@ line_string: "-" "-" {/./} newline;
 any_lit: int | decimal | string | line_string;
 
 // Identifier
-var_id: /a-z/ {/a-zA-Z_};
-type_id: /A-Z/ {/A-Za-z_};
+var_id: /a-z/ {/a-zA-Z_/};
+type_id: /A-Z/ {/A-Za-z_/};
 any_id: var_id | type_id;
