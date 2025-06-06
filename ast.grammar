@@ -1,0 +1,33 @@
+// root
+source: package_decl [imports {using_decl}] templ;
+
+// package
+package_decl: "(" $package $identifier $string ")";
+
+// import
+import_decl: "(" $import $identifier $string ")";
+
+// using
+using_decl: "(" $using (using_single | using_many) $identifier ")";
+using_single: $identifier;
+using_many: "[" $identifier {[","] $identifier} "]";
+
+// templ
+templ: {component} [page] {component};
+
+// component
+component: "(" $component $identifier [properties] {element} ")";
+properties: "[" property "]";
+property: $identifier ":" $identifier;
+
+// page
+page: "(" $page $identifier [properties] {elements} ")";
+
+// element
+element: ( $html
+		 | $head
+		 | $body
+		);
+
+// utils
+imports: import_decl {import_decl};
