@@ -1,1 +1,0 @@
-/var/home/nyehamene/proj/tree-sitter-grammar/queries/tags.scm
