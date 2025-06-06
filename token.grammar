@@ -1,25 +1,22 @@
-// Whitespace
-newline: ["\r"] "\n";
-ws: "\s" | "\t";
+// keyword
 
-// Keywords
 package: "package";
 import: "import";
 using: "using";
-type: "type";
-enum: "enum";
-record: "record";
-union: "union";
-templ: "templ";
+component: "component";
+page: "page";
 
-// Literal
-int: "0" | /1-9/ {/0-9/};
-decimal: int "." int;
-string: "\"" {/./} "\"";
-line_string: "-" "-" {/./} newline;
-any_lit: int | decimal | string | line_string;
+// basic
 
-// Identifier
-var_id: /a-z/ {/a-zA-Z_/};
-type_id: /A-Z/ {/A-Za-z_/};
-any_id: var_id | type_id;
+identifier: /[a-zA-Z][a-zA-Z_-]*/;
+string: string_quoted | stirng_line;
+string_quoted: /"/ /[^"]*/ /"/; 
+string_line: "-" "-" /[^\n]*/;
+
+// reserved
+
+model: "reserved";
+true: "true";
+false: "false";
+nil: "nil";
+text: "text";

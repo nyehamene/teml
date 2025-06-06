@@ -1,0 +1,30 @@
+(package p "view/app")
+
+(import ui "https://github.com/ui/ui")
+
+(using fancy-button ui)
+
+(using [card not_used] ui)
+
+// zero or more components per file
+// can defined before or after a page
+(component Dog [name: String age: Int]
+	(card {id: "dog-card"}
+		-- The quick brown fox jumped over the lazy dog!
+		-- The fox named \(name) is \(age) ((> age 1) "years" "year") old.
+		(fancy-button "Click Me")
+		-- namespaced reference
+		(ui/badge {value: name})))
+
+// zero or more layout per file
+(layout base [header: Fragment content: Component footer: Fragement]
+	(header)
+	-- Leading paragraph
+	(conent)
+	-- Trailing paragraph
+	(footer))
+
+// zero or one page per file
+(page home [dog: Dog]
+	(dog))
+
