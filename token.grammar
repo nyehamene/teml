@@ -14,7 +14,7 @@ templ: "templ";
 
 // Literal
 int: "0" | /1-9/ {/0-9/};
-decimal: lit_int "." lit_int;
+decimal: int "." int;
 string: "\"" {/./} "\"";
 line_string: "-" "-" {/./} newline;
 any_lit: int | decimal | string | line_string;
