@@ -9,4 +9,4 @@ roots = ["token.grammar", "ast.grammar"]
 
 [[grammar]]
 name = "grammar"
-source = { path = "/home/hnyehamene/.local/tree-sitter/tree-sitter-grammar" }
+source = { path = "$HOME/.local/tree-sitter/tree-sitter-grammar/" }
