@@ -1,22 +1,38 @@
 // keyword
-
 package: "package";
 import: "import";
 using: "using";
 component: "component";
-page: "page";
-
-// basic
-
-identifier: /[a-zA-Z][a-zA-Z_-]*/;
-string: string_quoted | stirng_line;
-string_quoted: /"/ /[^"]*/ /"/; 
-string_line: "-" "-" /[^\n]*/;
-
-// reserved
-
-model: "reserved";
+document: "document";
+layout: "layout";
+and: "and";
+or: "or";
+not: "not";
 true: "true";
 false: "false";
+
+// identifier
+identifier_simple: /[a-zA-Z][a-zA-Z_-]*/;
+identifier_qualified: identifier_simple {"/" identifier_simple};
+identifier: identifier_simple | identifier_qualified;
+
+// number
+number: "0" | /[1-9][0-9]*/;
+
+// string
+string_quoted: /"/ /[^"]*/ /"/; 
+string_line: "-" "-" /[^\n]*/;
+string: string_quoted | stirng_line;
+
+// literals
+bool: true | false;
+literal: string | bool | number;
+
+// operator
+operator: and | or | not | ">" | "<" | "=";
+
+// reserved
+page: "page";
+model: "reserved";
 nil: "nil";
 text: "text";

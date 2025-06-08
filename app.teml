@@ -6,25 +6,29 @@
 
 (using [card not_used] ui)
 
+// zero or one documents per file
+(document home [dog: Dog]
+	(dog))
+
 // zero or more components per file
-// can defined before or after a page
+// can defined before or after a document
 (component Dog [name: String age: Int]
 	(card {id: "dog-card"}
 		-- The quick brown fox jumped over the lazy dog!
-		-- The fox named \(name) is \(age) ((> age 1) "years" "year") old.
+		-- The fox named \(name) is \(age) \((> age 1) "years" "year") old.
 		(fancy-button "Click Me")
 		-- namespaced reference
 		(ui/badge {value: name})))
 
-// zero or more layout per file
-(layout base [header: Fragment content: Component footer: Fragement]
+// zero or more layouts per file
+// can be defined before or after a document
+(component BaseLayout
+	[ header: Fragment
+	, content: Fragment
+	, footer: Fragement
+	]
 	(header)
 	-- Leading paragraph
 	(conent)
 	-- Trailing paragraph
 	(footer))
-
-// zero or one page per file
-(page home [dog: Dog]
-	(dog))
-
