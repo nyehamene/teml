@@ -1,0 +1,18 @@
+// element
+element: "(" $identifier {attribute} {content} ")"; 
+
+// content
+content: element | string;
+
+// attribute
+attribute: ["#" $identifier] "{" [key_vals] "}";
+key_vals: key_val {[","] key_val};
+key_val: $identifier_simple ":" expression;
+
+// expression
+expression: $literal | call ;
+call: "(" func {arguments} ")";
+func: property_access | $operator;
+property_access: {$identifier_simple "."} $identifier_simple;
+arguments: argument {[","] argument};
+argument: $literal | $identifier | expression;
