@@ -15,7 +15,7 @@
 (component Dog [name: String age: Int]
 	(card {id: "dog-card"}
 		-- The quick brown fox jumped over the lazy dog!
-		-- The fox named \(name) is \(age) \((> age 1) "years" "year") old.
+		-- The fox named \(name) is \(age) \((if (> age 1) "years" "year")) old.
 		(fancy-button "Click Me")
 		-- namespaced reference
 		(ui/badge {value: name})))
@@ -29,6 +29,6 @@
 	]
 	(header)
 	-- Leading paragraph
-	(conent)
+	(content)
 	-- Trailing paragraph
 	(footer))

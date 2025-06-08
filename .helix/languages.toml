@@ -7,6 +7,19 @@ comment-tokens = "//"
 indent = { tab-width = 2, unit = "  " }
 roots = ["token.grammar", "ast.grammar"]
 
+[[language]]
+name = "teml"
+scope = "source.teml"
+injection-regex = "teml"
+file-types = ["teml"]
+comment-tokens = "//"
+indent = { tab-width = 2, unit = "  " }
+roots = ["teml.mod"]
+
 [[grammar]]
 name = "grammar"
-source = { path = "$HOME/.local/tree-sitter/tree-sitter-grammar/" }
+source = { path = "/home/hnyehamene/.local/tree-sitter/tree-sitter-grammar/" }
+
+[[grammar]]
+name = "teml"
+source = { path = "/home/hnyehamene/.local/tree-sitter/tree-sitter-teml" }
