@@ -137,6 +137,22 @@ func TestScan_line_string_template_string(t *testing.T) {
 	}
 }
 
+func TestScan_newline(t *testing.T) {
+	source := `
+
+	`
+	expected := token.Newline
+
+	tokens := token.Scan([]byte(source))
+	kinds := getKinds(tokens)
+
+	for i, got := range kinds {
+		if expected != got {
+			t.Errorf("expected %s but got %s at %d", expected, got, i)
+		}
+	}
+}
+
 func getKinds(toks []token.Token) []token.Kind {
 	kinds := make([]token.Kind, 0, len(toks))
 	for _, tok := range toks {

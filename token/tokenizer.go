@@ -1,5 +1,9 @@
 package token
 
+import (
+	"fmt"
+)
+
 type tokenizer struct {
 	src []byte
 	cur int
@@ -9,7 +13,13 @@ func Scan(src []byte) []Token {
 	t := tokenizer{src: src}
 	toks := []Token{}
 
-	for !t.eof() {
+	for {
+		t.skipSpace()
+
+		if t.eof() {
+			break
+		}
+
 		tok := t.next()
 		toks = append(toks, tok)
 	}
@@ -18,8 +28,6 @@ func Scan(src []byte) []Token {
 }
 
 func (t *tokenizer) next() Token {
-	t.skipSpace()
-
 	ch := t.peek()
 	startOffset := t.cur
 	kind := Invalid
@@ -35,6 +43,15 @@ func (t *tokenizer) next() Token {
 		}
 	} else {
 		kind = t.singleChars()
+	}
+
+	//
+	// NOTE debug only
+	// TODO remove
+	//
+	if kind == Invalid {
+		lexeme := string(t.src[startOffset:t.cur])
+		fmt.Printf("Invalid: %s\n", lexeme)
 	}
 
 	return newToken(kind, startOffset, t.cur)
@@ -65,6 +82,8 @@ func (t *tokenizer) singleChars() Kind {
 		kind = FSlash
 	case '\\':
 		kind = BSlash
+	case '\n':
+		kind = Newline
 	case '"':
 		kind = t.string()
 	case '-':
