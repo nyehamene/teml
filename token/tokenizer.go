@@ -25,7 +25,7 @@ func (t *tokenizer) next() Token {
 	ch := t.peek()
 	startOffset := t.cur
 
-	if isLetter(ch) {
+	if isAlpha(ch) {
 		kind := t.ident()
 		lexeme := t.src[startOffset:t.cur]
 		if kw, ok := isKeyword(lexeme); ok {
@@ -48,8 +48,8 @@ func (t *tokenizer) ident() Kind {
 	start := t.cur
 
 	for !t.eof() {
-		c := t.peek()
-		if !isLetter(c) {
+		ch := t.peek()
+		if !isAlphaNumeric(ch) && ch != '-' {
 			break
 		}
 		t.advance()
@@ -59,7 +59,7 @@ func (t *tokenizer) ident() Kind {
 		return Invalid
 	}
 
-	return Invalid
+	return Ident
 }
 
 func (t *tokenizer) skipSpace() {
