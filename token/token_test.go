@@ -45,6 +45,25 @@ func TestScan_ident(t *testing.T) {
 	}
 }
 
+func TestScan_bracket(t *testing.T) {
+	source := "([{}])"
+	expected := []token.Kind{
+		token.ParanOpen,
+		token.BracketOpen,
+		token.BraceOpen,
+		token.BraceClose,
+		token.BracketClose,
+		token.ParenClose,
+	}
+
+	tokens := token.Scan([]byte(source))
+	kinds := getKinds(tokens)
+
+	if diff := cmp.Diff(expected, kinds); diff != "" {
+		t.Error(diff)
+	}
+}
+
 func getKinds(toks []token.Token) []token.Kind {
 	kinds := make([]token.Kind, 0, len(toks))
 	for _, tok := range toks {

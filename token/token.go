@@ -17,10 +17,16 @@ type Kind int
 const (
 	Invalid Kind = iota
 
-	//
+	// {{ Bracket
+	BracketOpen  // [
+	BracketClose // ]
+	ParanOpen    // (
+	ParenClose   // )
+	BraceOpen    // {
+	BraceClose   // }
+	// }} Barcket
+
 	// {{ Keyword
-	//
-	keywordStart
 	Package
 	Import
 	Using
@@ -32,8 +38,7 @@ const (
 	True
 	False
 	If
-	keywordEnd
-	// }}
+	// }} Keyword
 
 	Ident
 )
@@ -75,7 +80,8 @@ var keywords = map[string]Kind{
 }
 
 var tokenString = map[Kind]string{
-	Invalid:   "invalid",
+	Invalid: "invalid",
+
 	Package:   "package",
 	Import:    "import",
 	Using:     "using",
@@ -87,7 +93,15 @@ var tokenString = map[Kind]string{
 	True:      "true",
 	False:     "false",
 	If:        "if",
-	Ident:     "ident",
+
+	Ident: "ident",
+
+	BracketOpen:  "[",
+	BracketClose: "]",
+	ParanOpen:    "(",
+	ParenClose:   ")",
+	BraceOpen:    "{",
+	BraceClose:   "}",
 }
 
 func isKeyword(ident []byte) (Kind, bool) {
