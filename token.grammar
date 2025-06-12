@@ -4,12 +4,12 @@ import: "import";
 using: "using";
 component: "component";
 document: "document";
-layout: "layout";
 and: "and";
 or: "or";
 not: "not";
 true: "true";
 false: "false";
+if: "if"
 
 // identifier
 identifier_simple: /[a-zA-Z][a-zA-Z_-]*/;
@@ -32,7 +32,8 @@ literal: string | bool | number;
 operator: and | or | not | ">" | "<" | "=";
 
 // reserved
+layout: "layout";
 page: "page";
-model: "reserved";
+model: "model";
 nil: "nil";
 text: "text";
