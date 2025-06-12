@@ -189,6 +189,32 @@ func TestScan_line(t *testing.T) {
 	}
 }
 
+func TestScan_position(t *testing.T) {
+	source := `package fooooo "foooo" -- foo`
+	//         012345678901234567890123456789
+	expected := []token.Pos{
+		{0, 7},
+		{8, 14},
+		{15, 22},
+		{23, 29},
+	}
+
+	f := token.Scan([]byte(source))
+	pos := getPosses(f.Posses())
+
+	if diff := cmp.Diff(expected, pos); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func getPosses(s iter.Seq[token.Pos]) []token.Pos {
+	pos := []token.Pos{}
+	for p := range s {
+		pos = append(pos, p)
+	}
+	return pos
+}
+
 func getTexts(s iter.Seq[string]) []string {
 	texts := []string{}
 	for str := range s {

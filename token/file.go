@@ -48,6 +48,16 @@ func (f Tokenized) Texts() iter.Seq[string] {
 	}
 }
 
+func (f Tokenized) Posses() iter.Seq[Pos] {
+	return func(yield func(Pos) bool) {
+		for _, t := range f.pos {
+			if !yield(t) {
+				return
+			}
+		}
+	}
+}
+
 func (f *Tokenized) add(kind Kind, pos Pos, text string) Position {
 	assert(
 		(len(f.tokens) == len(f.pos) && len(f.pos) == len(f.text)),
