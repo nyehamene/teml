@@ -86,12 +86,21 @@ func (t *tokenizer) stringLine() Kind {
 	t.advance()
 	t.advance()
 
+	isTempl := false
+
 	for !t.eof() {
 		ch := t.peek()
 		if ch == '\n' {
 			break
 		}
+		if ch == '\\' && t.peekNext() == '(' {
+			isTempl = true
+		}
 		t.advance()
+	}
+
+	if isTempl {
+		return StringLineTempl
 	}
 
 	return StringLine
