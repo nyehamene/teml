@@ -1,7 +1,5 @@
 package token
 
-import "fmt"
-
 type tokenizer struct {
 	src []byte
 	cur int
@@ -33,15 +31,33 @@ func (t *tokenizer) next() Token {
 		} else {
 			return newToken(kind, startOffset, t.cur)
 		}
+	} else {
+		kind := t.singleChars()
+		return newToken(kind, startOffset, t.cur)
+	}
+}
+
+func (t *tokenizer) singleChars() Kind {
+	ch := t.peek()
+	kind := Invalid
+
+	switch ch {
+	case '[':
+		kind = BracketOpen
+	case ']':
+		kind = BracketClose
+	case '(':
+		kind = ParanOpen
+	case ')':
+		kind = ParenClose
+	case '{':
+		kind = BraceOpen
+	case '}':
+		kind = BraceClose
 	}
 
-	//
-	// NOTE avoid infine loop
-	// This path is only taken if there is an invalid char
-	//
 	t.advance()
-	fmt.Printf("invalid: %s\n", string(ch))
-	return newToken(Invalid, startOffset, t.cur)
+	return kind
 }
 
 func (t *tokenizer) ident() Kind {
