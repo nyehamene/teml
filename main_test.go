@@ -18,3 +18,9 @@ func TestScan(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkScan(b *testing.B) {
+	for b.Loop() {
+		_ = token.Scan(examplefile)
+	}
+}
