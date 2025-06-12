@@ -27,6 +27,44 @@ func Scan(src []byte) []Token {
 	return toks
 }
 
+func ScanCountFirst(src []byte) []Token {
+	nums := ScanCountOnly(src)
+	toks := make([]Token, 0, nums)
+	t := tokenizer{src: src}
+
+	for i := range toks {
+		t.skipSpace()
+
+		if t.eof() {
+			break
+		}
+
+		tok := t.next()
+		toks[i] = tok
+	}
+
+	return toks
+}
+
+func ScanCountOnly(src []byte) int {
+	t := tokenizer{src: src}
+
+	count := 0
+
+	for {
+		t.skipSpace()
+
+		if t.eof() {
+			break
+		}
+
+		_ = t.next()
+		count += 1
+	}
+
+	return count
+}
+
 func (t *tokenizer) next() Token {
 	ch := t.peek()
 	startOffset := t.cur
