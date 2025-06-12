@@ -154,6 +154,31 @@ func TestScan_newline(t *testing.T) {
 	}
 }
 
+func TestScan_lexeme(t *testing.T) {
+	source := `package foo "foo" -- foo`
+	expected := []string{
+		"package",
+		"foo",
+		`"foo"`,
+		"-- foo",
+	}
+
+	f := token.Scan([]byte(source))
+	texts := getTexts(f.Texts())
+
+	if diff := cmp.Diff(expected, texts); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func getTexts(s iter.Seq[string]) []string {
+	texts := []string{}
+	for str := range s {
+		texts = append(texts, str)
+	}
+	return texts
+}
+
 func getKinds(s iter.Seq[token.Token]) []token.Kind {
 	kinds := []token.Kind{}
 	for tok := range s {
