@@ -31,6 +31,20 @@ func TestScan_keyword(t *testing.T) {
 	}
 }
 
+func TestScan_ident(t *testing.T) {
+	source := "foo foo_bar foo1 foo-bar"
+	expected := token.Ident
+
+	tokens := token.Scan([]byte(source))
+	kinds := getKinds(tokens)
+
+	for i, tok := range kinds {
+		if expected != tok {
+			t.Errorf("expected %s but got %s at %d", expected, tok, i)
+		}
+	}
+}
+
 func getKinds(toks []token.Token) []token.Kind {
 	kinds := make([]token.Kind, 0, len(toks))
 	for _, tok := range toks {

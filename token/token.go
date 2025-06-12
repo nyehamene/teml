@@ -34,6 +34,8 @@ const (
 	If
 	keywordEnd
 	// }}
+
+	Ident
 )
 
 func newToken(kind Kind, start, end int) Token {
@@ -42,14 +44,23 @@ func newToken(kind Kind, start, end int) Token {
 	return t
 }
 
-func isLetter(c byte) bool {
+func isAlphaNumeric(c byte) bool {
 	// TODO handle other unicode letter
-	return (c >= 'A' && c <= 'Z') ||
-		(c >= 'a' && c <= 'z') ||
+	return isAlpha(c) ||
+		isDigit(c) ||
 		c == '_'
 }
 
-var stringKeyword = map[string]Kind{
+func isAlpha(c byte) bool {
+	return (c >= 'A' && c <= 'Z') ||
+		(c >= 'a' && c <= 'z')
+}
+
+func isDigit(c byte) bool {
+	return (c >= '0' && c <= '9')
+}
+
+var keywords = map[string]Kind{
 	Package.String():   Package,
 	Import.String():    Import,
 	Using.String():     Using,
@@ -63,7 +74,7 @@ var stringKeyword = map[string]Kind{
 	If.String():        If,
 }
 
-var keywordString = map[Kind]string{
+var tokenString = map[Kind]string{
 	Invalid:   "invalid",
 	Package:   "package",
 	Import:    "import",
@@ -76,11 +87,11 @@ var keywordString = map[Kind]string{
 	True:      "true",
 	False:     "false",
 	If:        "if",
+	Ident:     "ident",
 }
 
 func isKeyword(ident []byte) (Kind, bool) {
-	id := string(ident)
-	kw, ok := stringKeyword[id]
+	kw, ok := keywords[string(ident)]
 	if !ok {
 		return Invalid, false
 	}
@@ -88,7 +99,7 @@ func isKeyword(ident []byte) (Kind, bool) {
 }
 
 func (k Kind) String() string {
-	kw, ok := keywordString[k]
+	kw, ok := tokenString[k]
 
 	if !ok {
 		msg := fmt.Sprintf("Invalid token kind: %d", int(k))
