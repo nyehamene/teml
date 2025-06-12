@@ -24,3 +24,9 @@ func BenchmarkScan(b *testing.B) {
 		_ = token.Scan(examplefile)
 	}
 }
+
+func BenchmarkScanCountFirst(b *testing.B) {
+	for b.Loop() {
+		_ = token.ScanCountFirst(examplefile)
+	}
+}
