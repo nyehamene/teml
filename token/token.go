@@ -48,6 +48,10 @@ const (
 	// }} Keyword
 
 	Ident
+
+	// {{ String
+	String
+	// }} String
 )
 
 func newToken(kind Kind, start, end int) Token {
@@ -101,7 +105,8 @@ var tokenString = map[Kind]string{
 	False:     "false",
 	If:        "if",
 
-	Ident: "ident",
+	Ident:  "ident",
+	String: "string",
 
 	BracketOpen:  "[",
 	BracketClose: "]",
