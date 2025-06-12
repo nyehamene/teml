@@ -56,6 +56,8 @@ const (
 	StringTempl
 	StringLineTempl
 	// }} String
+
+	Newline
 )
 
 func newToken(kind Kind, start, end int) Token {
@@ -126,6 +128,8 @@ var tokenString = map[Kind]string{
 	Colon:  ":",
 	FSlash: "/",
 	Hyphen: "-",
+
+	Newline: "\\n",
 }
 
 func isKeyword(ident []byte) (Kind, bool) {
