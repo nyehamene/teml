@@ -54,6 +54,14 @@ func (t *tokenizer) singleChars() Kind {
 		kind = BraceOpen
 	case '}':
 		kind = BraceClose
+	case ',':
+		kind = Comma
+	case ':':
+		kind = Colon
+	case '/':
+		kind = FSlash
+	case '\\':
+		kind = BSlash
 	}
 
 	t.advance()

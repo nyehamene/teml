@@ -64,6 +64,23 @@ func TestScan_bracket(t *testing.T) {
 	}
 }
 
+func TestScan_delimiter(t *testing.T) {
+	source := ",:/\\"
+	expected := []token.Kind{
+		token.Comma,
+		token.Colon,
+		token.FSlash,
+		token.BSlash,
+	}
+
+	tokens := token.Scan([]byte(source))
+	kinds := getKinds(tokens)
+
+	if diff := cmp.Diff(expected, kinds); diff != "" {
+		t.Error(diff)
+	}
+}
+
 func getKinds(toks []token.Token) []token.Kind {
 	kinds := make([]token.Kind, 0, len(toks))
 	for _, tok := range toks {
