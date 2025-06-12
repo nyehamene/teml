@@ -53,6 +53,7 @@ const (
 	// {{ String
 	String
 	StringLine
+	StringTempl
 	// }} String
 )
 
@@ -107,9 +108,10 @@ var tokenString = map[Kind]string{
 	False:     "false",
 	If:        "if",
 
-	Ident:      "ident",
-	String:     "string",
-	StringLine: "string_line",
+	Ident:       "ident",
+	String:      "string",
+	StringLine:  "l_string",
+	StringTempl: "t_string",
 
 	BracketOpen:  "[",
 	BracketClose: "]",

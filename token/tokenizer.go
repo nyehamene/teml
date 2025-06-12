@@ -22,19 +22,22 @@ func (t *tokenizer) next() Token {
 
 	ch := t.peek()
 	startOffset := t.cur
+	kind := Invalid
 
 	if isAlpha(ch) {
-		kind := t.ident()
+		k := t.ident()
 		lexeme := t.src[startOffset:t.cur]
+
 		if kw, ok := isKeyword(lexeme); ok {
-			return newToken(kw, startOffset, t.cur)
+			kind = kw
 		} else {
-			return newToken(kind, startOffset, t.cur)
+			kind = k
 		}
 	} else {
-		kind := t.singleChars()
-		return newToken(kind, startOffset, t.cur)
+		kind = t.singleChars()
 	}
+
+	return newToken(kind, startOffset, t.cur)
 }
 
 func (t *tokenizer) singleChars() Kind {
@@ -99,6 +102,8 @@ func (t *tokenizer) string() Kind {
 
 	t.advance()
 
+	isTempl := false
+
 	for !t.eof() {
 		ch := t.peek()
 		if ch == '"' {
@@ -107,7 +112,14 @@ func (t *tokenizer) string() Kind {
 		if ch == '\n' {
 			break
 		}
+		if ch == '\\' && t.peekNext() == '(' {
+			isTempl = true
+		}
 		t.advance()
+	}
+
+	if isTempl {
+		return StringTempl
 	}
 
 	if ch := t.peek(); ch != '"' {
