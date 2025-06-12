@@ -64,10 +64,34 @@ func (t *tokenizer) singleChars() Kind {
 		kind = BSlash
 	case '"':
 		kind = t.string()
+	case '-':
+		if ch := t.peekNext(); ch == '-' {
+			kind = t.stringLine()
+		}
 	}
 
 	t.advance()
 	return kind
+}
+
+func (t *tokenizer) stringLine() Kind {
+	assert(
+		(t.peek() == '-' && t.peekNext() == '-'),
+		"expected --",
+	)
+
+	t.advance()
+	t.advance()
+
+	for !t.eof() {
+		ch := t.peek()
+		if ch == '\n' {
+			break
+		}
+		t.advance()
+	}
+
+	return StringLine
 }
 
 func (t *tokenizer) string() Kind {
@@ -131,8 +155,20 @@ func (t *tokenizer) peek() byte {
 		return 0
 	}
 	next := t.cur
-	c := t.src[next]
-	return c
+	ch := t.src[next]
+	return ch
+}
+
+func (t *tokenizer) peekNext() byte {
+	size := len(t.src)
+	next := t.cur + 1
+
+	if next >= size {
+		return 0
+	}
+
+	ch := t.src[next]
+	return ch
 }
 
 func (t *tokenizer) advance() {

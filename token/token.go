@@ -31,6 +31,7 @@ const (
 	Colon
 	BSlash
 	FSlash
+	Hyphen
 	// }} Delimiter
 
 	// {{ Keyword
@@ -51,6 +52,7 @@ const (
 
 	// {{ String
 	String
+	StringLine
 	// }} String
 )
 
@@ -105,8 +107,9 @@ var tokenString = map[Kind]string{
 	False:     "false",
 	If:        "if",
 
-	Ident:  "ident",
-	String: "string",
+	Ident:      "ident",
+	String:     "string",
+	StringLine: "string_line",
 
 	BracketOpen:  "[",
 	BracketClose: "]",
@@ -118,6 +121,7 @@ var tokenString = map[Kind]string{
 	Comma:  ",",
 	Colon:  ":",
 	FSlash: "/",
+	Hyphen: "-",
 }
 
 func isKeyword(ident []byte) (Kind, bool) {
