@@ -1,6 +1,7 @@
 package token_test
 
 import (
+	"iter"
 	"testing"
 
 	"github.com/eml-lang/teml/token"
@@ -23,8 +24,8 @@ func TestScan_keyword(t *testing.T) {
 		token.If,
 	}
 
-	tokens := token.Scan([]byte(source))
-	kinds := getKinds(tokens)
+	f := token.Scan([]byte(source))
+	kinds := getKinds(f.Tokens())
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
 		t.Error(diff)
@@ -35,8 +36,8 @@ func TestScan_ident(t *testing.T) {
 	source := "foo foo_bar foo1 foo-bar"
 	expected := token.Ident
 
-	tokens := token.Scan([]byte(source))
-	kinds := getKinds(tokens)
+	f := token.Scan([]byte(source))
+	kinds := getKinds(f.Tokens())
 
 	for i, tok := range kinds {
 		if expected != tok {
@@ -56,8 +57,8 @@ func TestScan_bracket(t *testing.T) {
 		token.ParenClose,
 	}
 
-	tokens := token.Scan([]byte(source))
-	kinds := getKinds(tokens)
+	f := token.Scan([]byte(source))
+	kinds := getKinds(f.Tokens())
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
 		t.Error(diff)
@@ -73,8 +74,8 @@ func TestScan_delimiter(t *testing.T) {
 		token.BSlash,
 	}
 
-	tokens := token.Scan([]byte(source))
-	kinds := getKinds(tokens)
+	f := token.Scan([]byte(source))
+	kinds := getKinds(f.Tokens())
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
 		t.Error(diff)
@@ -85,8 +86,8 @@ func TestScan_quoted_string(t *testing.T) {
 	source := `"foo"`
 	expected := token.String
 
-	tokens := token.Scan([]byte(source))
-	kinds := getKinds(tokens)
+	f := token.Scan([]byte(source))
+	kinds := getKinds(f.Tokens())
 
 	for i, got := range kinds {
 		if expected != got {
@@ -99,8 +100,8 @@ func TestScan_line_string(t *testing.T) {
 	source := "-- line 1"
 	expected := token.StringLine
 
-	tokens := token.Scan([]byte(source))
-	kinds := getKinds(tokens)
+	f := token.Scan([]byte(source))
+	kinds := getKinds(f.Tokens())
 
 	for i, got := range kinds {
 		if expected != got {
@@ -113,8 +114,8 @@ func TestScan_quoted_string_template_string(t *testing.T) {
 	source := `"foo \(bar)"`
 	expected := token.StringTempl
 
-	tokens := token.Scan([]byte(source))
-	kinds := getKinds(tokens)
+	f := token.Scan([]byte(source))
+	kinds := getKinds(f.Tokens())
 
 	for i, got := range kinds {
 		if expected != got {
@@ -127,8 +128,8 @@ func TestScan_line_string_template_string(t *testing.T) {
 	source := `-- foo \(bar)`
 	expected := token.StringLineTempl
 
-	tokens := token.Scan([]byte(source))
-	kinds := getKinds(tokens)
+	f := token.Scan([]byte(source))
+	kinds := getKinds(f.Tokens())
 
 	for i, got := range kinds {
 		if expected != got {
@@ -143,8 +144,8 @@ func TestScan_newline(t *testing.T) {
 	`
 	expected := token.Newline
 
-	tokens := token.Scan([]byte(source))
-	kinds := getKinds(tokens)
+	f := token.Scan([]byte(source))
+	kinds := getKinds(f.Tokens())
 
 	for i, got := range kinds {
 		if expected != got {
@@ -153,9 +154,9 @@ func TestScan_newline(t *testing.T) {
 	}
 }
 
-func getKinds(toks []token.Token) []token.Kind {
-	kinds := make([]token.Kind, 0, len(toks))
-	for _, tok := range toks {
+func getKinds(s iter.Seq[token.Token]) []token.Kind {
+	kinds := []token.Kind{}
+	for tok := range s {
 		kinds = append(kinds, tok.Kind)
 	}
 	return kinds

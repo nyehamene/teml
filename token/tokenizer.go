@@ -9,9 +9,9 @@ type tokenizer struct {
 	cur int
 }
 
-func Scan(src []byte) []Token {
+func Scan(src []byte) *Tokenized {
 	t := tokenizer{src: src}
-	toks := []Token{}
+	f := NewFile()
 
 	for {
 		t.skipSpace()
@@ -20,30 +20,51 @@ func Scan(src []byte) []Token {
 			break
 		}
 
-		tok := t.next()
-		toks = append(toks, tok)
+		start := t.cur
+		kind := t.next()
+		end := t.cur
+
+		pos := Pos{Start: start, End: end}
+		text := string(t.src[start:end])
+
+		f.add(kind, pos, text)
 	}
 
-	return toks
+	return f
 }
 
-func ScanCountFirst(src []byte) []Token {
-	nums := ScanCountOnly(src)
-	toks := make([]Token, 0, nums)
+func ScanCountFirst(src []byte) *Tokenized {
+	size := ScanCountOnly(src)
+
+	lines := 0
+
+	for ch := range src {
+		if ch == '\n' {
+			lines += 1
+		}
+	}
+
+	f := InitFile(size, lines)
 	t := tokenizer{src: src}
 
-	for i := range toks {
+	for range size {
 		t.skipSpace()
 
 		if t.eof() {
 			break
 		}
 
-		tok := t.next()
-		toks[i] = tok
+		start := t.cur
+		kind := t.next()
+		end := t.cur
+
+		pos := Pos{Start: start, End: end}
+		text := string(t.src[start:end])
+
+		f.add(kind, pos, text)
 	}
 
-	return toks
+	return f
 }
 
 func ScanCountOnly(src []byte) int {
@@ -65,7 +86,7 @@ func ScanCountOnly(src []byte) int {
 	return count
 }
 
-func (t *tokenizer) next() Token {
+func (t *tokenizer) next() Kind {
 	ch := t.peek()
 	startOffset := t.cur
 	kind := Invalid
@@ -92,7 +113,7 @@ func (t *tokenizer) next() Token {
 		fmt.Printf("Invalid: %s\n", lexeme)
 	}
 
-	return newToken(kind, startOffset, t.cur)
+	return kind
 }
 
 func (t *tokenizer) singleChars() Kind {

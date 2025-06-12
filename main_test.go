@@ -11,8 +11,8 @@ import (
 var examplefile []byte
 
 func TestScan(t *testing.T) {
-	tokens := token.Scan(examplefile)
-	for _, tok := range tokens {
+	f := token.Scan(examplefile)
+	for tok := range f.Tokens() {
 		if tok.Kind == token.Invalid {
 			t.Fail()
 		}
