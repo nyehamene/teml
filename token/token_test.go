@@ -171,7 +171,7 @@ func TestScan_lexeme(t *testing.T) {
 	}
 }
 
-func TestScan_line(t *testing.T) {
+func TestScan_line_string_line(t *testing.T) {
 	source := `
 	-- line 1
 	`
@@ -213,6 +213,27 @@ func getPosses(s iter.Seq[token.Pos]) []token.Pos {
 		pos = append(pos, p)
 	}
 	return pos
+}
+
+func TestScan_line(t *testing.T) {
+	source := "package\nfoo\n"
+	//         0123456.7890.12
+	expected := []int{7, 11}
+
+	f := token.Scan([]byte(source))
+	lines := getLines(f.Lines())
+
+	if diff := cmp.Diff(expected, lines); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func getLines(s iter.Seq[int]) []int {
+	lines := []int{}
+	for line := range s {
+		lines = append(lines, line)
+	}
+	return lines
 }
 
 func getTexts(s iter.Seq[string]) []string {

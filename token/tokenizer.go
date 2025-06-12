@@ -27,6 +27,10 @@ func Scan(src []byte) *Tokenized {
 		pos := Pos{Start: start, End: end}
 		text := string(t.src[start:end])
 
+		if kind == Newline {
+			f.addLine(start)
+		}
+
 		f.add(kind, pos, text)
 	}
 
@@ -60,6 +64,10 @@ func ScanCountFirst(src []byte) *Tokenized {
 
 		pos := Pos{Start: start, End: end}
 		text := string(t.src[start:end])
+
+		if kind == Newline {
+			f.addLine(start)
+		}
 
 		f.add(kind, pos, text)
 	}
