@@ -62,14 +62,41 @@ func (t *tokenizer) singleChars() Kind {
 		kind = FSlash
 	case '\\':
 		kind = BSlash
+	case '"':
+		kind = t.string()
 	}
 
 	t.advance()
 	return kind
 }
 
+func (t *tokenizer) string() Kind {
+	assert(t.peek() == '"', "expected \"")
+
+	t.advance()
+
+	for !t.eof() {
+		ch := t.peek()
+		if ch == '"' {
+			break
+		}
+		if ch == '\n' {
+			break
+		}
+		t.advance()
+	}
+
+	if ch := t.peek(); ch != '"' {
+		return Invalid
+	}
+
+	return String
+}
+
 func (t *tokenizer) ident() Kind {
-	start := t.cur
+	assert(isAlpha(t.peek()), "expected alpha")
+
+	t.advance()
 
 	for !t.eof() {
 		ch := t.peek()
@@ -77,10 +104,6 @@ func (t *tokenizer) ident() Kind {
 			break
 		}
 		t.advance()
-	}
-
-	if empty := start == t.cur; empty {
-		return Invalid
 	}
 
 	return Ident
