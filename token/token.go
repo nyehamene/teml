@@ -4,13 +4,10 @@ import "fmt"
 
 type Token struct {
 	Kind Kind
-	Pos  Pos
+	Pos  Position
 }
 
-type Pos struct {
-	Start int
-	End   int
-}
+type Position int
 
 type Kind int
 
@@ -60,8 +57,7 @@ const (
 	Newline
 )
 
-func newToken(kind Kind, start, end int) Token {
-	pos := Pos{Start: start, End: end}
+func newToken(kind Kind, pos Position) Token {
 	t := Token{Kind: kind, Pos: pos}
 	return t
 }
