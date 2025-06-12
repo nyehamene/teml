@@ -26,6 +26,13 @@ const (
 	BraceClose   // }
 	// }} Barcket
 
+	// {{ Delimiter
+	Comma
+	Colon
+	BSlash
+	FSlash
+	// }} Delimiter
+
 	// {{ Keyword
 	Package
 	Import
@@ -102,6 +109,10 @@ var tokenString = map[Kind]string{
 	ParenClose:   ")",
 	BraceOpen:    "{",
 	BraceClose:   "}",
+
+	Comma:  ",",
+	Colon:  ":",
+	FSlash: "/",
 }
 
 func isKeyword(ident []byte) (Kind, bool) {
