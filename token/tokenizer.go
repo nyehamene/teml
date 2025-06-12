@@ -168,11 +168,11 @@ func (t *tokenizer) stringLine() Kind {
 
 	for !t.eof() {
 		ch := t.peek()
-		if ch == '\n' {
-			break
-		}
 		if ch == '\\' && t.peekNext() == '(' {
 			isTempl = true
+		}
+		if t.peekNext() == '\n' {
+			break
 		}
 		t.advance()
 	}

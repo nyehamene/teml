@@ -171,6 +171,24 @@ func TestScan_lexeme(t *testing.T) {
 	}
 }
 
+func TestScan_line(t *testing.T) {
+	source := `
+	-- line 1
+	`
+	expected := []token.Kind{
+		token.Newline,
+		token.StringLine,
+		token.Newline,
+	}
+
+	f := token.ScanCountFirst([]byte(source))
+	kinds := getKinds(f.Tokens())
+
+	if diff := cmp.Diff(expected, kinds); diff != "" {
+		t.Error(diff)
+	}
+}
+
 func getTexts(s iter.Seq[string]) []string {
 	texts := []string{}
 	for str := range s {
