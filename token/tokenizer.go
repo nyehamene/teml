@@ -1,9 +1,5 @@
 package token
 
-import (
-	"fmt"
-)
-
 type tokenizer struct {
 	src []byte
 	cur int
@@ -81,15 +77,6 @@ func (t *tokenizer) next() Kind {
 		}
 	} else {
 		kind = t.singleChars()
-	}
-
-	//
-	// NOTE debug only
-	// TODO remove
-	//
-	if kind == Invalid {
-		lexeme := string(t.src[startOffset:t.cur])
-		fmt.Printf("Invalid: %s\n", lexeme)
 	}
 
 	return kind
