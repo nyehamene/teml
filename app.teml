@@ -18,6 +18,7 @@
 		-- The fox named \(name) is \(age) \((if (> age 1) "years" "year")) old.
 		(fancy-button "Click Me")
 		-- namespaced reference
+		-- not a template \\(foo)
 		(ui/badge {value: name})))
 
 // zero or more layouts per file
