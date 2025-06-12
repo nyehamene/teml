@@ -10,48 +10,40 @@ type tokenizer struct {
 }
 
 func Scan(src []byte) *Tokenized {
-	t := tokenizer{src: src}
 	f := NewFile()
-
-	for {
-		t.skipSpace()
-
-		if t.eof() {
-			break
-		}
-
-		start := t.cur
-		kind := t.next()
-		end := t.cur
-
-		pos := Pos{Start: start, End: end}
-		text := string(t.src[start:end])
-
-		if kind == Newline {
-			f.addLine(start)
-		}
-
-		f.add(kind, pos, text)
-	}
-
+	scan(src, f)
 	return f
 }
 
 func ScanCountFirst(src []byte) *Tokenized {
-	size := ScanCountOnly(src)
+	t := tokenizer{src: src}
 
 	lines := 0
+	size := 0
+	for {
+		t.skipSpace()
+		if t.eof() {
+			break
+		}
 
-	for ch := range src {
-		if ch == '\n' {
+		k := t.next()
+		if k == Newline {
 			lines += 1
 		}
+
+		size += 1
 	}
 
 	f := InitFile(size, lines)
+	scan(src, f)
+
+	return f
+}
+
+func scan(src []byte, f *Tokenized) {
 	t := tokenizer{src: src}
 
-	for range size {
+	for {
 		t.skipSpace()
 
 		if t.eof() {
@@ -71,27 +63,6 @@ func ScanCountFirst(src []byte) *Tokenized {
 
 		f.add(kind, pos, text)
 	}
-
-	return f
-}
-
-func ScanCountOnly(src []byte) int {
-	t := tokenizer{src: src}
-
-	count := 0
-
-	for {
-		t.skipSpace()
-
-		if t.eof() {
-			break
-		}
-
-		_ = t.next()
-		count += 1
-	}
-
-	return count
 }
 
 func (t *tokenizer) next() Kind {
