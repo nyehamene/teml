@@ -9,6 +9,7 @@ type Token struct {
 
 type Position int
 
+//go:generate stringer -type=Kind
 type Kind int
 
 const (
@@ -53,6 +54,8 @@ const (
 	StringTempl
 	StringLineTempl
 	// }} String
+
+	Number
 
 	Newline
 )
@@ -112,6 +115,8 @@ var tokenString = map[Kind]string{
 	StringLine:      "l_string",
 	StringTempl:     "t_string",
 	StringLineTempl: "t_l_string",
+
+	Number: "number",
 
 	BracketOpen:  "[",
 	BracketClose: "]",

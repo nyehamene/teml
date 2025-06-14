@@ -75,6 +75,8 @@ func (t *tokenizer) next() Kind {
 		} else {
 			kind = k
 		}
+	} else if isDigit(ch) {
+		kind = t.number()
 	} else {
 		kind = t.singleChars()
 	}
@@ -148,6 +150,40 @@ func (t *tokenizer) stringLine() Kind {
 	}
 
 	return StringLine
+}
+
+func (t *tokenizer) number() Kind {
+	assert(isDigit(t.peek()), "expected a digit")
+
+	t.advance()
+
+	for !t.eof() {
+		if ch := t.peek(); !isDigit(ch) {
+			break
+		}
+		t.advance()
+	}
+
+	// match decimal number
+	if ch := t.peek(); ch == '.' {
+		if ch := t.peekNext(); !isDigit(ch) {
+			// consume '.'
+			t.advance()
+			return Invalid
+		}
+
+		// consume '.'
+		t.advance()
+
+		for !t.eof() {
+			if ch := t.peek(); !isDigit(ch) {
+				break
+			}
+			t.advance()
+		}
+	}
+
+	return Number
 }
 
 func (t *tokenizer) string() Kind {

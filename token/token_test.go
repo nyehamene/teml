@@ -228,6 +228,20 @@ func TestScan_line(t *testing.T) {
 	}
 }
 
+func TestScan_number(t *testing.T) {
+	source := "10 1.0"
+	expected := token.Number
+
+	f := token.Scan([]byte(source))
+	kinds := getKinds(f.Tokens())
+
+	for i, got := range kinds {
+		if expected != got {
+			t.Errorf("expected %s but got %s at %d", expected, got, i)
+		}
+	}
+}
+
 func getLines(s iter.Seq[int]) []int {
 	lines := []int{}
 	for line := range s {
