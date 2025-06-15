@@ -1,6 +1,10 @@
 package token
 
-import "iter"
+import (
+	"iter"
+
+	"github.com/eml-lang/teml/assert"
+)
 
 type Tokenized struct {
 	tokens []Token
@@ -68,8 +72,21 @@ func (f Tokenized) Lines() iter.Seq[int] {
 	}
 }
 
+func (f Tokenized) Size() int {
+	s := len(f.tokens)
+	return s
+}
+
+func (f Tokenized) Get(i int) (Token, bool) {
+	if i >= f.Size() {
+		return Token{}, false
+	}
+	tok := f.tokens[i]
+	return tok, true
+}
+
 func (f *Tokenized) add(kind Kind, pos Pos, text string) Position {
-	assert(
+	assert.Assert(
 		(len(f.tokens) == len(f.pos) && len(f.pos) == len(f.text)),
 		"expect tokens, pos, and text to have the same len",
 	)
