@@ -93,7 +93,7 @@ func (p *parser) peek() pToken {
 	}
 
 	next := p.cur
-	if node, ok := p.src.Get(next); !ok {
+	if node, ok := p.src.Token(next); !ok {
 		return tokenEOF
 	} else {
 		return node

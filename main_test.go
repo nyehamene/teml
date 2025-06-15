@@ -11,7 +11,7 @@ import (
 var examplefile []byte
 
 func TestScan(t *testing.T) {
-	f := token.Scan(examplefile)
+	f := token.Scan(examplefile, 0)
 	for tok := range f.Tokens() {
 		if tok.Kind == token.Invalid {
 			t.Fail()
@@ -21,12 +21,12 @@ func TestScan(t *testing.T) {
 
 func BenchmarkScan(b *testing.B) {
 	for b.Loop() {
-		_ = token.Scan(examplefile)
+		_ = token.Scan(examplefile, 0)
 	}
 }
 
 func BenchmarkScanCountFirst(b *testing.B) {
 	for b.Loop() {
-		_ = token.ScanCountFirst(examplefile)
+		_ = token.ScanCountFirst(examplefile, 0)
 	}
 }

@@ -77,7 +77,7 @@ func (f Tokenized) Size() int {
 	return s
 }
 
-func (f Tokenized) Get(i int) (Token, bool) {
+func (f Tokenized) Token(i int) (Token, bool) {
 	if i >= f.Size() {
 		return Token{}, false
 	}
