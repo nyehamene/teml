@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/eml-lang/teml/assert"
 	"github.com/eml-lang/teml/token"
 )
 
@@ -30,13 +31,13 @@ func Parse(toks token.Tokenized) (*File, bool) {
 }
 
 func ParseWithErrorHandler(toks token.Tokenized, printerr func(string)) (*File, bool) {
-	f := NewFile()
+	f := &File{}
 	ok := parse(toks, f, printerr)
 	return f, ok
 
 }
 
-func parse(toks token.Tokenized, f *File, printerr func(string)) bool {
+func parse(toks token.Tokenized, f *File, printerr func(string)) (hasError bool) {
 	p := parser{
 		src:  toks,
 		file: f,
@@ -47,9 +48,16 @@ func parse(toks token.Tokenized, f *File, printerr func(string)) bool {
 		printerr(s)
 	}
 
-	p.parsePackage()
+	defer func() {
+		hasError = p.hasError
+	}()
 
-	return p.hasError
+	p.parsePackage()
+	p.parseImport()
+
+	assert.Assert(p.eof(), "expected eof")
+
+	return
 }
 
 func (p *parser) parsePackage() {
@@ -63,6 +71,30 @@ func (p *parser) parsePackage() {
 
 	pkg := Package{Ident: ident, Path: path}
 	p.file.Pkg = pkg
+}
+
+func (p *parser) parseImport() {
+	for !p.eof() {
+
+		ch := p.peek()
+		next := p.peekNext()
+
+		if ch.Kind != token.ParanOpen &&
+			next.Kind != token.Import {
+			break
+		}
+
+		p.advance()
+		p.advance()
+
+		ident := p.expect(token.Ident, errfmt.title("Import Declaration Error"), errfmt.desc("missing identifier"))
+		path := p.expect(token.String, errfmt.title("Import Declaration Error"), errfmt.desc("missing path string"))
+
+		p.expect(token.ParenClose, errfmt.title("Import Declaration Error"), errfmt.desc("missing closing parenthesis ')'"))
+
+		imp := Import{Ident: ident, Path: path}
+		p.file.addImport(imp)
+	}
 }
 
 func (p *parser) expect(k token.Kind, msgs ...errmessage) pToken {
@@ -87,6 +119,22 @@ func (p *parser) advance() {
 	}
 	next := p.cur + 1
 	p.cur = next
+}
+
+func (p *parser) peekNext() pToken {
+	next := p.cur + 1
+	size := p.src.Size()
+	if next >= size {
+		return tokenEOF
+	}
+
+	ch, ok := p.src.Token(next)
+	if !ok {
+		// unreachable
+		assert.Assert(false, "unreachable")
+		return tokenEOF
+	}
+	return ch
 }
 
 func (p *parser) peek() pToken {
