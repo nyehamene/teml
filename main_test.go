@@ -12,7 +12,7 @@ var examplefile []byte
 
 func TestScan(t *testing.T) {
 	f := token.Scan(examplefile, 0)
-	for tok := range f.Tokens() {
+	for _, tok := range f.Tokens() {
 		if tok.Kind == token.Invalid {
 			t.Fail()
 		}
