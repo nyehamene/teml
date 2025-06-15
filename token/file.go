@@ -32,10 +32,10 @@ func InitFile(size int, lines int) *Tokenized {
 	return &f
 }
 
-func (f *Tokenized) Tokens() iter.Seq[Token] {
-	return func(yield func(Token) bool) {
-		for _, t := range f.tokens {
-			if !yield(t) {
+func (f *Tokenized) Tokens() iter.Seq2[int, Token] {
+	return func(yield func(int, Token) bool) {
+		for i, t := range f.tokens {
+			if !yield(i, t) {
 				break
 			}
 		}

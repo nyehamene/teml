@@ -296,9 +296,9 @@ func TestScan_newline_after_comment(t *testing.T) {
 	}
 }
 
-func getNewlines(s iter.Seq[token.Token]) []token.Kind {
+func getNewlines(s iter.Seq2[int, token.Token]) []token.Kind {
 	kinds := []token.Kind{}
-	for tok := range s {
+	for _, tok := range s {
 		if tok.Kind != token.Newline {
 			continue
 		}
@@ -323,9 +323,9 @@ func getTexts(s iter.Seq[string]) []string {
 	return texts
 }
 
-func getKinds(s iter.Seq[token.Token]) []token.Kind {
+func getKinds(s iter.Seq2[int, token.Token]) []token.Kind {
 	kinds := []token.Kind{}
-	for tok := range s {
+	for _, tok := range s {
 		kinds = append(kinds, tok.Kind)
 	}
 	return kinds
