@@ -1,17 +1,17 @@
 (package p "view/app")
 
-(import ui "https://github.com/ui/ui")
+(import ui "https:;;github.com/ui/ui")
 
 (using fancy-button ui)
 
 (using [card not_used] ui)
 
-// zero or one documents per file
+;; zero or one documents per file
 (document home [dog: Dog]
 	(dog))
 
-// zero or more components per file
-// can defined before or after a document
+;; zero or more components per file
+;; can defined before or after a document
 (component Dog [name: String age: Int]
 	(card {id: "dog-card"}
 		-- The quick brown fox jumped over the lazy dog!
@@ -21,8 +21,8 @@
 		-- not a template \\(foo)
 		(ui/badge {value: name})))
 
-// zero or more layouts per file
-// can be defined before or after a document
+;; zero or more layouts per file
+;; can be defined before or after a document
 (component BaseLayout
 	[ header: Fragment
 	, content: Fragment

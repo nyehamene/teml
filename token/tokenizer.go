@@ -109,6 +109,8 @@ func (t *tokenizer) singleChars() Kind {
 		kind = Comma
 	case ':':
 		kind = Colon
+	case ';':
+		kind = t.comment()
 	case '/':
 		kind = FSlash
 	case '\\':
@@ -236,6 +238,21 @@ func (t *tokenizer) ident() Kind {
 	}
 
 	return Ident
+}
+
+func (t *tokenizer) comment() Kind {
+	assert.Assert(t.peek() == ';', "expected ;")
+
+	t.advance()
+
+	for !t.eof() {
+		if ch := t.peek(); ch == '\n' {
+			break
+		}
+		t.advance()
+	}
+
+	return Comment
 }
 
 func (t *tokenizer) skipSpace() {

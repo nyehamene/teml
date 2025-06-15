@@ -58,6 +58,7 @@ const (
 	Number
 
 	Newline
+	Comment
 )
 
 func newToken(kind Kind, pos Position) Token {
@@ -131,6 +132,7 @@ var tokenString = map[Kind]string{
 	Hyphen: "-",
 
 	Newline: "\\n",
+	Comment: ";...",
 }
 
 func isKeyword(ident []byte) (Kind, bool) {
