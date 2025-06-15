@@ -34,6 +34,20 @@ func TestParse_package(t *testing.T) {
 
 }
 
+func TestParse_package_redeclared(t *testing.T) {
+	t.Skip("unneccessary in a recursive decent parser")
+
+	source := `(package p "does/not/matter")
+			   (package i "/does/not/matter")`
+	tokens := token.Scan([]byte(source))
+
+	_, hasError := ast.ParseWithErrorHandler(*tokens, func(string) {})
+
+	if !hasError {
+		t.Error("Parser succeeded unexpectedly")
+	}
+}
+
 func TestParse_package_error(t *testing.T) {
 	source := []string{
 		`(package)`,
