@@ -145,7 +145,7 @@ func TestScan_newline(t *testing.T) {
 	expected := token.Newline
 
 	f := token.Scan([]byte(source))
-	kinds := getKinds(f.Tokens())
+	kinds := getNewlines(f.Tokens())
 
 	for i, got := range kinds {
 		if expected != got {
@@ -176,9 +176,7 @@ func TestScan_line_string_line(t *testing.T) {
 	-- line 1
 	`
 	expected := []token.Kind{
-		token.Newline,
 		token.StringLine,
-		token.Newline,
 	}
 
 	f := token.ScanCountFirst([]byte(source))
@@ -256,6 +254,51 @@ func TestScan_comment(t *testing.T) {
 	}
 }
 
+func TestScan_newline_after_string_line(t *testing.T) {
+	source := `
+	-- 1 line
+	`
+	expected := []token.Kind{
+		token.Newline,
+		token.Newline,
+	}
+
+	f := token.Scan([]byte(source))
+	nl := getNewlines(f.Tokens())
+
+	if diff := cmp.Diff(expected, nl); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func TestScan_newline_after_comment(t *testing.T) {
+	source := `
+	; 1 line
+	`
+	expected := []token.Kind{
+		token.Newline,
+		token.Newline,
+	}
+
+	f := token.Scan([]byte(source))
+	nl := getNewlines(f.Tokens())
+
+	if diff := cmp.Diff(expected, nl); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func getNewlines(s iter.Seq[token.Token]) []token.Kind {
+	kinds := []token.Kind{}
+	for tok := range s {
+		if tok.Kind != token.Newline {
+			continue
+		}
+		kinds = append(kinds, tok.Kind)
+	}
+	return kinds
+}
+
 func getLines(s iter.Seq[int]) []int {
 	lines := []int{}
 	for line := range s {
@@ -275,6 +318,9 @@ func getTexts(s iter.Seq[string]) []string {
 func getKinds(s iter.Seq[token.Token]) []token.Kind {
 	kinds := []token.Kind{}
 	for tok := range s {
+		if tok.Kind == token.Newline {
+			continue
+		}
 		kinds = append(kinds, tok.Kind)
 	}
 	return kinds
