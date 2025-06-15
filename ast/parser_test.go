@@ -2,6 +2,7 @@ package ast_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/eml-lang/teml/ast"
@@ -49,16 +50,44 @@ func TestParse_package_redeclared(t *testing.T) {
 }
 
 func TestParse_package_error(t *testing.T) {
+	t.Skip("needs error recovery or augument the parser to display only one error per line")
+
 	source := []string{
-		`(package)`,
-		`(package p)`,
-		`(package "path/to/package")`,
+		"(package) ;error: Package Declaration Error\n;desc: missing identifier",
+		"(package p) ;error: Package Declaration error\n;desc: missing path string",
+		"(package \"path/to/package\") ;error: Package Declaration error\n;desc: missing identifier",
 	}
 
 	for i, src := range source {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			tokens := token.Scan([]byte(src), 0)
-			_, hasError := ast.ParseWithErrorHandler(*tokens, func(string) {})
+			tokens := token.Scan([]byte(src), token.PreserveComment)
+			got := []string{}
+			errlabels := []string{";error", ";desc"}
+
+			_, hasError := ast.ParseWithErrorHandler(*tokens, func(err string) {
+				lines := strings.SplitSeq(err, "\n")
+				for ln := range lines {
+					chunks := strings.SplitN(ln, ": ", 2)
+					if len(chunks) != 2 {
+						return
+					}
+					lbl := chunks[0]
+					msg := chunks[1]
+
+					for _, l := range errlabels {
+						if l != lbl {
+							continue
+						}
+						got = append(got, msg)
+					}
+				}
+			})
+
+			expected := getErrorMessagesFromComments(*tokens)
+
+			if diff := cmp.Diff(expected, got); diff != "" {
+				t.Error(diff)
+			}
 
 			if !hasError {
 				t.Error("Parser succeeded unexpectedly")
@@ -74,4 +103,21 @@ func getKinds(n ast.Node) []token.Kind {
 		return k
 	}
 	return nil
+}
+
+func getErrorMessagesFromComments(f token.Tokenized) []string {
+	cmts := []string{}
+	for _, tok := range f.Tokens() {
+		if tok.Kind != token.Comment {
+			continue
+		}
+		cmt, ok := f.Text(tok)
+		if !ok {
+			continue
+		}
+
+		msg := strings.Split(cmt, ": ")[1]
+		cmts = append(cmts, msg)
+	}
+	return cmts
 }

@@ -18,10 +18,6 @@ type parser struct {
 	file     *File
 }
 
-const (
-	errorLabel = "SYNTAX ERROR"
-)
-
 var (
 	tokenEOF pToken = pToken{Kind: -1, Pos: -1}
 )
@@ -60,8 +56,8 @@ func (p *parser) parsePackage() {
 	p.expect(token.ParanOpen, "invalid delimiter")
 	p.expect(token.Package, "invalid declaration")
 
-	ident := p.expect(token.Ident, "invalid package identifier")
-	path := p.expect(token.String, "invalid package path string")
+	ident := p.expect(token.Ident, errfmt.title("Package Declaration Error"), errfmt.desc("missing identifier"))
+	path := p.expect(token.String, errfmt.title("Package Declaration Error"), errfmt.desc("missing path string"))
 
 	p.expect(token.ParenClose, "invalid delimiter")
 
@@ -69,11 +65,17 @@ func (p *parser) parsePackage() {
 	p.file.Pkg = pkg
 }
 
-func (p *parser) expect(k token.Kind, msg ...string) pToken {
+func (p *parser) expect(k token.Kind, msgs ...errmessage) pToken {
 	ch := p.peek()
 	if ch.Kind != k {
-		m := strings.Join(msg, " ")
-		p.printerr(fmt.Sprintf("error at %s. expected %s\n%s", ch.Kind, k, m))
+		exp := errfmt.expect(k)
+		got := errfmt.got(ch.Kind)
+
+		errs := make([]string, 0, len(msgs)+2)
+		errs = append(errs, msgs...)
+		errs = append(errs, exp, got)
+		msg := strings.Join(errs, "\n")
+		p.printerr(msg)
 	}
 	p.advance()
 	return ch
@@ -103,4 +105,28 @@ func (p *parser) peek() pToken {
 func (p *parser) eof() bool {
 	e := p.cur >= p.src.Size()
 	return e
+}
+
+type stringer interface {
+	String() string
+}
+type errformatter struct{}
+type errmessage = string
+
+var errfmt errformatter
+
+func (errformatter) title(msg string) errmessage {
+	return fmt.Sprintf(";error: %s", msg)
+}
+
+func (errformatter) desc(msg string) errmessage {
+	return fmt.Sprintf(";desc: %s", msg)
+}
+
+func (errformatter) expect(msg stringer) errmessage {
+	return fmt.Sprintf(";expected: %s", msg)
+}
+
+func (errformatter) got(msg stringer) errmessage {
+	return fmt.Sprintf(";got: %s", msg)
 }
