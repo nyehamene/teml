@@ -9,13 +9,21 @@ type tokenizer struct {
 	cur int
 }
 
-func Scan(src []byte) *Tokenized {
+type Flags uint
+
+const (
+	PreserveNewline Flags = 1 << iota
+	PreserveComment
+	HideErrors
+)
+
+func Scan(src []byte, flags Flags) *Tokenized {
 	f := NewFile()
-	scan(src, f)
+	scan(src, f, flags)
 	return f
 }
 
-func ScanCountFirst(src []byte) *Tokenized {
+func ScanCountFirst(src []byte, flags Flags) *Tokenized {
 	t := tokenizer{src: src}
 
 	lines := 0
@@ -35,12 +43,12 @@ func ScanCountFirst(src []byte) *Tokenized {
 	}
 
 	f := InitFile(size, lines)
-	scan(src, f)
+	scan(src, f, flags)
 
 	return f
 }
 
-func scan(src []byte, f *Tokenized) {
+func scan(src []byte, f *Tokenized, flags Flags) {
 	t := tokenizer{src: src}
 
 	for {
@@ -59,6 +67,20 @@ func scan(src []byte, f *Tokenized) {
 
 		if kind == Newline {
 			f.addLine(start)
+
+			addLine := flags & PreserveNewline
+			if addLine != 0 {
+				f.add(kind, pos, text)
+			}
+			continue
+		}
+
+		if kind == Comment {
+			addComment := flags & PreserveComment
+			if addComment != 0 {
+				f.add(kind, pos, text)
+			}
+			continue
 		}
 
 		f.add(kind, pos, text)

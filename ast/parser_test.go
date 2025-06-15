@@ -16,7 +16,7 @@ func TestParse_package(t *testing.T) {
 		token.String,
 	}
 
-	tokens := token.Scan([]byte(source))
+	tokens := token.Scan([]byte(source), 0)
 
 	f, hasError := ast.ParseWithErrorHandler(*tokens, func(err string) {
 		t.Error(err)
@@ -39,7 +39,7 @@ func TestParse_package_redeclared(t *testing.T) {
 
 	source := `(package p "does/not/matter")
 			   (package i "/does/not/matter")`
-	tokens := token.Scan([]byte(source))
+	tokens := token.Scan([]byte(source), 0)
 
 	_, hasError := ast.ParseWithErrorHandler(*tokens, func(string) {})
 
@@ -57,7 +57,7 @@ func TestParse_package_error(t *testing.T) {
 
 	for i, src := range source {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			tokens := token.Scan([]byte(src))
+			tokens := token.Scan([]byte(src), 0)
 			_, hasError := ast.ParseWithErrorHandler(*tokens, func(string) {})
 
 			if !hasError {
