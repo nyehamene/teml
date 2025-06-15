@@ -5,7 +5,7 @@ import (
 )
 
 type tokenizer struct {
-	src []byte
+	f   *Tokenized
 	cur int
 }
 
@@ -15,19 +15,25 @@ const (
 	PreserveNewline Flags = 1 << iota
 	PreserveComment
 	HideErrors
+	ReduceAlloc
 )
 
 func Scan(src []byte, flags Flags) *Tokenized {
-	f := NewFile()
-	scan(src, f, flags)
-	return f
+	f := Tokenized{src: src}
+
+	if flags&ReduceAlloc != 0 {
+		lines, size := count(src)
+		f.adjustSize(size, lines)
+	}
+
+	scan(&f, flags)
+	return &f
 }
 
-func ScanCountFirst(src []byte, flags Flags) *Tokenized {
-	t := tokenizer{src: src}
+func count(src []byte) (lines int, size int) {
+	f := &Tokenized{src: src}
+	t := tokenizer{f: f}
 
-	lines := 0
-	size := 0
 	for {
 		t.skipSpace()
 		if t.eof() {
@@ -42,14 +48,11 @@ func ScanCountFirst(src []byte, flags Flags) *Tokenized {
 		size += 1
 	}
 
-	f := InitFile(size, lines)
-	scan(src, f, flags)
-
-	return f
+	return lines, size
 }
 
-func scan(src []byte, f *Tokenized, flags Flags) {
-	t := tokenizer{src: src}
+func scan(f *Tokenized, flags Flags) {
+	t := tokenizer{f: f}
 
 	for {
 		t.skipSpace()
@@ -63,14 +66,13 @@ func scan(src []byte, f *Tokenized, flags Flags) {
 		end := t.cur
 
 		pos := Pos{Start: start, End: end}
-		text := string(t.src[start:end])
 
 		if kind == Newline {
 			f.addLine(start)
 
 			addLine := flags & PreserveNewline
 			if addLine != 0 {
-				f.add(kind, pos, text)
+				f.add(kind, pos)
 			}
 			continue
 		}
@@ -78,12 +80,12 @@ func scan(src []byte, f *Tokenized, flags Flags) {
 		if kind == Comment {
 			addComment := flags & PreserveComment
 			if addComment != 0 {
-				f.add(kind, pos, text)
+				f.add(kind, pos)
 			}
 			continue
 		}
 
-		f.add(kind, pos, text)
+		f.add(kind, pos)
 	}
 }
 
@@ -94,7 +96,7 @@ func (t *tokenizer) next() Kind {
 
 	if isAlpha(ch) {
 		k := t.ident()
-		lexeme := t.src[startOffset:t.cur]
+		lexeme := t.f.src[startOffset:t.cur]
 
 		if kw, ok := isKeyword(lexeme); ok {
 			kind = kw
@@ -315,19 +317,19 @@ func (t *tokenizer) peek() byte {
 		return 0
 	}
 	next := t.cur
-	ch := t.src[next]
+	ch := t.f.src[next]
 	return ch
 }
 
 func (t *tokenizer) peekNext() byte {
-	size := len(t.src)
+	size := len(t.f.src)
 	next := t.cur + 1
 
 	if next >= size {
 		return 0
 	}
 
-	ch := t.src[next]
+	ch := t.f.src[next]
 	return ch
 }
 
@@ -341,6 +343,6 @@ func (t *tokenizer) advance() {
 
 func (t *tokenizer) eof() bool {
 	cur := t.cur
-	size := len(t.src)
+	size := len(t.f.src)
 	return cur >= size
 }

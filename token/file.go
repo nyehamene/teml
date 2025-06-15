@@ -9,8 +9,8 @@ import (
 type Tokenized struct {
 	tokens []Token
 	pos    []Pos
-	text   []string
 	lines  []int
+	src    []byte
 }
 
 type Pos struct {
@@ -18,18 +18,10 @@ type Pos struct {
 	End   int
 }
 
-func NewFile() *Tokenized {
-	f := Tokenized{}
-	return &f
-}
-
-func InitFile(size int, lines int) *Tokenized {
-	f := Tokenized{}
+func (f *Tokenized) adjustSize(size int, lines int) {
 	f.tokens = make([]Token, 0, size)
 	f.pos = make([]Pos, 0, size)
-	f.text = make([]string, 0, size)
 	f.lines = make([]int, 0, lines)
-	return &f
 }
 
 func (f *Tokenized) Tokens() iter.Seq2[int, Token] {
@@ -44,9 +36,11 @@ func (f *Tokenized) Tokens() iter.Seq2[int, Token] {
 
 func (f Tokenized) Texts() iter.Seq[string] {
 	return func(yield func(string) bool) {
-		for _, t := range f.text {
-			if !yield(t) {
-				return
+		for _, tok := range f.Tokens() {
+			if txt, ok := f.Text(tok); ok {
+				if !yield(txt) {
+					return
+				}
 			}
 		}
 	}
@@ -87,7 +81,7 @@ func (f Tokenized) Token(i int) (Token, bool) {
 
 func (f Tokenized) Text(target Token) (string, bool) {
 	assert.Assert(
-		len(f.tokens) == len(f.text),
+		len(f.tokens) == len(f.pos),
 		"len of tokens and text are do not match",
 	)
 
@@ -95,24 +89,25 @@ func (f Tokenized) Text(target Token) (string, bool) {
 		if target != tok {
 			continue
 		}
-		txt := f.text[i]
-		return txt, true
+		pos := f.pos[i]
+		txt := f.src[pos.Start:pos.End]
+		return string(txt), true
 	}
 	return "", false
 }
 
-func (f *Tokenized) add(kind Kind, pos Pos, text string) Position {
+func (f *Tokenized) add(kind Kind, pos Pos) Position {
 	assert.Assert(
-		(len(f.tokens) == len(f.pos) && len(f.pos) == len(f.text)),
+		len(f.tokens) == len(f.pos),
 		"expect tokens, pos, and text to have the same len",
 	)
+
 	position := len(f.tokens)
 	p := Position(position)
 	tok := newToken(kind, p)
 
 	f.tokens = append(f.tokens, tok)
 	f.pos = append(f.pos, pos)
-	f.text = append(f.text, text)
 	return Position(position)
 }
 

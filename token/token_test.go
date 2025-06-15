@@ -183,7 +183,7 @@ func TestScan_line_string_line(t *testing.T) {
 		token.StringLine,
 	}
 
-	f := token.ScanCountFirst([]byte(source), 0)
+	f := token.Scan([]byte(source), 0)
 	kinds := getKinds(f.Tokens())
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
