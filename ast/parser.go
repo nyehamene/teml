@@ -74,12 +74,14 @@ func (p *parser) parsePackage() {
 }
 
 func (p *parser) parseImport() {
+	// hasImport := false
+
 	for !p.eof() {
 
 		ch := p.peek()
 		next := p.peekNext()
 
-		if ch.Kind != token.ParanOpen &&
+		if ch.Kind != token.ParanOpen ||
 			next.Kind != token.Import {
 			break
 		}
@@ -94,6 +96,68 @@ func (p *parser) parseImport() {
 
 		imp := Import{Ident: ident, Path: path}
 		p.file.addImport(imp)
+
+		// hasImport = true
+	}
+
+	// if hasImport {
+	// 	p.parseUsings()
+	// }
+
+	p.parseUsings()
+}
+
+func (p *parser) parseUsings() {
+	for !p.eof() {
+		ch := p.peek()
+		next := p.peekNext()
+
+		if ch.Kind != token.ParanOpen ||
+			next.Kind != token.Using {
+			break
+		}
+
+		p.advance()
+		p.advance()
+
+		// TODO respect ReduceAlloc flag
+		idents := []token.Token{}
+
+		ch = p.peek()
+
+		if ch.Kind == token.BracketOpen {
+
+			p.advance()
+
+			for !p.eof() {
+
+				id := p.peek()
+				if id.Kind == token.BracketClose {
+					break
+				}
+
+				ident := p.expect(token.Ident, "missing identifier")
+				idents = append(idents, ident)
+			}
+
+			p.expect(token.BracketClose, "missing closing bracket ']'")
+
+		} else {
+			ident := p.expect(token.Ident, errfmt.title("Using Declaration Error"), errfmt.desc("missing identifier"))
+			idents = append(idents, ident)
+		}
+
+		from := p.expect(token.Ident, errfmt.title("Using Declaration Error"), errfmt.desc("missing import identifier"))
+
+		p.expect(token.ParenClose, errfmt.title("Using Declaration Error"), errfmt.desc("missing closing parenthesis ')'"))
+
+		use := Using{From: from}
+		for _, ident := range idents {
+			use.addIdent(ident)
+
+		}
+
+		p.file.addUsing(use)
 	}
 }
 
