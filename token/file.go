@@ -85,6 +85,22 @@ func (f Tokenized) Token(i int) (Token, bool) {
 	return tok, true
 }
 
+func (f Tokenized) Text(target Token) (string, bool) {
+	assert.Assert(
+		len(f.tokens) == len(f.text),
+		"len of tokens and text are do not match",
+	)
+
+	for i, tok := range f.Tokens() {
+		if target != tok {
+			continue
+		}
+		txt := f.text[i]
+		return txt, true
+	}
+	return "", false
+}
+
 func (f *Tokenized) add(kind Kind, pos Pos, text string) Position {
 	assert.Assert(
 		(len(f.tokens) == len(f.pos) && len(f.pos) == len(f.text)),
