@@ -14,6 +14,10 @@ var short = []string{
 	`(package p "a")`,
 	`(package p "a") (import i "b")`,
 	`(package p "a") (import i "b") (import i "c")`,
+	`(package p "a") (import i "b") (import i "c") (using [d e] i) (using f i)`,
+	`(package p "a") (import i "b") (using c i) (using d i)`,
+	`(package p "a") (import i "b") (using c i)`,
+	`(package p "a") (import i "b") (using [c d] i)`,
 }
 
 func TestParse_short_test(t *testing.T) {
