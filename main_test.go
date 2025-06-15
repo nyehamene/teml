@@ -25,8 +25,8 @@ func BenchmarkScan(b *testing.B) {
 	}
 }
 
-func BenchmarkScanCountFirst(b *testing.B) {
+func BenchmarkScanReduceAlloc(b *testing.B) {
 	for b.Loop() {
-		_ = token.ScanCountFirst(examplefile, 0)
+		_ = token.Scan(examplefile, token.ReduceAlloc)
 	}
 }
