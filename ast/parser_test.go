@@ -10,29 +10,37 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestParse_package(t *testing.T) {
-	source := `(package p "path/to/pkg")`
-	expected := []token.Kind{
-		token.Ident,
-		token.String,
+var short = []string{
+	`(package p "a")`,
+	`(package p "a") (import i "b")`,
+	`(package p "a") (import i "b") (import i "c")`,
+}
+
+func TestParse_short_test(t *testing.T) {
+	for i, source := range short {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			expected := []token.Kind{
+				token.Ident,
+				token.String,
+			}
+
+			tokens := token.Scan([]byte(source), 0)
+
+			f, hasError := ast.ParseWithErrorHandler(*tokens, func(err string) {
+				t.Error(err)
+			})
+
+			kinds := getKinds(f.Pkg)
+
+			if hasError {
+				t.Error("Parser failed unexpectedly")
+			}
+
+			if diff := cmp.Diff(expected, kinds); diff != "" {
+				t.Error(diff)
+			}
+		})
 	}
-
-	tokens := token.Scan([]byte(source), 0)
-
-	f, hasError := ast.ParseWithErrorHandler(*tokens, func(err string) {
-		t.Error(err)
-	})
-
-	kinds := getKinds(f.Pkg)
-
-	if hasError {
-		t.Error("Parser failed unexpectedly")
-	}
-
-	if diff := cmp.Diff(expected, kinds); diff != "" {
-		t.Error(diff)
-	}
-
 }
 
 func TestParse_package_redeclared(t *testing.T) {
