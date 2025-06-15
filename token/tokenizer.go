@@ -95,37 +95,53 @@ func (t *tokenizer) singleChars() Kind {
 	switch ch {
 	case '[':
 		kind = BracketOpen
+		t.advance()
 	case ']':
 		kind = BracketClose
+		t.advance()
 	case '(':
 		kind = ParanOpen
+		t.advance()
 	case ')':
 		kind = ParenClose
+		t.advance()
 	case '{':
 		kind = BraceOpen
+		t.advance()
 	case '}':
 		kind = BraceClose
+		t.advance()
 	case ',':
 		kind = Comma
+		t.advance()
 	case ':':
 		kind = Colon
-	case ';':
-		kind = t.comment()
+		t.advance()
 	case '/':
 		kind = FSlash
+		t.advance()
 	case '\\':
 		kind = BSlash
+		t.advance()
 	case '\n':
 		kind = Newline
+		t.advance()
 	case '"':
 		kind = t.string()
+		t.advance()
+	case ';':
+		kind = t.comment()
 	case '-':
 		if ch := t.peekNext(); ch == '-' {
 			kind = t.stringLine()
+			break
 		}
+		fallthrough
+	default:
+		kind = Invalid
+		t.advance()
 	}
 
-	t.advance()
 	return kind
 }
 
@@ -142,11 +158,11 @@ func (t *tokenizer) stringLine() Kind {
 
 	for !t.eof() {
 		ch := t.peek()
+		if ch == '\n' {
+			break
+		}
 		if ch == '\\' && t.peekNext() == '(' {
 			isTempl = true
-		}
-		if t.peekNext() == '\n' {
-			break
 		}
 		t.advance()
 	}
