@@ -1,5 +1,9 @@
 package token
 
+import (
+	"github.com/eml-lang/teml/assert"
+)
+
 type tokenizer struct {
 	src []byte
 	cur int
@@ -124,7 +128,7 @@ func (t *tokenizer) singleChars() Kind {
 }
 
 func (t *tokenizer) stringLine() Kind {
-	assert(
+	assert.Assert(
 		(t.peek() == '-' && t.peekNext() == '-'),
 		"expected --",
 	)
@@ -153,7 +157,7 @@ func (t *tokenizer) stringLine() Kind {
 }
 
 func (t *tokenizer) number() Kind {
-	assert(isDigit(t.peek()), "expected a digit")
+	assert.Assert(isDigit(t.peek()), "expected a digit")
 
 	t.advance()
 
@@ -187,7 +191,7 @@ func (t *tokenizer) number() Kind {
 }
 
 func (t *tokenizer) string() Kind {
-	assert(t.peek() == '"', "expected \"")
+	assert.Assert(t.peek() == '"', "expected \"")
 
 	t.advance()
 
@@ -219,7 +223,7 @@ func (t *tokenizer) string() Kind {
 }
 
 func (t *tokenizer) ident() Kind {
-	assert(isAlpha(t.peek()), "expected alpha")
+	assert.Assert(isAlpha(t.peek()), "expected alpha")
 
 	t.advance()
 
