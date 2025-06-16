@@ -1,14 +1,14 @@
 package ast
 
 import (
-	"github.com/eml-lang/teml/assert"
 	"github.com/eml-lang/teml/token"
 )
 
 type File struct {
-	Pkg     Package
-	imports []Import
-	usings  []Using
+	pkg        Package
+	imports    []Import
+	usings     []Using
+	components []Component
 }
 
 type Node interface {
@@ -30,6 +30,16 @@ type Using struct {
 	From   token.Token
 }
 
+type Component struct {
+	Ident      token.Token
+	properties []Property
+}
+
+type Property struct {
+	Ident token.Token
+	Type  token.Token
+}
+
 type IntErrorNode int
 
 const (
@@ -37,21 +47,13 @@ const (
 	unexpectedTokenError
 )
 
-func (Package) node() {}
-func (Import) node()  {}
-func (Using) node()   {}
+func (Package) node()   {}
+func (Import) node()    {}
+func (Using) node()     {}
+func (Component) node() {}
 
 func (IntErrorNode) node() {}
 
-func (u *Using) addIdent(id token.Token) {
-	assert.Assert(id.Kind == token.Ident, "expected ident")
-	u.idents = append(u.idents, id)
-}
-
-func (f *File) addImport(imp Import) {
-	f.imports = append(f.imports, imp)
-}
-
-func (f *File) addUsing(use Using) {
-	f.usings = append(f.usings, use)
+func (f *File) Package() Package {
+	return f.pkg
 }

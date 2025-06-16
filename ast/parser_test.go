@@ -18,6 +18,15 @@ var short = []string{
 	`(package p "a") (import i "b") (using c i) (using d i)`,
 	`(package p "a") (import i "b") (using c i)`,
 	`(package p "a") (import i "b") (using [c d] i)`,
+	`(package p "a") (import i "b") (component Foo [])`,
+	`(package p "a") (import i "b") (using c i) (component Foo [])`,
+	`(package p "a") (component Foo [])`,
+	`(package p "a") (component Foo []) (component Foo [])`,
+	`(package p "a") (component Foo [a: A])`,
+	`(package p "a") (component Foo [a: A, b: B])`,
+	`(package p "a") (component Foo [a: A b: B])`,
+	`(package p "a") (component Foo [a: A,])`,
+	// `(package p "a") (document [])`,
 }
 
 func TestParse_short_test(t *testing.T) {
@@ -34,7 +43,7 @@ func TestParse_short_test(t *testing.T) {
 				t.Error(err)
 			})
 
-			kinds := getKinds(f.Pkg)
+			kinds := getKinds(f.Package())
 
 			if hasError {
 				t.Error("Parser failed unexpectedly")
