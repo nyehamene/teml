@@ -8,6 +8,7 @@ type File struct {
 	pkg        Package
 	imports    []Import
 	usings     []Using
+	document   Document
 	components []Component
 }
 
@@ -30,6 +31,11 @@ type Using struct {
 	From   token.Token
 }
 
+type Document struct {
+	Ident      token.Token
+	properties []Property
+}
+
 type Component struct {
 	Ident      token.Token
 	properties []Property
@@ -38,6 +44,10 @@ type Component struct {
 type Property struct {
 	Ident token.Token
 	Type  token.Token
+}
+
+type propertyholder interface {
+	addProperty(Property)
 }
 
 type IntErrorNode int
@@ -50,10 +60,19 @@ const (
 func (Package) node()   {}
 func (Import) node()    {}
 func (Using) node()     {}
+func (Document) node()  {}
 func (Component) node() {}
 
 func (IntErrorNode) node() {}
 
 func (f *File) Package() Package {
 	return f.pkg
+}
+
+func (c *Component) addProperty(p Property) {
+	c.properties = append(c.properties, p)
+}
+
+func (c *Document) addProperty(p Property) {
+	c.properties = append(c.properties, p)
 }

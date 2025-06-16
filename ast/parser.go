@@ -172,7 +172,28 @@ func (p *parser) parseComponent() {
 	p.file.components = append(p.file.components, cmp)
 }
 
-func (p *parser) parseProperties(cmp *Component) {
+func (p *parser) parseDocument() {
+	assert.Assert(p.peek().Kind == token.Document, "expected keyword 'document'")
+
+	p.advance()
+
+	doc := Document{}
+
+	if ch := p.peek(); ch.Kind == token.Ident {
+		p.advance()
+		doc.Ident = ch
+	}
+
+	p.expect(token.BracketOpen, "missing opening bracket '[")
+
+	p.parseProperties(&doc)
+
+	p.expect(token.BracketClose, "missing closing bracket '[")
+
+	p.file.document = doc
+}
+
+func (p *parser) parseProperties(ph propertyholder) {
 
 	for !p.eof() {
 
@@ -185,7 +206,7 @@ func (p *parser) parseProperties(cmp *Component) {
 		Type := p.expect(token.Ident, "missing property type")
 
 		pty := Property{Ident: ident, Type: Type}
-		cmp.properties = append(cmp.properties, pty)
+		ph.addProperty(pty)
 
 		if ch := p.peek(); ch.Kind == token.Comma {
 			p.advance()
@@ -203,6 +224,8 @@ func (p *parser) parseDeclarations() {
 		switch ch.Kind {
 		case token.Component:
 			p.parseComponent()
+		case token.Document:
+			p.parseDocument()
 		default:
 			// TODO error
 			return

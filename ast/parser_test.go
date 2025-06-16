@@ -18,15 +18,21 @@ var short = []string{
 	`(package p "a") (import i "b") (using c i) (using d i)`,
 	`(package p "a") (import i "b") (using c i)`,
 	`(package p "a") (import i "b") (using [c d] i)`,
-	`(package p "a") (import i "b") (component Foo [])`,
+	`(package p "a") (import i "b") (using c i) (document [])`,
 	`(package p "a") (import i "b") (using c i) (component Foo [])`,
+	`(package p "a") (import i "b") (document [])`,
+	`(package p "a") (import i "b") (component Foo [])`,
+	`(package p "a") (document [])`,
+	`(package p "a") (document Foo [])`,
+	`(package p "a") (document Foo [a: A])`,
+	`(package p "a") (document Foo [a: A, b: B])`,
+	`(package p "a") (document Foo [a: A,])`,
 	`(package p "a") (component Foo [])`,
 	`(package p "a") (component Foo []) (component Foo [])`,
 	`(package p "a") (component Foo [a: A])`,
 	`(package p "a") (component Foo [a: A, b: B])`,
 	`(package p "a") (component Foo [a: A b: B])`,
 	`(package p "a") (component Foo [a: A,])`,
-	// `(package p "a") (document [])`,
 }
 
 func TestParse_short_test(t *testing.T) {
