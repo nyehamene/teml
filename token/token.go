@@ -147,8 +147,7 @@ func (k Kind) String() string {
 	kw, ok := tokenString[k]
 
 	if !ok {
-		msg := fmt.Sprintf("Invalid token kind: %d", int(k))
-		panic(msg)
+		return fmt.Sprintf("%d", int(k))
 	}
 
 	return kw
