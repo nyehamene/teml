@@ -10,7 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-var short = []string{
+var valid_short = []string{
 	`(package p "a")`,
 	`(package p "a") (import i "b")`,
 	`(package p "a") (import i "b") (import i "c")`,
@@ -27,16 +27,21 @@ var short = []string{
 	`(package p "a") (document Foo [a: A])`,
 	`(package p "a") (document Foo [a: A, b: B])`,
 	`(package p "a") (document Foo [a: A,])`,
+	`(package p "a") (document Foo [] (div) (div))`,
 	`(package p "a") (component Foo [])`,
 	`(package p "a") (component Foo []) (component Foo [])`,
 	`(package p "a") (component Foo [a: A])`,
 	`(package p "a") (component Foo [a: A, b: B])`,
 	`(package p "a") (component Foo [a: A b: B])`,
 	`(package p "a") (component Foo [a: A,])`,
+	`(package p "a") (component Foo [] (div))`,
+	`(package p "a") (component Foo [] (div) (div))`,
+	`(package p "a") (component Foo [] (div {a: b}))`,
+	`(package p "a") (component Foo [] (div {a: b, c: d}))`,
 }
 
 func TestParse_short_test(t *testing.T) {
-	for i, source := range short {
+	for i, source := range valid_short {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			expected := []token.Kind{
 				token.Ident,

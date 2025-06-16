@@ -169,6 +169,8 @@ func (p *parser) parseComponent() {
 
 	p.expect(token.BracketClose, "missing closing square bracket ']'")
 
+	p.parseElements(&cmp)
+
 	p.file.components = append(p.file.components, cmp)
 }
 
@@ -189,6 +191,8 @@ func (p *parser) parseDocument() {
 	p.parseProperties(&doc)
 
 	p.expect(token.BracketClose, "missing closing bracket '[")
+
+	p.parseElements(&doc)
 
 	p.file.document = doc
 }
@@ -232,6 +236,42 @@ func (p *parser) parseDeclarations() {
 		}
 
 		p.expect(token.ParenClose, "missing closing parenthesis ')'")
+	}
+}
+
+func (p *parser) parseElements(eh elementholder) {
+	for !p.eof() {
+		if ch := p.peek(); ch.Kind != token.ParanOpen {
+			break
+		}
+		p.expect(token.ParanOpen, "missing opening parenthesis '('")
+		e := Element{}
+		e.Ident = p.expect(token.Ident, "missing element identifier")
+
+		// parse attributes
+		if ch := p.peek(); ch.Kind == token.BraceOpen {
+			p.advance()
+			for !p.eof() {
+				if ch := p.peek(); ch.Kind == token.BraceClose {
+					break
+				}
+
+				at := Attribute{}
+				at.Ident = p.expect(token.Ident, "missing attribute key")
+				p.expect(token.Colon, "missing attribute value separator ':'")
+				at.Value = p.expect(token.Ident, "missing attribute value")
+
+				if ch := p.peek(); ch.Kind == token.Comma {
+					p.advance()
+				}
+
+				e.attributes = append(e.attributes, at)
+			}
+			p.expect(token.BraceClose, "missing closing square bracket ']'")
+		}
+
+		p.expect(token.ParenClose, "missing closing parenthesis ')'")
+		eh.addElement(e)
 	}
 }
 

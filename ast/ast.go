@@ -34,11 +34,13 @@ type Using struct {
 type Document struct {
 	Ident      token.Token
 	properties []Property
+	elements   []Element
 }
 
 type Component struct {
 	Ident      token.Token
 	properties []Property
+	elements   []Element
 }
 
 type Property struct {
@@ -46,8 +48,22 @@ type Property struct {
 	Type  token.Token
 }
 
+type Element struct {
+	Ident      token.Token
+	attributes []Attribute
+}
+
+type Attribute struct {
+	Ident token.Token
+	Value token.Token
+}
+
 type propertyholder interface {
 	addProperty(Property)
+}
+
+type elementholder interface {
+	addElement(Element)
 }
 
 type IntErrorNode int
@@ -75,4 +91,12 @@ func (c *Component) addProperty(p Property) {
 
 func (c *Document) addProperty(p Property) {
 	c.properties = append(c.properties, p)
+}
+
+func (c *Component) addElement(e Element) {
+	c.elements = append(c.elements, e)
+}
+
+func (c *Document) addElement(e Element) {
+	c.elements = append(c.elements, e)
 }
