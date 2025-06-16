@@ -54,6 +54,7 @@ func parse(toks token.Tokenized, f *File, printerr func(string)) (hasError bool)
 
 	p.parsePackage()
 	p.parseImport()
+	p.parseDeclarations()
 
 	assert.Assert(p.eof(), "expected eof")
 
@@ -70,11 +71,10 @@ func (p *parser) parsePackage() {
 	p.expect(token.ParenClose, "invalid delimiter")
 
 	pkg := Package{Ident: ident, Path: path}
-	p.file.Pkg = pkg
+	p.file.pkg = pkg
 }
 
 func (p *parser) parseImport() {
-	// hasImport := false
 
 	for !p.eof() {
 
@@ -95,14 +95,9 @@ func (p *parser) parseImport() {
 		p.expect(token.ParenClose, errfmt.title("Import Declaration Error"), errfmt.desc("missing closing parenthesis ')'"))
 
 		imp := Import{Ident: ident, Path: path}
-		p.file.addImport(imp)
+		p.file.imports = append(p.file.imports, imp)
 
-		// hasImport = true
 	}
-
-	// if hasImport {
-	// 	p.parseUsings()
-	// }
 
 	p.parseUsings()
 }
@@ -153,11 +148,67 @@ func (p *parser) parseUsings() {
 
 		use := Using{From: from}
 		for _, ident := range idents {
-			use.addIdent(ident)
+			use.idents = append(use.idents, ident)
 
 		}
 
-		p.file.addUsing(use)
+		p.file.usings = append(p.file.usings, use)
+	}
+}
+
+func (p *parser) parseComponent() {
+	assert.Assert(p.peek().Kind == token.Component, "expected keyword 'component'")
+	p.advance()
+
+	ident := p.expect(token.Ident, "missing component identifier '('")
+	cmp := Component{Ident: ident}
+
+	p.expect(token.BracketOpen, "missing opening square bracket '['")
+
+	p.parseProperties(&cmp)
+
+	p.expect(token.BracketClose, "missing closing square bracket ']'")
+
+	p.file.components = append(p.file.components, cmp)
+}
+
+func (p *parser) parseProperties(cmp *Component) {
+
+	for !p.eof() {
+
+		if ch := p.peek(); ch.Kind == token.BracketClose {
+			break
+		}
+
+		ident := p.expect(token.Ident, "missing property identifier")
+		p.expect(token.Colon, "missing type separator ':'")
+		Type := p.expect(token.Ident, "missing property type")
+
+		pty := Property{Ident: ident, Type: Type}
+		cmp.properties = append(cmp.properties, pty)
+
+		if ch := p.peek(); ch.Kind == token.Comma {
+			p.advance()
+		}
+	}
+
+}
+
+func (p *parser) parseDeclarations() {
+	for !p.eof() {
+		p.expect(token.ParanOpen, "missing opening parenthesis '('")
+
+		ch := p.peek()
+
+		switch ch.Kind {
+		case token.Component:
+			p.parseComponent()
+		default:
+			// TODO error
+			return
+		}
+
+		p.expect(token.ParenClose, "missing closing parenthesis ')'")
 	}
 }
 
