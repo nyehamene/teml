@@ -49,7 +49,7 @@ type Property struct {
 }
 
 type Element struct {
-	Ident      token.Token
+	Ident      Expr
 	attributes []Attribute
 }
 
