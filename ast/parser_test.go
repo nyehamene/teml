@@ -65,6 +65,7 @@ var valid_short = []string{
 	`(package p "a") (component Foo [] (div {} "foo" {} (div)))`,
 	`(package p "a") (component Foo [] (div {} "foo \(foo)"))`,
 	"(package p \"a\") (component Foo [] (div {} -- foo \\(foo)\n))",
+	"(package p \"a\") (component Foo [] (div {a: \"foo\\(b)\"} -- foo \\(foo)\n))",
 }
 
 func TestParse_short_test(t *testing.T) {
