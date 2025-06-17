@@ -37,6 +37,9 @@ var valid_short = []string{
 	`(package p "a") (document Foo [] (foo/bar/div {}))`,
 	`(package p "a") (document Foo [] (div {a: "b", b: true, c: false, d: 100, e: 10.1}))`,
 	`(package p "a") (document Foo [] (div {a: "b" b: true c: false d: 100 e: 10.1}))`,
+	`(package p "a") (document Foo [] "foo")`,
+	"(package p \"a\") (document Foo [] -- foo\n)",
+	"(package p \"a\") (document Foo [] (div) \"foo\" -- foo\n)",
 	`(package p "a") (component Foo [])`,
 	`(package p "a") (component Foo []) (component Foo [])`,
 	`(package p "a") (component Foo [a: A])`,
@@ -52,6 +55,16 @@ var valid_short = []string{
 	`(package p "a") (component Foo [] (div #a/b/c{}))`,
 	`(package p "a") (component Foo [] (div {a: "b", b: true, c: false, d: 100, e: 10.1}))`,
 	`(package p "a") (component Foo [] (div {a: "b" b: true c: false d: 100 e: 10.1}))`,
+	`(package p "a") (component Foo [] (div (div (div))))`,
+	`(package p "a") (component Foo [] (div "foo"))`,
+	"(package p \"a\") (component Foo [] (div -- foo\n))",
+	"(package p \"a\") (component Foo [] -- foo\n)",
+	"(package p \"a\") (component Foo [] (div) \"foo\" -- foo\n)",
+	"(package p \"a\") (component Foo [] (div (div) \"foo\" -- foo\n))",
+	`(package p "a") (component Foo [] (div {} #a{} "foo"))`,
+	`(package p "a") (component Foo [] (div {} "foo" {} (div)))`,
+	`(package p "a") (component Foo [] (div {} "foo \(foo)"))`,
+	"(package p \"a\") (component Foo [] (div {} -- foo \\(foo)\n))",
 }
 
 func TestParse_short_test(t *testing.T) {

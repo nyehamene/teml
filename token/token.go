@@ -18,7 +18,7 @@ const (
 	// {{ Bracket
 	BracketOpen  // [
 	BracketClose // ]
-	ParanOpen    // (
+	ParenOpen    // (
 	ParenClose   // )
 	BraceOpen    // {
 	BraceClose   // }
@@ -122,7 +122,7 @@ var tokenString = map[Kind]string{
 
 	BracketOpen:  "[",
 	BracketClose: "]",
-	ParanOpen:    "(",
+	ParenOpen:    "(",
 	ParenClose:   ")",
 	BraceOpen:    "{",
 	BraceClose:   "}",

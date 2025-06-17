@@ -34,13 +34,13 @@ type Using struct {
 type Document struct {
 	Ident      token.Token
 	properties []Property
-	elements   []Element
+	children   []Content
 }
 
 type Component struct {
 	Ident      token.Token
 	properties []Property
-	elements   []Element
+	children   []Content
 }
 
 type Property struct {
@@ -51,6 +51,7 @@ type Property struct {
 type Element struct {
 	Ident      Expr
 	attributes []Attribute
+	children   []Content
 }
 
 type Attribute struct {
@@ -59,21 +60,19 @@ type Attribute struct {
 	Value Expr
 }
 
-type PrimaryExpr token.Token
-
-type propertyholder interface {
-	addProperty(Property)
+type Content interface {
+	content()
 }
 
-type elementholder interface {
-	addElement(Element)
-}
+type Text token.Token
 
 type IntErrorNode int
 
 type Expr interface {
 	expr()
 }
+
+type PrimaryExpr token.Token
 
 type BinaryExpr struct {
 	left  Expr
@@ -93,25 +92,13 @@ func (Component) node() {}
 
 func (IntErrorNode) node() {}
 
+func (Text) content()      {}
+func (Element) content()   {}
+func (Attribute) content() {}
+
 func (b BinaryExpr) expr()  {}
 func (p PrimaryExpr) expr() {}
 
 func (f *File) Package() Package {
 	return f.pkg
-}
-
-func (c *Component) addProperty(p Property) {
-	c.properties = append(c.properties, p)
-}
-
-func (c *Document) addProperty(p Property) {
-	c.properties = append(c.properties, p)
-}
-
-func (c *Component) addElement(e Element) {
-	c.elements = append(c.elements, e)
-}
-
-func (c *Document) addElement(e Element) {
-	c.elements = append(c.elements, e)
 }
