@@ -30,6 +30,7 @@ const (
 	BSlash
 	FSlash
 	Hyphen
+	Hash
 	// }} Delimiter
 
 	// {{ Keyword
@@ -130,6 +131,7 @@ var tokenString = map[Kind]string{
 	Colon:  ":",
 	FSlash: "/",
 	Hyphen: "-",
+	Hash:   "#",
 
 	Newline: "\\n",
 	Comment: ";...",
