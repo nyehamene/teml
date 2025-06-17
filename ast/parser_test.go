@@ -78,7 +78,7 @@ func TestParse_short_test(t *testing.T) {
 
 			tokens := token.Scan([]byte(source), 0)
 
-			f, hasError := ast.ParseWithErrorHandler(*tokens, func(err string) {
+			f, hasError := ast.ParseWithErrorHandler(*tokens, 0, func(err string) {
 				t.Error(err)
 			})
 
@@ -102,7 +102,7 @@ func TestParse_package_redeclared(t *testing.T) {
 			   (package i "/does/not/matter")`
 	tokens := token.Scan([]byte(source), 0)
 
-	_, hasError := ast.ParseWithErrorHandler(*tokens, func(string) {})
+	_, hasError := ast.ParseWithErrorHandler(*tokens, 0, func(string) {})
 
 	if !hasError {
 		t.Error("Parser succeeded unexpectedly")
@@ -124,7 +124,7 @@ func TestParse_package_error(t *testing.T) {
 			got := []string{}
 			errlabels := []string{";error", ";desc"}
 
-			_, hasError := ast.ParseWithErrorHandler(*tokens, func(err string) {
+			_, hasError := ast.ParseWithErrorHandler(*tokens, 0, func(err string) {
 				lines := strings.SplitSeq(err, "\n")
 				for ln := range lines {
 					chunks := strings.SplitN(ln, ": ", 2)
