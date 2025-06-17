@@ -56,7 +56,7 @@ type Element struct {
 type Attribute struct {
 	tag   Expr
 	Ident token.Token
-	Value token.Token
+	Value Expr
 }
 
 type PrimaryExpr token.Token

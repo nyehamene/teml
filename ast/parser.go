@@ -246,13 +246,13 @@ func (p *parser) parseElements(eh elementholder) {
 		}
 		p.expect(token.ParanOpen, "missing opening parenthesis '('")
 		e := Element{}
-		e.Ident = p.parseNameExpr()
+		e.Ident = p.parseQualifiedName()
 
 		// tag
 		var tag Expr
 		if ch := p.peek(); ch.Kind == token.Hash {
 			p.advance()
-			tag = p.parseNameExpr()
+			tag = p.parseQualifiedName()
 		}
 
 		// attributes
@@ -267,7 +267,7 @@ func (p *parser) parseElements(eh elementholder) {
 				at.tag = tag
 				at.Ident = p.expect(token.Ident, "missing attribute key")
 				p.expect(token.Colon, "missing attribute value separator ':'")
-				at.Value = p.expect(token.Ident, "missing attribute value")
+				at.Value = p.parseExpr()
 
 				if ch := p.peek(); ch.Kind == token.Comma {
 					p.advance()
@@ -283,7 +283,7 @@ func (p *parser) parseElements(eh elementholder) {
 	}
 }
 
-func (p *parser) parseNameExpr() Expr {
+func (p *parser) parseQualifiedName() Expr {
 	assert.Assert(p.peek().Kind == token.Ident, "expected identifier")
 	val := p.expect(token.Ident, "missing identifier")
 
@@ -296,6 +296,15 @@ func (p *parser) parseNameExpr() Expr {
 	}
 
 	return expr
+}
+
+func (p *parser) parseExpr() Expr {
+	switch ch := p.peek(); ch.Kind {
+	case token.String, token.True, token.False, token.Number:
+		p.advance()
+		return PrimaryExpr(ch)
+	}
+	return nil
 }
 
 func (p *parser) expect(k token.Kind, msgs ...errmessage) pToken {
