@@ -327,7 +327,7 @@ func (p *parser) parseQualifiedName() Expr {
 
 func (p *parser) parseExpr() Expr {
 	switch ch := p.peek(); ch.Kind {
-	case token.String, token.True, token.False, token.Number:
+	case token.String, token.True, token.False, token.Number, token.StringTempl:
 		p.advance()
 		return PrimaryExpr(ch)
 	}
