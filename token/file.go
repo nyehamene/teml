@@ -24,6 +24,16 @@ func (f *Tokenized) adjustSize(size int, lines int) {
 	f.lines = make([]int, 0, lines)
 }
 
+func (f *Tokenized) TokensFrom(pos int) iter.Seq2[int, Token] {
+	return func(yield func(int, Token) bool) {
+		for i := 0; pos < len(f.tokens); pos++ {
+			if ch := f.tokens[pos]; !yield(i, ch) {
+				break
+			}
+		}
+	}
+}
+
 func (f *Tokenized) Tokens() iter.Seq2[int, Token] {
 	return func(yield func(int, Token) bool) {
 		for i, t := range f.tokens {

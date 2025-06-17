@@ -17,30 +17,32 @@ type parser struct {
 	printerr func(string)
 	hasError bool
 	file     *File
+	flag     token.Flags
 }
 
 var (
 	tokenEOF pToken = pToken{Kind: -1, Pos: -1}
 )
 
-func Parse(toks token.Tokenized) (*File, bool) {
+func Parse(toks token.Tokenized, flag token.Flags) (*File, bool) {
 	printerr := func(s string) {
 		log.Println(s)
 	}
-	return ParseWithErrorHandler(toks, printerr)
+	return ParseWithErrorHandler(toks, flag, printerr)
 }
 
-func ParseWithErrorHandler(toks token.Tokenized, printerr func(string)) (*File, bool) {
+func ParseWithErrorHandler(toks token.Tokenized, flag token.Flags, printerr func(string)) (*File, bool) {
 	f := &File{}
-	ok := parse(toks, f, printerr)
+	ok := parse(toks, f, flag, printerr)
 	return f, ok
 
 }
 
-func parse(toks token.Tokenized, f *File, printerr func(string)) (hasError bool) {
+func parse(toks token.Tokenized, f *File, flag token.Flags, printerr func(string)) (hasError bool) {
 	p := parser{
 		src:  toks,
 		file: f,
+		flag: flag,
 	}
 
 	p.printerr = func(s string) {
@@ -51,6 +53,10 @@ func parse(toks token.Tokenized, f *File, printerr func(string)) (hasError bool)
 	defer func() {
 		hasError = p.hasError
 	}()
+
+	if flag&token.ReduceAlloc == 0 {
+		f.adjustSize(toks)
+	}
 
 	p.parsePackage()
 	p.parseImport()
@@ -115,12 +121,15 @@ func (p *parser) parseUsings() {
 		p.advance()
 		p.advance()
 
-		// TODO respect ReduceAlloc flag
-		idents := []token.Token{}
+		use := Using{}
 
 		ch = p.peek()
 
 		if ch.Kind == token.BracketOpen {
+
+			if p.flag&token.ReduceAlloc != 0 {
+				use.adjustSize(p.cur, p.src)
+			}
 
 			p.advance()
 
@@ -132,22 +141,19 @@ func (p *parser) parseUsings() {
 				}
 
 				ident := p.expect(token.Ident, "missing identifier")
-				idents = append(idents, ident)
+				use.idents = append(use.idents, ident)
 			}
 
 			p.expect(token.BracketClose, "missing closing bracket ']'")
 
 		} else {
 			ident := p.expect(token.Ident, errfmt.title("Using Declaration Error"), errfmt.desc("missing identifier"))
-			idents = append(idents, ident)
+			use.idents = []token.Token{ident}
 		}
 
-		from := p.expect(token.Ident, errfmt.title("Using Declaration Error"), errfmt.desc("missing import identifier"))
+		use.From = p.expect(token.Ident, errfmt.title("Using Declaration Error"), errfmt.desc("missing import identifier"))
 
 		p.expect(token.ParenClose, errfmt.title("Using Declaration Error"), errfmt.desc("missing closing parenthesis ')'"))
-
-		use := Using{From: from}
-		use.idents = append(use.idents, idents...)
 
 		p.file.usings = append(p.file.usings, use)
 	}
@@ -195,8 +201,11 @@ func (p *parser) parseDocument() {
 }
 
 func (p *parser) parseProperties() []Property {
-	// TODO respect ReduceAlloc flag
 	var props []Property
+
+	if p.flag&token.ReduceAlloc != 0 {
+		props = createSizedPropertySlice(p.cur, p.src)
+	}
 
 	for !p.eof() {
 
@@ -204,19 +213,24 @@ func (p *parser) parseProperties() []Property {
 			break
 		}
 
-		ident := p.expect(token.Ident, "missing property identifier")
-		p.expect(token.Colon, "missing type separator ':'")
-		Type := p.expect(token.Ident, "missing property type")
-
-		prop := Property{Ident: ident, Type: Type}
+		prop := p.parseProperty()
 		props = append(props, prop)
-
-		if ch := p.peek(); ch.Kind == token.Comma {
-			p.advance()
-		}
 	}
 
 	return props
+}
+
+func (p *parser) parseProperty() Property {
+	ident := p.expect(token.Ident, "missing property identifier")
+	p.expect(token.Colon, "missing type separator ':'")
+	Type := p.expect(token.Ident, "missing property type")
+
+	prop := Property{Ident: ident, Type: Type}
+
+	if ch := p.peek(); ch.Kind == token.Comma {
+		p.advance()
+	}
+	return prop
 }
 
 func (p *parser) parseDeclarations() {
@@ -287,8 +301,11 @@ func (p *parser) parseAttribute() Attribute {
 }
 
 func (p *parser) parseChildren() []Content {
-	// TODO respect ReduceAlloc
 	var content []Content
+
+	if p.flag&token.ReduceAlloc != 0 {
+		content = createSizedContentSlize(p.cur, p.src)
+	}
 
 loop:
 	for !p.eof() {

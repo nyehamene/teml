@@ -1,6 +1,6 @@
 (package p "view/app")
 
-(import ui "https:;;github.com/ui/ui")
+(import ui "https://github.com/ui/ui")
 
 (using fancy-button ui)
 
@@ -19,7 +19,7 @@
 		(fancy-button "Click Me")
 		-- namespaced reference
 		-- not a template \\(foo)
-		(ui/badge {value: name})))
+		(ui/badge {value: "name"})))
 
 ;; zero or more layouts per file
 ;; can be defined before or after a document
@@ -45,4 +45,4 @@
 				 , signal: "foo"
 				 }
 		(div "second child")
-		(div [] "third child")))
+		(div {} "third child")))
