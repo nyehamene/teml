@@ -246,7 +246,7 @@ func (p *parser) parseElements(eh elementholder) {
 		}
 		p.expect(token.ParanOpen, "missing opening parenthesis '('")
 		e := Element{}
-		e.Ident = p.expect(token.Ident, "missing element identifier")
+		e.Ident = p.parseNameExpr()
 
 		// tag
 		var tag Expr
