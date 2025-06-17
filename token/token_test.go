@@ -49,7 +49,7 @@ func TestScan_ident(t *testing.T) {
 func TestScan_bracket(t *testing.T) {
 	source := "([{}])"
 	expected := []token.Kind{
-		token.ParanOpen,
+		token.ParenOpen,
 		token.BracketOpen,
 		token.BraceOpen,
 		token.BraceClose,

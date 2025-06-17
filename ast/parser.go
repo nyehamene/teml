@@ -62,7 +62,7 @@ func parse(toks token.Tokenized, f *File, printerr func(string)) (hasError bool)
 }
 
 func (p *parser) parsePackage() {
-	p.expect(token.ParanOpen, "invalid delimiter")
+	p.expect(token.ParenOpen, "invalid delimiter")
 	p.expect(token.Package, "invalid declaration")
 
 	ident := p.expect(token.Ident, errfmt.title("Package Declaration Error"), errfmt.desc("missing identifier"))
@@ -81,7 +81,7 @@ func (p *parser) parseImport() {
 		ch := p.peek()
 		next := p.peekNext()
 
-		if ch.Kind != token.ParanOpen ||
+		if ch.Kind != token.ParenOpen ||
 			next.Kind != token.Import {
 			break
 		}
@@ -107,7 +107,7 @@ func (p *parser) parseUsings() {
 		ch := p.peek()
 		next := p.peekNext()
 
-		if ch.Kind != token.ParanOpen ||
+		if ch.Kind != token.ParenOpen ||
 			next.Kind != token.Using {
 			break
 		}
@@ -147,10 +147,7 @@ func (p *parser) parseUsings() {
 		p.expect(token.ParenClose, errfmt.title("Using Declaration Error"), errfmt.desc("missing closing parenthesis ')'"))
 
 		use := Using{From: from}
-		for _, ident := range idents {
-			use.idents = append(use.idents, ident)
-
-		}
+		use.idents = append(use.idents, idents...)
 
 		p.file.usings = append(p.file.usings, use)
 	}
@@ -165,11 +162,11 @@ func (p *parser) parseComponent() {
 
 	p.expect(token.BracketOpen, "missing opening square bracket '['")
 
-	p.parseProperties(&cmp)
+	cmp.properties = p.parseProperties()
 
 	p.expect(token.BracketClose, "missing closing square bracket ']'")
 
-	p.parseElements(&cmp)
+	cmp.children = p.parseChildren()
 
 	p.file.components = append(p.file.components, cmp)
 }
@@ -188,16 +185,18 @@ func (p *parser) parseDocument() {
 
 	p.expect(token.BracketOpen, "missing opening bracket '[")
 
-	p.parseProperties(&doc)
+	doc.properties = p.parseProperties()
 
 	p.expect(token.BracketClose, "missing closing bracket '[")
 
-	p.parseElements(&doc)
+	doc.children = p.parseChildren()
 
 	p.file.document = doc
 }
 
-func (p *parser) parseProperties(ph propertyholder) {
+func (p *parser) parseProperties() []Property {
+	// TODO respect ReduceAlloc flag
+	var props []Property
 
 	for !p.eof() {
 
@@ -209,19 +208,20 @@ func (p *parser) parseProperties(ph propertyholder) {
 		p.expect(token.Colon, "missing type separator ':'")
 		Type := p.expect(token.Ident, "missing property type")
 
-		pty := Property{Ident: ident, Type: Type}
-		ph.addProperty(pty)
+		prop := Property{Ident: ident, Type: Type}
+		props = append(props, prop)
 
 		if ch := p.peek(); ch.Kind == token.Comma {
 			p.advance()
 		}
 	}
 
+	return props
 }
 
 func (p *parser) parseDeclarations() {
 	for !p.eof() {
-		p.expect(token.ParanOpen, "missing opening parenthesis '('")
+		p.expect(token.ParenOpen, "missing opening parenthesis '('")
 
 		ch := p.peek()
 
@@ -239,48 +239,75 @@ func (p *parser) parseDeclarations() {
 	}
 }
 
-func (p *parser) parseElements(eh elementholder) {
-	for !p.eof() {
-		if ch := p.peek(); ch.Kind != token.ParanOpen {
-			break
-		}
-		p.expect(token.ParanOpen, "missing opening parenthesis '('")
-		e := Element{}
-		e.Ident = p.parseQualifiedName()
+func (p *parser) parseElement() Element {
+	p.expect(token.ParenOpen, "missing opening parenthesis '('")
 
-		// tag
-		var tag Expr
-		if ch := p.peek(); ch.Kind == token.Hash {
-			p.advance()
-			tag = p.parseQualifiedName()
-		}
+	e := Element{}
+	e.Ident = p.parseQualifiedName()
 
-		// attributes
-		if ch := p.peek(); ch.Kind == token.BraceOpen {
-			p.advance()
-			for !p.eof() {
-				if ch := p.peek(); ch.Kind == token.BraceClose {
-					break
-				}
+	// children
+	e.children = p.parseChildren()
 
-				at := Attribute{}
-				at.tag = tag
-				at.Ident = p.expect(token.Ident, "missing attribute key")
-				p.expect(token.Colon, "missing attribute value separator ':'")
-				at.Value = p.parseExpr()
+	p.expect(token.ParenClose, "missing closing parenthesis ')'")
+	return e
+}
 
-				if ch := p.peek(); ch.Kind == token.Comma {
-					p.advance()
-				}
+func (p *parser) parseAttribute() Attribute {
+	// tag
+	attr := Attribute{}
 
-				e.attributes = append(e.attributes, at)
-			}
-			p.expect(token.BraceClose, "missing closing square bracket ']'")
-		}
-
-		p.expect(token.ParenClose, "missing closing parenthesis ')'")
-		eh.addElement(e)
+	var tag Expr
+	if ch := p.peek(); ch.Kind == token.Hash {
+		p.advance()
+		tag = p.parseQualifiedName()
 	}
+
+	if ch := p.peek(); ch.Kind == token.BraceOpen {
+		p.advance()
+		for !p.eof() {
+			if ch := p.peek(); ch.Kind == token.BraceClose {
+				break
+			}
+
+			attr.tag = tag
+			attr.Ident = p.expect(token.Ident, "missing attribute key")
+
+			p.expect(token.Colon, "missing attribute value separator ':'")
+
+			attr.Value = p.parseExpr()
+
+			if ch := p.peek(); ch.Kind == token.Comma {
+				p.advance()
+			}
+		}
+		p.expect(token.BraceClose, "missing closing square bracket ']'")
+	}
+
+	return attr
+}
+
+func (p *parser) parseChildren() []Content {
+	// TODO respect ReduceAlloc
+	var content []Content
+
+loop:
+	for !p.eof() {
+		switch ch := p.peek(); ch.Kind {
+		case token.ParenOpen:
+			child := p.parseElement()
+			content = append(content, child)
+		case token.Hash, token.BraceOpen:
+			attr := p.parseAttribute()
+			content = append(content, attr)
+		case token.String, token.StringLine, token.StringTempl, token.StringLineTempl:
+			p.advance()
+			text := Text(ch)
+			content = append(content, text)
+		default:
+			break loop
+		}
+	}
+	return content
 }
 
 func (p *parser) parseQualifiedName() Expr {
@@ -328,6 +355,11 @@ func (p *parser) advance() {
 		return
 	}
 	next := p.cur + 1
+
+	for ch := p.peek(); ch.Kind == token.Comment; {
+		next += 1
+	}
+
 	p.cur = next
 }
 

@@ -124,7 +124,7 @@ func (t *tokenizer) singleChars() Kind {
 		kind = BracketClose
 		t.advance()
 	case '(':
-		kind = ParanOpen
+		kind = ParenOpen
 		t.advance()
 	case ')':
 		kind = ParenClose
