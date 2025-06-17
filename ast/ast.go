@@ -54,9 +54,12 @@ type Element struct {
 }
 
 type Attribute struct {
+	tag   Expr
 	Ident token.Token
 	Value token.Token
 }
+
+type PrimaryExpr token.Token
 
 type propertyholder interface {
 	addProperty(Property)
@@ -67,6 +70,15 @@ type elementholder interface {
 }
 
 type IntErrorNode int
+
+type Expr interface {
+	expr()
+}
+
+type BinaryExpr struct {
+	left  Expr
+	right Expr
+}
 
 const (
 	EOF IntErrorNode = iota
@@ -80,6 +92,9 @@ func (Document) node()  {}
 func (Component) node() {}
 
 func (IntErrorNode) node() {}
+
+func (b BinaryExpr) expr()  {}
+func (p PrimaryExpr) expr() {}
 
 func (f *File) Package() Package {
 	return f.pkg
