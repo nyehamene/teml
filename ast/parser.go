@@ -248,7 +248,14 @@ func (p *parser) parseElements(eh elementholder) {
 		e := Element{}
 		e.Ident = p.expect(token.Ident, "missing element identifier")
 
-		// parse attributes
+		// tag
+		var tag Expr
+		if ch := p.peek(); ch.Kind == token.Hash {
+			p.advance()
+			tag = p.parseNameExpr()
+		}
+
+		// attributes
 		if ch := p.peek(); ch.Kind == token.BraceOpen {
 			p.advance()
 			for !p.eof() {
@@ -257,6 +264,7 @@ func (p *parser) parseElements(eh elementholder) {
 				}
 
 				at := Attribute{}
+				at.tag = tag
 				at.Ident = p.expect(token.Ident, "missing attribute key")
 				p.expect(token.Colon, "missing attribute value separator ':'")
 				at.Value = p.expect(token.Ident, "missing attribute value")
@@ -273,6 +281,21 @@ func (p *parser) parseElements(eh elementholder) {
 		p.expect(token.ParenClose, "missing closing parenthesis ')'")
 		eh.addElement(e)
 	}
+}
+
+func (p *parser) parseNameExpr() Expr {
+	assert.Assert(p.peek().Kind == token.Ident, "expected identifier")
+	val := p.expect(token.Ident, "missing identifier")
+
+	var expr Expr = PrimaryExpr(val)
+
+	for p.peek().Kind == token.FSlash {
+		p.advance()
+		right := PrimaryExpr(p.expect(token.Ident, "missing identifier"))
+		expr = BinaryExpr{left: expr, right: right}
+	}
+
+	return expr
 }
 
 func (p *parser) expect(k token.Kind, msgs ...errmessage) pToken {

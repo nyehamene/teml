@@ -38,6 +38,9 @@ var valid_short = []string{
 	`(package p "a") (component Foo [] (div) (div))`,
 	`(package p "a") (component Foo [] (div {a: b}))`,
 	`(package p "a") (component Foo [] (div {a: b, c: d}))`,
+	`(package p "a") (component Foo [] (div #a{}))`,
+	`(package p "a") (component Foo [] (div #a/b{}))`,
+	`(package p "a") (component Foo [] (div #a/b/c{a: b}))`,
 }
 
 func TestParse_short_test(t *testing.T) {
