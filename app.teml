@@ -33,3 +33,16 @@
 	(content)
 	-- Trailing paragraph
 	(footer))
+
+(component Foo []
+	(div
+		#css/grid{ gap: "10px"
+						 , align-content: "center"
+						 , justify-items: "center"
+						 }
+		(div "first child")
+		#data{ bind: "value"
+				 , signal: "foo"
+				 }
+		(div "second child")
+		(div [] "third child")))

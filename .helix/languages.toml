@@ -12,7 +12,7 @@ name = "teml"
 scope = "source.teml"
 injection-regex = "teml"
 file-types = ["teml"]
-comment-tokens = "//"
+comment-tokens = ";"
 indent = { tab-width = 2, unit = "  " }
 roots = ["teml.mod"]
 

@@ -150,6 +150,9 @@ func (t *tokenizer) singleChars() Kind {
 	case '\n':
 		kind = Newline
 		t.advance()
+	case '#':
+		kind = Hash
+		t.advance()
 	case '"':
 		kind = t.string()
 		t.advance()
