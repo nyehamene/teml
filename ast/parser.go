@@ -417,6 +417,7 @@ func (p *parser) eof() bool {
 type stringer interface {
 	String() string
 }
+
 type errformatter struct{}
 type errmessage = string
 
