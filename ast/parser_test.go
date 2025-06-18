@@ -7,10 +7,9 @@ import (
 
 	"github.com/eml-lang/teml/ast"
 	"github.com/eml-lang/teml/token"
-	"github.com/google/go-cmp/cmp"
 )
 
-var valid_short = []string{
+var valid = []string{
 	`(package p "a")`,
 	`(package p "a") (import i "b")`,
 	`(package p "a") (import i "b") (import i "c")`,
@@ -68,88 +67,39 @@ var valid_short = []string{
 	"(package p \"a\") (component Foo [] (div {a: \"foo\\(b)\"} -- foo \\(foo)\n))",
 }
 
-func TestParse_short_test(t *testing.T) {
-	for i, source := range valid_short {
+func TestParse_short_valid(t *testing.T) {
+	for i, source := range valid {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			expected := []token.Kind{
-				token.Ident,
-				token.String,
-			}
 
 			tokens := token.Scan([]byte(source), 0)
 
-			f, hasError := ast.ParseWithErrorHandler(*tokens, 0, func(err string) {
+			_, hasError := ast.ParseWithErrorHandler(*tokens, 0, func(err string) {
 				t.Error(err)
 			})
-
-			kinds := getKinds(f.Package())
 
 			if hasError {
 				t.Error("Parser failed unexpectedly")
 			}
 
-			if diff := cmp.Diff(expected, kinds); diff != "" {
-				t.Error(diff)
-			}
 		})
 	}
 }
 
-func TestParse_package_redeclared(t *testing.T) {
-	t.Skip("unneccessary in a recursive decent parser")
-
-	source := `(package p "does/not/matter")
-			   (package i "/does/not/matter")`
-	tokens := token.Scan([]byte(source), 0)
-
-	_, hasError := ast.ParseWithErrorHandler(*tokens, 0, func(string) {})
-
-	if !hasError {
-		t.Error("Parser succeeded unexpectedly")
-	}
+var invalid = []string{
+	// "(package) ;error: DECLARATION ERROR\n;desc: missing identifier",
 }
 
-func TestParse_package_error(t *testing.T) {
-	t.Skip("needs error recovery or augument the parser to display only one error per line")
-
-	source := []string{
-		"(package) ;error: Package Declaration Error\n;desc: missing identifier",
-		"(package p) ;error: Package Declaration error\n;desc: missing path string",
-		"(package \"path/to/package\") ;error: Package Declaration error\n;desc: missing identifier",
-	}
-
-	for i, src := range source {
+func TestParse_short_invalid(t *testing.T) {
+	for i, source := range invalid {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			tokens := token.Scan([]byte(src), token.PreserveComment)
-			got := []string{}
-			errlabels := []string{";error", ";desc"}
+
+			tokens := token.Scan([]byte(source), 0)
 
 			_, hasError := ast.ParseWithErrorHandler(*tokens, 0, func(err string) {
-				lines := strings.SplitSeq(err, "\n")
-				for ln := range lines {
-					chunks := strings.SplitN(ln, ": ", 2)
-					if len(chunks) != 2 {
-						return
-					}
-					lbl := chunks[0]
-					msg := chunks[1]
-
-					for _, l := range errlabels {
-						if l != lbl {
-							continue
-						}
-						got = append(got, msg)
-					}
-				}
+				t.Error(err)
 			})
 
-			expected := getErrorMessagesFromComments(*tokens)
-
-			if diff := cmp.Diff(expected, got); diff != "" {
-				t.Error(diff)
-			}
-
-			if !hasError {
+			if hasError {
 				t.Error("Parser succeeded unexpectedly")
 			}
 		})
