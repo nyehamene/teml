@@ -3,13 +3,10 @@ package ast
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/eml-lang/teml/assert"
 	"github.com/eml-lang/teml/token"
 )
-
-type pToken = token.Token
 
 type parser struct {
 	src      token.Tokenized
@@ -21,7 +18,7 @@ type parser struct {
 }
 
 var (
-	tokenEOF pToken = pToken{Kind: -1, Pos: -1}
+	tokenEOF token.Token = token.Token{Kind: -1, Pos: -1}
 )
 
 func Parse(toks token.Tokenized, flag token.Flags) (*File, bool) {
@@ -68,13 +65,24 @@ func parse(toks token.Tokenized, f *File, flag token.Flags, printerr func(string
 }
 
 func (p *parser) parsePackage() {
+	var ident token.Token
+	var path token.Token
+	var ok bool
+
 	p.expect(token.ParenOpen, "invalid delimiter")
 	p.expect(token.Package, "invalid declaration")
 
-	ident := p.expect(token.Ident, errfmt.title("Package Declaration Error"), errfmt.desc("missing identifier"))
-	path := p.expect(token.String, errfmt.title("Package Declaration Error"), errfmt.desc("missing path string"))
+	if ident, ok = p.expect(token.Ident, "Package Declaration Error"); !ok {
+		return
+	}
 
-	p.expect(token.ParenClose, "invalid delimiter")
+	if path, ok = p.expect(token.String, "Package Declaration Error"); !ok {
+		return
+	}
+
+	if _, ok = p.expect(token.ParenClose, "invalid delimiter"); !ok {
+		return
+	}
 
 	pkg := Package{Ident: ident, Path: path}
 	p.file.pkg = pkg
@@ -95,10 +103,10 @@ func (p *parser) parseImport() {
 		p.advance()
 		p.advance()
 
-		ident := p.expect(token.Ident, errfmt.title("Import Declaration Error"), errfmt.desc("missing identifier"))
-		path := p.expect(token.String, errfmt.title("Import Declaration Error"), errfmt.desc("missing path string"))
+		ident, _ := p.expect(token.Ident, "missing identifier")
+		path, _ := p.expect(token.String, "missing path string")
 
-		p.expect(token.ParenClose, errfmt.title("Import Declaration Error"), errfmt.desc("missing closing parenthesis ')'"))
+		p.expect(token.ParenClose, "missing closing parenthesis")
 
 		imp := Import{Ident: ident, Path: path}
 		p.file.imports = append(p.file.imports, imp)
@@ -140,20 +148,20 @@ func (p *parser) parseUsings() {
 					break
 				}
 
-				ident := p.expect(token.Ident, "missing identifier")
+				ident, _ := p.expect(token.Ident, "missing identifier")
 				use.idents = append(use.idents, ident)
 			}
 
 			p.expect(token.BracketClose, "missing closing bracket ']'")
 
 		} else {
-			ident := p.expect(token.Ident, errfmt.title("Using Declaration Error"), errfmt.desc("missing identifier"))
+			ident, _ := p.expect(token.Ident, "missing identifier")
 			use.idents = []token.Token{ident}
 		}
 
-		use.From = p.expect(token.Ident, errfmt.title("Using Declaration Error"), errfmt.desc("missing import identifier"))
+		use.From, _ = p.expect(token.Ident, "missing import identifier")
 
-		p.expect(token.ParenClose, errfmt.title("Using Declaration Error"), errfmt.desc("missing closing parenthesis ')'"))
+		p.expect(token.ParenClose, "missing closing parenthesis")
 
 		p.file.usings = append(p.file.usings, use)
 	}
@@ -163,7 +171,7 @@ func (p *parser) parseComponent() {
 	assert.Assert(p.peek().Kind == token.Component, "expected keyword 'component'")
 	p.advance()
 
-	ident := p.expect(token.Ident, "missing component identifier '('")
+	ident, _ := p.expect(token.Ident, "missing component identifier '('")
 	cmp := Component{Ident: ident}
 
 	p.expect(token.BracketOpen, "missing opening square bracket '['")
@@ -221,9 +229,11 @@ func (p *parser) parseProperties() []Property {
 }
 
 func (p *parser) parseProperty() Property {
-	ident := p.expect(token.Ident, "missing property identifier")
+	ident, _ := p.expect(token.Ident, "missing property identifier")
+
 	p.expect(token.Colon, "missing type separator ':'")
-	Type := p.expect(token.Ident, "missing property type")
+
+	Type, _ := p.expect(token.Ident, "missing property type")
 
 	prop := Property{Ident: ident, Type: Type}
 
@@ -284,7 +294,7 @@ func (p *parser) parseAttribute() Attribute {
 			}
 
 			attr.tag = tag
-			attr.Ident = p.expect(token.Ident, "missing attribute key")
+			attr.Ident, _ = p.expect(token.Ident, "missing attribute key")
 
 			p.expect(token.Colon, "missing attribute value separator ':'")
 
@@ -329,13 +339,14 @@ loop:
 
 func (p *parser) parseQualifiedName() Expr {
 	assert.Assert(p.peek().Kind == token.Ident, "expected identifier")
-	val := p.expect(token.Ident, "missing identifier")
+	val, _ := p.expect(token.Ident, "missing identifier")
 
 	var expr Expr = PrimaryExpr(val)
 
 	for p.peek().Kind == token.FSlash {
 		p.advance()
-		right := PrimaryExpr(p.expect(token.Ident, "missing identifier"))
+		val, _ := p.expect(token.Ident, "missing identifier")
+		right := PrimaryExpr(val)
 		expr = BinaryExpr{left: expr, right: right}
 	}
 
@@ -351,20 +362,16 @@ func (p *parser) parseExpr() Expr {
 	return nil
 }
 
-func (p *parser) expect(k token.Kind, msgs ...errmessage) pToken {
+func (p *parser) expect(k token.Kind, msg errmessage) (token.Token, bool) {
 	ch := p.peek()
 	if ch.Kind != k {
-		exp := errfmt.expect(k)
-		got := errfmt.got(ch.Kind)
-
-		errs := make([]string, 0, len(msgs)+2)
-		errs = append(errs, msgs...)
-		errs = append(errs, exp, got)
-		msg := strings.Join(errs, "\n")
-		p.printerr(msg)
+		p.printerr(errfmt.desc(msg))
+		p.printerr(errfmt.expect(k))
+		p.printerr(errfmt.got(ch.Kind))
+		return ch, false
 	}
 	p.advance()
-	return ch
+	return ch, true
 }
 
 func (p *parser) advance() {
@@ -380,7 +387,7 @@ func (p *parser) advance() {
 	p.cur = next
 }
 
-func (p *parser) peekNext() pToken {
+func (p *parser) peekNext() token.Token {
 	next := p.cur + 1
 	size := p.src.Size()
 	if next >= size {
@@ -396,7 +403,7 @@ func (p *parser) peekNext() pToken {
 	return ch
 }
 
-func (p *parser) peek() pToken {
+func (p *parser) peek() token.Token {
 	if p.eof() {
 		return tokenEOF
 	}
