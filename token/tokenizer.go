@@ -14,6 +14,7 @@ type Flags uint
 const (
 	PreserveNewline Flags = 1 << iota
 	PreserveComment
+	ExitOnError
 	HideErrors
 	ReduceAlloc
 )

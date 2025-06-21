@@ -1,6 +1,8 @@
 package ast
 
 import (
+	"iter"
+
 	"github.com/eml-lang/teml/token"
 )
 
@@ -49,15 +51,27 @@ type Property struct {
 }
 
 type Element struct {
-	Ident      Expr
+	Ident    Expr
+	children []Content
+}
+
+type AttributeSet interface {
+	content()
+	attrs()
+}
+
+type TaggedAttributeSet struct {
+	tag        Expr
 	attributes []Attribute
-	children   []Content
+}
+
+type UntaggedAttributeSet struct {
+	attributes []Attribute
 }
 
 type Attribute struct {
-	tag   Expr
-	Ident token.Token
-	Value Expr
+	Key   token.Token
+	value Expr
 }
 
 type Content interface {
@@ -80,8 +94,7 @@ type BinaryExpr struct {
 }
 
 const (
-	EOF IntErrorNode = iota
-	badNode
+	badNode IntErrorNode = iota
 	unexpectedTokenError
 )
 
@@ -93,15 +106,46 @@ func (Component) node() {}
 
 func (IntErrorNode) node() {}
 
-func (Text) content()      {}
-func (Element) content()   {}
-func (Attribute) content() {}
+func (Text) content()                 {}
+func (Element) content()              {}
+func (TaggedAttributeSet) content()   {}
+func (UntaggedAttributeSet) content() {}
+
+func (TaggedAttributeSet) attrs()   {}
+func (UntaggedAttributeSet) attrs() {}
 
 func (b BinaryExpr) expr()  {}
 func (p PrimaryExpr) expr() {}
 
-func (f *File) Package() Package {
+func (f File) Package() Package {
 	return f.pkg
+}
+
+func (f File) Document() Document {
+	return f.document
+}
+
+func (f File) Components() iter.Seq2[int, Component] {
+	return seq(f.components, func(c Component) Component {
+		return c
+	})
+}
+
+func (c Component) Properties() iter.Seq2[int, Property] {
+	return seq(c.properties, func(p Property) Property {
+		return p
+	})
+}
+
+func seq[A any, E any](es []E, m func(E) A) iter.Seq2[int, A] {
+	return func(yield func(int, A) bool) {
+		for i, e := range es {
+			a := m(e)
+			if !yield(i, a) {
+				break
+			}
+		}
+	}
 }
 
 func (f *File) adjustSize(tok token.Tokenized) {
