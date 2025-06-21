@@ -81,6 +81,7 @@ type BinaryExpr struct {
 
 const (
 	EOF IntErrorNode = iota
+	badNode
 	unexpectedTokenError
 )
 

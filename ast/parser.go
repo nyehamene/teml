@@ -13,7 +13,6 @@ type parser struct {
 	cur      int
 	printerr func(string)
 	hasError bool
-	file     *File
 	flag     token.Flags
 }
 
@@ -29,16 +28,16 @@ func Parse(toks token.Tokenized, flag token.Flags) (*File, bool) {
 }
 
 func ParseWithErrorHandler(toks token.Tokenized, flag token.Flags, printerr func(string)) (*File, bool) {
-	f := &File{}
-	ok := parse(toks, f, flag, printerr)
+	f, ok := parse(toks, flag, printerr)
 	return f, ok
 
 }
 
-func parse(toks token.Tokenized, f *File, flag token.Flags, printerr func(string)) (hasError bool) {
+func parse(toks token.Tokenized, flag token.Flags, printerr func(string)) (*File, bool) {
+	f := &File{}
+
 	p := parser{
 		src:  toks,
-		file: f,
 		flag: flag,
 	}
 
@@ -47,165 +46,179 @@ func parse(toks token.Tokenized, f *File, flag token.Flags, printerr func(string
 		printerr(s)
 	}
 
-	defer func() {
-		hasError = p.hasError
-	}()
-
 	if flag&token.ReduceAlloc == 0 {
 		f.adjustSize(toks)
 	}
 
-	p.parsePackage()
-	p.parseImport()
-	p.parseDeclarations()
+	for !p.eof() {
+		decl, ok := p.parseDeclaration()
+		if !ok {
+			continue
+		}
+
+		switch d := decl.(type) {
+		case Package:
+			f.pkg = d
+		case Import:
+			f.imports = append(f.imports, d)
+		case Using:
+			f.usings = append(f.usings, d)
+		case Component:
+			f.components = append(f.components, d)
+		}
+	}
 
 	assert.Assert(p.eof(), "expected eof")
 
-	return
+	return f, p.hasError
 }
 
-func (p *parser) parsePackage() {
+func (p *parser) parsePackage() (Package, bool) {
 	var ident token.Token
 	var path token.Token
 	var ok bool
 
-	p.expect(token.ParenOpen, "invalid delimiter")
-	p.expect(token.Package, "invalid declaration")
-
-	if ident, ok = p.expect(token.Ident, "Package Declaration Error"); !ok {
-		return
+	if _, ok := p.expect(token.Package, "missing package keyword"); !ok {
+		return Package{}, false
 	}
 
-	if path, ok = p.expect(token.String, "Package Declaration Error"); !ok {
-		return
+	if ident, ok = p.expect(token.Ident, "missing package identifier"); !ok {
+		return Package{}, false
 	}
 
-	if _, ok = p.expect(token.ParenClose, "invalid delimiter"); !ok {
-		return
+	if path, ok = p.expect(token.String, "missing package path"); !ok {
+		return Package{}, false
 	}
 
-	pkg := Package{Ident: ident, Path: path}
-	p.file.pkg = pkg
+	return Package{Ident: ident, Path: path}, true
 }
 
-func (p *parser) parseImport() {
+func (p *parser) parseImport() (Import, bool) {
+	var ident token.Token
+	var path token.Token
+	var ok bool
 
-	for !p.eof() {
-
-		ch := p.peek()
-		next := p.peekNext()
-
-		if ch.Kind != token.ParenOpen ||
-			next.Kind != token.Import {
-			break
-		}
-
-		p.advance()
-		p.advance()
-
-		ident, _ := p.expect(token.Ident, "missing identifier")
-		path, _ := p.expect(token.String, "missing path string")
-
-		p.expect(token.ParenClose, "missing closing parenthesis")
-
-		imp := Import{Ident: ident, Path: path}
-		p.file.imports = append(p.file.imports, imp)
-
+	if _, ok = p.expect(token.Import, "missing import keyword"); !ok {
+		return Import{}, false
 	}
 
-	p.parseUsings()
+	if ident, ok = p.expect(token.Ident, "missing import identifier"); !ok {
+		return Import{}, false
+	}
+
+	if path, ok = p.expect(token.String, "missing import path string"); !ok {
+		return Import{}, false
+	}
+
+	return Import{Ident: ident, Path: path}, true
 }
 
-func (p *parser) parseUsings() {
-	for !p.eof() {
-		ch := p.peek()
-		next := p.peekNext()
+func (p *parser) parseUsing() (Using, bool) {
+	var u Using
 
-		if ch.Kind != token.ParenOpen ||
-			next.Kind != token.Using {
-			break
+	if _, ok := p.expect(token.Using, "missing using keyword"); !ok {
+		return Using{}, false
+	}
+
+	if ch := p.peek(); ch.Kind == token.BracketOpen {
+
+		p.advance()
+
+		if p.flag&token.ReduceAlloc != 0 {
+			u.adjustSize(p.cur, p.src)
 		}
 
-		p.advance()
-		p.advance()
+		for !p.eof() {
 
-		use := Using{}
-
-		ch = p.peek()
-
-		if ch.Kind == token.BracketOpen {
-
-			if p.flag&token.ReduceAlloc != 0 {
-				use.adjustSize(p.cur, p.src)
+			if id := p.peek(); id.Kind == token.BracketClose {
+				break
 			}
 
-			p.advance()
-
-			for !p.eof() {
-
-				id := p.peek()
-				if id.Kind == token.BracketClose {
-					break
-				}
-
-				ident, _ := p.expect(token.Ident, "missing identifier")
-				use.idents = append(use.idents, ident)
+			if ident, ok := p.expect(token.Ident, "missing identifier"); ok {
+				u.idents = append(u.idents, ident)
+			} else {
+				return Using{}, false
 			}
+		}
 
-			p.expect(token.BracketClose, "missing closing bracket ']'")
+		p.expect(token.BracketClose, "missing closing bracket")
 
+	} else {
+		if ident, ok := p.expect(token.Ident, "missing identifier"); ok {
+			u.idents = append(u.idents, ident)
 		} else {
-			ident, _ := p.expect(token.Ident, "missing identifier")
-			use.idents = []token.Token{ident}
+			return Using{}, false
 		}
-
-		use.From, _ = p.expect(token.Ident, "missing import identifier")
-
-		p.expect(token.ParenClose, "missing closing parenthesis")
-
-		p.file.usings = append(p.file.usings, use)
 	}
+
+	var ok bool
+	if u.From, ok = p.expect(token.Ident, "missing import identifier"); !ok {
+		return Using{}, false
+	}
+
+	return u, true
 }
 
-func (p *parser) parseComponent() {
-	assert.Assert(p.peek().Kind == token.Component, "expected keyword 'component'")
-	p.advance()
+func (p *parser) parseComponent() (Component, bool) {
+	var ident token.Token
+	var properties []Property
+	var children []Content
+	var ok bool
 
-	ident, _ := p.expect(token.Ident, "missing component identifier '('")
-	cmp := Component{Ident: ident}
+	if _, ok = p.expect(token.Component, "missing component keyword"); !ok {
+		return Component{}, false
+	}
 
-	p.expect(token.BracketOpen, "missing opening square bracket '['")
+	if ident, ok = p.expect(token.Ident, "missing component identifier"); !ok {
+		return Component{}, false
+	}
 
-	cmp.properties = p.parseProperties()
+	if _, ok = p.expect(token.BracketOpen, "missing opening square bracket '['"); !ok {
+		return Component{}, false
+	}
 
-	p.expect(token.BracketClose, "missing closing square bracket ']'")
+	properties = p.parseProperties()
 
-	cmp.children = p.parseChildren()
+	if _, ok = p.expect(token.BracketClose, "missing closing square bracket ']'"); !ok {
+		return Component{}, false
+	}
 
-	p.file.components = append(p.file.components, cmp)
+	children = p.parseChildren()
+
+	c := Component{Ident: ident, properties: properties, children: children}
+
+	return c, true
 }
 
-func (p *parser) parseDocument() {
-	assert.Assert(p.peek().Kind == token.Document, "expected keyword 'document'")
+func (p *parser) parseDocument() (Document, bool) {
+	var ident token.Token
+	var properties []Property
+	var children []Content
+	var ok bool
 
-	p.advance()
-
-	doc := Document{}
+	if _, ok = p.expect(token.Document, "missing document keyword"); !ok {
+		return Document{}, false
+	}
 
 	if ch := p.peek(); ch.Kind == token.Ident {
 		p.advance()
-		doc.Ident = ch
+		ident = ch
 	}
 
-	p.expect(token.BracketOpen, "missing opening bracket '[")
+	if _, ok = p.expect(token.BracketOpen, "missing opening bracket"); !ok {
+		return Document{}, false
+	}
 
-	doc.properties = p.parseProperties()
+	properties = p.parseProperties()
 
-	p.expect(token.BracketClose, "missing closing bracket '[")
+	if _, ok = p.expect(token.BracketClose, "missing closing bracket"); !ok {
+		return Document{}, false
+	}
 
-	doc.children = p.parseChildren()
+	children = p.parseChildren()
 
-	p.file.document = doc
+	d := Document{Ident: ident, properties: properties, children: children}
+	return d, true
 }
 
 func (p *parser) parseProperties() []Property {
@@ -243,24 +256,37 @@ func (p *parser) parseProperty() Property {
 	return prop
 }
 
-func (p *parser) parseDeclarations() {
-	for !p.eof() {
-		p.expect(token.ParenOpen, "missing opening parenthesis '('")
+func (p *parser) parseDeclaration() (Node, bool) {
+	var node Node
+	var ok bool
 
-		ch := p.peek()
-
-		switch ch.Kind {
-		case token.Component:
-			p.parseComponent()
-		case token.Document:
-			p.parseDocument()
-		default:
-			// TODO error
-			return
-		}
-
-		p.expect(token.ParenClose, "missing closing parenthesis ')'")
+	if _, ok := p.expect(token.ParenOpen, "missing opening parenthesis"); !ok {
+		return badNode, false
 	}
+
+	ch := p.peek()
+
+	switch ch.Kind {
+	case token.Package:
+		node, ok = p.parsePackage()
+	case token.Import:
+		node, ok = p.parseImport()
+	case token.Using:
+		node, ok = p.parseUsing()
+	case token.Document:
+		node, ok = p.parseDocument()
+	case token.Component:
+		node, ok = p.parseComponent()
+	default:
+		node, ok = badNode, false
+		p.advance()
+	}
+
+	if _, ok := p.expect(token.ParenClose, "missing closing parenthesis"); !ok {
+		return badNode, false
+	}
+
+	return node, ok
 }
 
 func (p *parser) parseElement() Element {
