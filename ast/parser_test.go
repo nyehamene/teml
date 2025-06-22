@@ -267,6 +267,25 @@ func TestValidCounting(t *testing.T) {
 	}
 }
 
+func FuzzParse(f *testing.F) {
+	for _, source := range valid {
+		f.Add(source)
+	}
+
+	for _, source := range valid_count {
+		f.Add(source)
+	}
+
+	f.Fuzz(func(t *testing.T, source string) {
+		tokens := token.Scan([]byte(source), 0)
+		_, hasError := parse(*tokens, 0, func(s string) {})
+
+		if hasError {
+			t.Error("parse failed unexpectedly")
+		}
+	})
+}
+
 func getFirstAttributesAttributes(f *File, document bool) ([]Attribute, bool) {
 	e, ok := getFirstElement(f, document)
 	if !ok {
@@ -316,23 +335,6 @@ func getFirstComponent(f *File) (Component, bool) {
 	return f.components[0], true
 }
 
-func getElements(f *File, document bool) ([]Element, bool) {
-	c, ok := getChildren(f, document)
-	if !ok {
-		return nil, false
-	}
-
-	var el []Element
-
-	for _, child := range c {
-		switch t := child.(type) {
-		case Element:
-			el = append(el, t)
-		}
-	}
-	return el, true
-}
-
 func getFirstElementChildren(f *File, document bool) ([]Content, bool) {
 	e, ok := getFirstElement(f, document)
 	if !ok {
@@ -363,24 +365,6 @@ func getFirstElement(f *File, document bool) (Element, bool) {
 	}
 
 	return getfirst(c.children)
-}
-
-func getFirstProperty(f *File, document bool) (Property, bool) {
-	var properties []Property
-	if document {
-		properties = f.document.properties
-	} else {
-		if len(f.components) == 0 {
-			return Property{}, false
-		}
-		properties = f.components[0].properties
-	}
-
-	if len(properties) == 0 {
-		return Property{}, false
-	}
-
-	return properties[0], true
 }
 
 type entry[T any] struct {

@@ -46,10 +46,6 @@ func parse(toks token.Tokenized, flag token.Flags, printerr func(string)) (*File
 		printerr(s)
 	}
 
-	if flag&token.ReduceAlloc != 0 {
-		f.adjustSize(toks)
-	}
-
 	type Order int
 	const (
 		OrderNone Order = iota
@@ -167,10 +163,6 @@ func (p *parser) parseUsing() (Using, bool) {
 
 		p.advance()
 
-		if p.flag&token.ReduceAlloc != 0 {
-			u.adjustSize(p.cur, p.src)
-		}
-
 		for !p.eof() {
 
 			if ch := p.peek(); ch.Kind != token.Ident {
@@ -276,10 +268,6 @@ func (p *parser) parseProperties() ([]Property, bool) {
 
 	if _, ok := p.expect(token.BracketOpen, "missing opening bracket"); !ok {
 		return nil, false
-	}
-
-	if p.flag&token.ReduceAlloc != 0 {
-		props = createSizedPropertySlice(p.cur, p.src)
 	}
 
 	for !p.eof() {
@@ -484,10 +472,6 @@ func (p *parser) parseAttribute() (Attribute, bool) {
 func (p *parser) parseChildren() ([]Content, bool) {
 	var content []Content
 
-	if p.flag&token.ReduceAlloc != 0 {
-		content = createSizedContentSlize(p.cur, p.src)
-	}
-
 	for !p.eof() {
 		switch ch := p.peek(); ch.Kind {
 		case token.ParenOpen:
@@ -649,10 +633,6 @@ type errformatter struct{}
 type errmessage = string
 
 var errfmt errformatter
-
-func (errformatter) title(msg string) errmessage {
-	return fmt.Sprintf(";error: %s", msg)
-}
 
 func (errformatter) desc(msg string) errmessage {
 	return fmt.Sprintf(";desc: %s", msg)

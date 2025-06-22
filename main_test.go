@@ -31,13 +31,13 @@ func TestScanParse(t *testing.T) {
 func BenchmarkScan(b *testing.B) {
 	for b.Loop() {
 		f := token.Scan(examplefile, 0)
-		_, _ = ast.Parse(*f, 0)
+		_, _ = ast.ParseWithErrorHandler(*f, 0, func(s string) {})
 	}
 }
 
 func BenchmarkScanReduceAlloc(b *testing.B) {
 	for b.Loop() {
 		f := token.Scan(examplefile, token.ReduceAlloc)
-		_, _ = ast.Parse(*f, token.ReduceAlloc)
+		_, _ = ast.ParseWithErrorHandler(*f, token.ReduceAlloc, func(s string) {})
 	}
 }
