@@ -4,7 +4,7 @@ import: "import";
 using: "using";
 component: "component";
 document: "document";
-layout: "layout";
+enum: "enum",
 and: "and";
 or: "or";
 not: "not";

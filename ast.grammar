@@ -18,7 +18,11 @@ templ_decl: {component} [document] {component};
 // component
 component: "(" $component $identifier_simple [properties] {string | element} ")";
 properties: "[" property "]";
-property: $identifier_simple ":" $identifier;
+property: $identifier_simple ":" type;
+
+type: $identifier | enum_type;
+
+enum_type: "(" $enum {string_quoted} ")";
 
 // document
 document: "(" $document [$identifier_simple] [properties] {string | element} ")";
