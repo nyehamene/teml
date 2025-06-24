@@ -1,5 +1,5 @@
 // root
-source: package_decl [imports {using_decl}] templ_decl;
+program: package_decl [imports {using_decl}] templ_decl;
 
 // package
 package_decl: "(" $package $identifier_simple $string ")";
@@ -20,9 +20,9 @@ component: "(" $component $identifier_simple [properties] {string | element} ")"
 properties: "[" property "]";
 property: $identifier_simple ":" type;
 
+// property type
 type: $identifier | enum_type;
-
-enum_type: "(" $enum {string_quoted} ")";
+enum_type: "(" $enum {string_quoted | number} ")";
 
 // document
 document: "(" $document [$identifier_simple] [properties] {string | element} ")";

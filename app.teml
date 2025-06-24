@@ -12,7 +12,7 @@
 
 ;; zero or more components per file
 ;; can defined before or after a document
-(component Dog [name: String age: Int]
+(component Dog [name: String age: Int color: (enum "brown" "black")]
 	(card {id: "dog-card"}
 		-- The quick brown fox jumped over the lazy dog!
 		-- The fox named \(name) is \(age) \((if (> age 1) "years" "year")) old.
