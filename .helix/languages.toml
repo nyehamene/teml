@@ -18,7 +18,7 @@ roots = ["teml.mod"]
 
 [[grammar]]
 name = "grammar"
-source = { path = "/home/hnyehamene/.local/tree-sitter/tree-sitter-grammar/" }
+source = { path = "/home/hnyehamene/.local/tree-sitter/tree-sitter-grammar" }
 
 [[grammar]]
 name = "teml"
