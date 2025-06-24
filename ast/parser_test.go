@@ -69,6 +69,9 @@ var valid = []string{
 	`(package p "a") (component Foo [] (div {} "foo \(foo)"))`,
 	"(package p \"a\") (component Foo [] (div {} -- foo \\(foo)\n))",
 	"(package p \"a\") (component Foo [] (div {a: \"foo\\(b)\"} -- foo \\(foo)\n))",
+	`(package p "path") (component C [a: (enum "A" "B")])`,
+	`(package p "path") (component C [a: (enum "A", "B")])`,
+	`(package p "path") (component C [a: (enum 0 1)])`,
 }
 
 func TestParse_short_valid(t *testing.T) {
@@ -133,6 +136,7 @@ var invalid = []string{
 	`(package p "path") (using a i) ;desc: missing import declaration`,
 	`(package p "path") (import i "path") (document []) (using a i) ;desc: unexpected using declaration`,
 	`(package p "path") (document []) (document []) ;desc: duplicate document declaration`,
+	`(package p "path") (component C [a: (enum "A" 10)]) ;desc: mismatch enum constant type`,
 }
 
 func TestParse_short_invalid(t *testing.T) {

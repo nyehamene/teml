@@ -298,7 +298,7 @@ func (p *parser) parseProperties() ([]Property, bool) {
 func (p *parser) parseProperty() (Property, bool) {
 	var ident token.Token
 	// TODO type should be a qualified identifier
-	var Type token.Token
+	var Type PropertyType
 	var ok bool
 
 	if ident, ok = p.expect(token.Ident, "missing property identifier"); !ok {
@@ -309,7 +309,62 @@ func (p *parser) parseProperty() (Property, bool) {
 		return Property{}, false
 	}
 
-	if Type, ok = p.expect(token.Ident, "missing property type"); !ok {
+	// parse property type
+	switch ch := p.peek(); ch.Kind {
+	case token.Ident:
+		p.advance()
+		Type = IdentPropertyType(ch)
+
+	case token.ParenOpen:
+		p.advance()
+
+		if _, ok := p.expect(token.Enum, "missing enum keyword"); !ok {
+			return Property{}, false
+		}
+
+		enumtype := EnumPropertyType{}
+
+		var constantKind *token.Kind
+
+	loop:
+		for !p.eof() {
+			ch := p.peek()
+
+			switch ch.Kind {
+			case token.ParenClose:
+				break loop
+
+			case token.String, token.Number:
+				if constantKind != nil && ch.Kind != *constantKind {
+					p.addError("mismatch enum constant type")
+				} else {
+					constantKind = &ch.Kind
+				}
+				enumtype.constants = append(enumtype.constants, ch)
+
+			default:
+				p.addError("invalid enum constant")
+				return Property{}, false
+			}
+
+			// reached only when a valid constant is matched
+			p.advance()
+
+			if ch := p.peek(); ch.Kind == token.Comma {
+				p.advance()
+			}
+		}
+
+		// TODO fail is enum constants is empty
+
+		if _, ok := p.expect(token.ParenClose, "missing close parenthesis"); !ok {
+			return Property{}, false
+		}
+
+		Type = enumtype
+
+	default:
+		p.addError("missing property type")
 		return Property{}, false
 	}
 

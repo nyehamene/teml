@@ -47,7 +47,17 @@ type Component struct {
 
 type Property struct {
 	Ident token.Token
-	Type  token.Token
+	Type  PropertyType
+}
+
+type PropertyType interface {
+	constant()
+}
+
+type IdentPropertyType token.Token
+
+type EnumPropertyType struct {
+	constants []token.Token
 }
 
 type Element struct {
@@ -116,6 +126,9 @@ func (UntaggedAttributeSet) attrs() {}
 
 func (b BinaryExpr) expr()  {}
 func (p PrimaryExpr) expr() {}
+
+func (i IdentPropertyType) constant() {}
+func (e EnumPropertyType) constant()  {}
 
 func (f File) Package() Package {
 	return f.pkg
