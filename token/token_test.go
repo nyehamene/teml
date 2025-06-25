@@ -9,16 +9,13 @@ import (
 )
 
 func TestScan_keyword(t *testing.T) {
-	source := "package import using component document and or not true false if enum"
+	source := "package import using component document true false if enum"
 	expected := []token.Kind{
 		token.Package,
 		token.Import,
 		token.Using,
 		token.Component,
 		token.Document,
-		token.And,
-		token.Or,
-		token.Not,
 		token.True,
 		token.False,
 		token.If,

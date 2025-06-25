@@ -12,10 +12,19 @@
 
 ;; zero or more components per file
 ;; can defined before or after a document
-(component Dog [name: String age: Int color: (enum "brown" "black")]
+(component Dog
+	[ name: String
+	, age: Int
+	, isAdult: bool
+	, color: (enum "brown" "black")
+	]
 	(card {id: "dog-card"}
 		-- The quick brown fox jumped over the lazy dog!
-		-- The fox named \(name) is \(age) \((if (> age 1) "years" "year")) old.
+		-- The fox named \(name) is \(age) \((if isAdult "years" "year")) old.
+		(div {data-message:
+						(cond color
+							"brown": "a good dog"
+							"black": "a naughty dog")})
 		(fancy-button "Click Me")
 		-- namespaced reference
 		-- not a template \\(foo)

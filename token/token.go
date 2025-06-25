@@ -39,9 +39,6 @@ const (
 	Using
 	Component
 	Document
-	And
-	Or
-	Not
 	True
 	False
 	If
@@ -90,9 +87,6 @@ var keywords = map[string]Kind{
 	Using.String():     Using,
 	Component.String(): Component,
 	Document.String():  Document,
-	And.String():       And,
-	Or.String():        Or,
-	Not.String():       Not,
 	True.String():      True,
 	False.String():     False,
 	If.String():        If,
@@ -107,9 +101,6 @@ var tokenString = map[Kind]string{
 	Using:     "using",
 	Component: "component",
 	Document:  "document",
-	And:       "and",
-	Or:        "or",
-	Not:       "not",
 	True:      "true",
 	False:     "false",
 	If:        "if",
