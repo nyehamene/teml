@@ -4,17 +4,18 @@ import: "import";
 using: "using";
 component: "component";
 document: "document";
-and: "and";
-or: "or";
-not: "not";
 true: "true";
 false: "false";
 if: "if"
+bool: "Bool";
+string: "String";
+int: "Int";
+cond: "cond";
 
 // identifier
-identifier_simple: /[a-zA-Z][a-zA-Z_-]*/;
-identifier_qualified: identifier_simple {"/" identifier_simple};
-identifier: identifier_simple | identifier_qualified;
+identifier: /[a-zA-Z][a-zA-Z_-]*/;
+member_access: identifier_simple {"/" identifier_simple};
+identifier_or_member_access: identifier | member_access;
 
 // number
 number: "0" | /[1-9][0-9]*/;
@@ -22,14 +23,31 @@ number: "0" | /[1-9][0-9]*/;
 // string
 string_quoted: /"/ /[^"]*/ /"/; 
 string_line: "-" "-" /[^\n]*/;
-string: string_quoted | stirng_line;
+string_line_cat: string_line { string_line }
+string: string_quoted | stirng_line_cat;
 
 // literals
 bool: true | false;
+
+// expresson
 literal: string | bool | number;
 
-// operator
-operator: and | or | not | ">" | "<" | "=";
+primary_expression: literal, identifier; 
+
+if_expression: "(" "if" (identifier, bool) expression [","] [expression] ")";
+
+cond_expression: "(" "cond" identifier {literal ":" expression [","]};
+
+expression: primary_expression | member_access | if_expression | cond_expression;
+
+template_expression: "\" "\" "(" (primary_expresion | if_expression | cond_expression) ")";
+
+// type
+type: identifier_or_member_access | enum;
+enum: "(" "enum" literal {literal} ")";
+
+// comment
+comment: ";" /[^\n]*/;
 
 // reserved
 layout: "layout";

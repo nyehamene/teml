@@ -1,18 +1,13 @@
+// template
+
+template: $string | element | conditional_element;
+conditional_element: if_element | cond_element;
+if_element: "(" "if" ($identifier | $bool) template [template] ")";
+cond_element: "(" "cond" ($identifier | $bool) {cond_option [","]} ")";
+cond_option: $literal ":" template;
+
 // element
-element: "(" $identifier {attribute} {content} ")"; 
+element: "(" $identifier_or_member_access {attribute | template} ")"; 
 
-// content
-content: element | string;
-
-// attribute
-attribute: ["#" $identifier] "{" [key_vals] "}";
-key_vals: key_val {[","] key_val};
-key_val: $identifier_simple ":" expression;
-
-// expression
-expression: $literal | call ;
-call: "(" func {arguments} ")";
-func: property_access | $operator;
-property_access: {$identifier_simple "."} $identifier_simple;
-arguments: argument {[","] argument};
-argument: $literal | $identifier | expression;
+attribute: ["#" $identifier_or_member_access] "{" {key_val [","]} "}";
+key_val: $identifier ":" expression;

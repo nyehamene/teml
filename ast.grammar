@@ -1,31 +1,25 @@
 // root
-program: package_decl [imports {using_decl}] templ_decl;
+program: package_decl [{import_decl} {using_decl}] [templ_decl];
 
 // package
-package_decl: "(" $package $identifier_simple $string ")";
+package_decl: "(" $package $identifier $string ")";
 
 // import
-import_decl: "(" $import $identifier_simple $string ")";
+import_decl: "(" $import $identifier $string ")";
 
 // using
-using_decl: "(" $using (using_single | using_many) $identifier_simple ")";
-using_single: $identifier_simple;
-using_many: "[" $identifier_simple {[","] $identifier_simple} "]";
+using_decl: "(" $using (using_single | using_many) $identifier ")";
+using_single: $identifier;
+using_many: "[" {$identifier [","]} "]";
 
 // templ
-templ_decl: {component} [document] {component};
+templ_decl: {component | document};
 
 // component
-component: "(" $component $identifier_simple [properties] {string | element} ")";
-properties: "[" property "]";
-property: $identifier_simple ":" type;
+properties: "[" {property [","]} "]";
+property: $identifier ":" $type;
 
-// property type
-type: $identifier | enum_type;
-enum_type: "(" $enum {string_quoted | number} ")";
+component: "(" $component $identifier [properties] {$template} ")";
 
 // document
-document: "(" $document [$identifier_simple] [properties] {string | element} ")";
-
-// utils
-imports: import_decl {import_decl};
+document: "(" $document [$identifier] [properties] {$template} ")";
