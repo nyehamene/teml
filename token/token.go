@@ -42,6 +42,7 @@ const (
 	True
 	False
 	If
+	Cond
 	Enum
 	// }} Keyword
 
@@ -90,6 +91,7 @@ var keywords = map[string]Kind{
 	True.String():      True,
 	False.String():     False,
 	If.String():        If,
+	Cond.String():      Cond,
 	Enum.String():      Enum,
 }
 
@@ -104,6 +106,7 @@ var tokenString = map[Kind]string{
 	True:      "true",
 	False:     "false",
 	If:        "if",
+	Cond:      "cond",
 	Enum:      "enum",
 
 	Ident:           "ident",
