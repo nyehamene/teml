@@ -120,6 +120,16 @@ type IfExpression struct {
 	elseBranch Expr
 }
 
+type CondExpression struct {
+	cond    Expr
+	options []CondExpressionOption
+}
+
+type CondExpressionOption struct {
+	constant Expr
+	value    Expr
+}
+
 type BinaryExpr struct {
 	left  Expr
 	right Expr
@@ -148,9 +158,10 @@ func (UntaggedAttributeSet) content() {}
 func (TaggedAttributeSet) attrs()   {}
 func (UntaggedAttributeSet) attrs() {}
 
-func (b BinaryExpr) expr()   {}
-func (p PrimaryExpr) expr()  {}
-func (e IfExpression) expr() {}
+func (b BinaryExpr) expr()     {}
+func (p PrimaryExpr) expr()    {}
+func (e IfExpression) expr()   {}
+func (e CondExpression) expr() {}
 
 func (i IdentPropertyType) constant() {}
 func (e EnumPropertyType) constant()  {}

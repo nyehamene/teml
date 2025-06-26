@@ -79,6 +79,9 @@ var valid = []string{
 	`(package p "path") (component C [] (cond f true: (div), false: (span), 0: (div), "foo": (span),))`,
 	`(package p "path") (component C [] (div {a: (if true "foo")}))`,
 	`(package p "path") (document [] (div {a: (if f "foo" 100)}))`,
+	`(package p "path") (component C [] (div {a: (cond f true: "foo")}))`,
+	`(package p "path") (document [] (div {a: (cond f true: "foo" false: 100)}))`,
+	`(package p "path") (document [] (div {a: (cond f true: "foo", false: 100, 0: true, "foo": "bar",)}))`,
 }
 
 func TestParse_short_valid(t *testing.T) {

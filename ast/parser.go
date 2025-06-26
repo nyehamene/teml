@@ -759,6 +759,8 @@ func (p *parser) parseExpr() (Expr, bool) {
 		switch ch := p.peekNext(); ch.Kind {
 		case token.If:
 			expr, ok = p.parseIfExpression()
+		case token.Cond:
+			expr, ok = p.parseCondExpression()
 		}
 
 	default:
@@ -766,6 +768,56 @@ func (p *parser) parseExpr() (Expr, bool) {
 	}
 
 	return expr, ok
+}
+
+func (p *parser) parseCondExpression() (Expr, bool) {
+	var cond Expr
+	var options []CondExpressionOption
+	var ok bool
+
+	if _, ok = p.expect(token.ParenOpen, "missing opening parenthesis"); !ok {
+		return nil, false
+	}
+
+	if _, ok = p.expect(token.Cond, "missing cond keyword"); !ok {
+		return nil, false
+	}
+
+	if cond, ok = p.parseExpr(); !ok {
+		return nil, false
+	}
+
+	for !p.eof() {
+		if ch := p.peek(); ch.Kind == token.ParenClose {
+			break
+		}
+
+		lit, ok := p.parseLiteral()
+		if !ok {
+			return nil, false
+		}
+
+		p.expect(token.Colon, "missing colon")
+
+		value, ok := p.parseExpr()
+		if !ok {
+			return nil, false
+		}
+
+		if ch := p.peek(); ch.Kind == token.Comma {
+			p.advance()
+		}
+
+		option := CondExpressionOption{constant: lit, value: value}
+		options = append(options, option)
+	}
+
+	if _, ok = p.expect(token.ParenClose, "missing closing parenthesis"); !ok {
+		return nil, false
+	}
+
+	e := CondExpression{cond: cond, options: options}
+	return e, true
 }
 
 func (p *parser) parseIfExpression() (Expr, bool) {
