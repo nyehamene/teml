@@ -509,11 +509,6 @@ func (p *parser) parseAttribute() (Attribute, bool) {
 
 	value, ok = p.parseExpr()
 	if value == nil {
-		if ok {
-			p.addError("invalid expression")
-		} else {
-			p.addError("missing attribute value")
-		}
 		return Attribute{}, false
 	}
 
@@ -593,12 +588,21 @@ func (p *parser) parseExpr() (Expr, bool) {
 	var ok bool
 
 	switch ch := p.peek(); ch.Kind {
-	case token.String, token.True, token.False, token.Number, token.StringTempl:
+	case token.True,
+		token.False,
+		token.Number,
+		token.Ident,
+		token.String,
+		token.StringTempl:
 		expr, ok = PrimaryExpr(ch), true
-	case token.Ident, token.StringLine, token.StringLineTempl:
-		expr, ok = nil, true
-	case token.ParenOpen, token.ParenClose:
+
+	case token.ParenClose,
+		token.BraceClose:
 		expr, ok = nil, false
+		p.addError("missing expression")
+	default:
+		expr, ok = nil, false
+		p.addError("invalid expression")
 	}
 
 	p.advance()

@@ -1,5 +1,4 @@
 // template
-
 template: $string | element | conditional_element;
 conditional_element: if_element | cond_element;
 if_element: "(" "if" ($identifier | $bool) template [template] ")";
