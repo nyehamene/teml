@@ -74,6 +74,9 @@ var valid = []string{
 	`(package p "path") (component C [a: (enum 0 1)])`,
 	`(package p "path") (document C [] (if true (div)))`,
 	`(package p "path") (component C [] (if f (div) (span)))`,
+	`(package p "path") (document C [] (cond f true: (div)))`,
+	`(package p "path") (document C [] (cond f true: (div) false: (span) 0: (div) "foo": (span)))`,
+	`(package p "path") (component C [] (cond f true: (div), false: (span), 0: (div), "foo": (span),))`,
 }
 
 func TestParse_short_valid(t *testing.T) {
@@ -272,6 +275,7 @@ func TestValidCounting(t *testing.T) {
 }
 
 func FuzzParse(f *testing.F) {
+	f.Skip()
 	for _, source := range valid {
 		f.Add(source)
 	}

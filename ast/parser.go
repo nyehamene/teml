@@ -226,8 +226,16 @@ func (p *parser) parseComponent() (Component, bool) {
 		return Component{}, false
 	}
 
-	if children, ok = p.parseChildren(); !ok {
-		return Component{}, false
+	for !p.eof() {
+		if ch := p.peek(); ch.Kind == token.ParenClose {
+			break
+		}
+
+		templ, ok := p.parseTemplate()
+		if !ok {
+			return Component{}, false
+		}
+		children = append(children, templ)
 	}
 
 	c := Component{Ident: ident, properties: properties, children: children}
@@ -255,8 +263,16 @@ func (p *parser) parseDocument() (Document, bool) {
 		return Document{}, false
 	}
 
-	if children, ok = p.parseChildren(); !ok {
-		return Document{}, false
+	for !p.eof() {
+		if ch := p.peek(); ch.Kind == token.ParenClose {
+			break
+		}
+
+		templ, ok := p.parseTemplate()
+		if !ok {
+			return Document{}, false
+		}
+		children = append(children, templ)
 	}
 
 	d := Document{Ident: ident, properties: properties, children: children}
@@ -425,6 +441,65 @@ func (p *parser) parseDeclaration() (Node, bool) {
 	return node, ok
 }
 
+func (p *parser) parseCondElement() (CondElement, bool) {
+	var cond Expr
+	var options []CondElementOption
+	var ok bool
+
+	if _, ok = p.expect(token.ParenOpen, "missing opening parenthesis"); !ok {
+		return CondElement{}, false
+	}
+
+	if _, ok = p.expect(token.Cond, "missing cond keyword"); !ok {
+		return CondElement{}, false
+	}
+
+	if cond, ok = p.parseExpr(); !ok {
+		return CondElement{}, false
+	}
+
+	for !p.eof() {
+
+		if ch := p.peek(); ch.Kind == token.ParenClose {
+			break
+		}
+
+		lit, ok := p.parseLiteral()
+		if !ok {
+			return CondElement{}, false
+		}
+
+		p.expect(token.Colon, "missing colon")
+
+		content, ok := p.parseTemplate()
+		if !ok {
+			return CondElement{}, false
+		}
+
+		if ch := p.peek(); ch.Kind == token.Comma {
+			p.advance()
+		}
+
+		option := CondElementOption{
+			constant: lit,
+			branch:   content,
+		}
+
+		options = append(options, option)
+	}
+
+	if _, ok := p.expect(token.ParenClose, "missing closing parenthese"); !ok {
+		return CondElement{}, false
+	}
+
+	e := CondElement{
+		cond:    cond,
+		options: options,
+	}
+
+	return e, true
+}
+
 func (p *parser) parseIfElement() (IfElement, bool) {
 	var cond Expr
 	var thenBranch Content
@@ -478,8 +553,26 @@ func (p *parser) parseElement(skipParenOpen bool) (Element, bool) {
 		return Element{}, false
 	}
 
-	if children, ok = p.parseChildren(); !ok {
-		return Element{}, false
+loop:
+	for !p.eof() {
+		switch ch := p.peek(); ch.Kind {
+		case token.ParenClose:
+			break loop
+
+		case token.Hash, token.BraceOpen:
+			attrs, ok := p.parseAttributes()
+			if !ok {
+				return Element{}, false
+			}
+			children = append(children, attrs)
+
+		default:
+			templ, ok := p.parseTemplate()
+			if !ok {
+				return Element{}, false
+			}
+			children = append(children, templ)
+		}
 	}
 
 	if _, ok = p.expect(token.ParenClose, "missing closing parenthesis"); !ok {
@@ -562,24 +655,25 @@ func (p *parser) parseTemplate() (Content, bool) {
 	switch ch := p.peek(); ch.Kind {
 	case token.ParenOpen:
 
-		// if element
 		switch ch := p.peekNext(); ch.Kind {
+
+		// if element
 		case token.If:
-			cond, ok := p.parseIfElement()
-			if !ok {
-				return nil, false
+			if cond, ok := p.parseIfElement(); ok {
+				return cond, true
 			}
 
-			return cond, true
+		// cond element
+		case token.Cond:
+			if cond, ok := p.parseCondElement(); ok {
+				return cond, true
+			}
 
-			// element
+		// element
 		case token.Ident:
-			child, ok := p.parseElement(false)
-			if !ok {
-				return nil, false
+			if child, ok := p.parseElement(false); ok {
+				return child, true
 			}
-
-			return child, true
 		}
 
 	case token.String,
@@ -590,39 +684,15 @@ func (p *parser) parseTemplate() (Content, bool) {
 		p.advance()
 		text := Text(ch)
 		return text, true
+
+	case token.Ident:
+		p.addError("invalid content")
+
+	default:
+		p.addError("missing content")
 	}
 
-	p.addError("invalid content")
 	return nil, false
-}
-
-func (p *parser) parseChildren() ([]Content, bool) {
-	var content []Content
-
-	for !p.eof() {
-		switch ch := p.peek(); ch.Kind {
-		case token.Hash, token.BraceOpen:
-			attrs, ok := p.parseAttributes()
-			if !ok {
-				return content, false
-			}
-
-			content = append(content, attrs)
-
-		case token.ParenClose:
-			return content, true
-
-		default:
-			templ, ok := p.parseTemplate()
-			if !ok {
-				return content, false
-			}
-
-			content = append(content, templ)
-		}
-	}
-
-	return content, true
 }
 
 func (p *parser) parseQualifiedName() (Expr, bool) {
@@ -649,7 +719,7 @@ func (p *parser) parseQualifiedName() (Expr, bool) {
 	return expr, true
 }
 
-func (p *parser) parseExpr() (Expr, bool) {
+func (p *parser) parseLiteral() (Expr, bool) {
 	var expr Expr
 	var ok bool
 
@@ -657,21 +727,37 @@ func (p *parser) parseExpr() (Expr, bool) {
 	case token.True,
 		token.False,
 		token.Number,
-		token.Ident,
 		token.String,
 		token.StringTempl:
+
 		expr, ok = PrimaryExpr(ch), true
 
-	case token.ParenClose,
-		token.BraceClose:
-		expr, ok = nil, false
-		p.addError("missing expression")
 	default:
-		expr, ok = nil, false
 		p.addError("invalid expression")
 	}
 
 	p.advance()
+	return expr, ok
+}
+
+func (p *parser) parseExpr() (Expr, bool) {
+	var expr Expr
+	var ok bool
+
+	switch ch := p.peek(); ch.Kind {
+	case token.ParenClose,
+		token.BraceClose:
+		expr, ok = nil, false
+		p.addError("missing expression")
+
+	case token.Ident:
+		p.advance()
+		expr, ok = PrimaryExpr(ch), true
+
+	default:
+		expr, ok = p.parseLiteral()
+	}
+
 	return expr, ok
 }
 

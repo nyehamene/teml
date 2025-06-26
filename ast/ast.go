@@ -71,6 +71,16 @@ type IfElement struct {
 	elseBranch Content
 }
 
+type CondElement struct {
+	cond    Expr
+	options []CondElementOption
+}
+
+type CondElementOption struct {
+	constant Expr
+	branch   Content
+}
+
 type AttributeSet interface {
 	content()
 	attrs()
@@ -125,6 +135,7 @@ func (IntErrorNode) node() {}
 func (Text) content()                 {}
 func (Element) content()              {}
 func (IfElement) content()            {}
+func (CondElement) content()          {}
 func (TaggedAttributeSet) content()   {}
 func (UntaggedAttributeSet) content() {}
 
