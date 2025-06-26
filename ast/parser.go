@@ -754,11 +754,53 @@ func (p *parser) parseExpr() (Expr, bool) {
 		p.advance()
 		expr, ok = PrimaryExpr(ch), true
 
+	case token.ParenOpen:
+
+		switch ch := p.peekNext(); ch.Kind {
+		case token.If:
+			expr, ok = p.parseIfExpression()
+		}
+
 	default:
 		expr, ok = p.parseLiteral()
 	}
 
 	return expr, ok
+}
+
+func (p *parser) parseIfExpression() (Expr, bool) {
+	var cond Expr
+	var thenBranch Expr
+	var elseBranch Expr
+	var ok bool
+
+	if _, ok = p.expect(token.ParenOpen, "missing opening parenthesis"); !ok {
+		return nil, false
+	}
+
+	if _, ok = p.expect(token.If, "missing if keyword"); !ok {
+		return nil, false
+	}
+
+	if cond, ok = p.parseExpr(); !ok {
+		return nil, false
+	}
+
+	if thenBranch, ok = p.parseExpr(); !ok {
+		return nil, false
+	}
+
+	if ch := p.peek(); ch.Kind != token.ParenClose {
+		if elseBranch, ok = p.parseExpr(); !ok {
+			return nil, false
+		}
+	}
+
+	if _, ok := p.expect(token.ParenClose, "missing closing parenthesis"); !ok {
+		return nil, false
+	}
+
+	return IfExpression{cond: cond, thenBranch: thenBranch, elseBranch: elseBranch}, true
 }
 
 func (p *parser) expect(k token.Kind, msg errmessage) (token.Token, bool) {

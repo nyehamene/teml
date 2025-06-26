@@ -114,6 +114,12 @@ type Expr interface {
 
 type PrimaryExpr token.Token
 
+type IfExpression struct {
+	cond       Expr
+	thenBranch Expr
+	elseBranch Expr
+}
+
 type BinaryExpr struct {
 	left  Expr
 	right Expr
@@ -142,8 +148,9 @@ func (UntaggedAttributeSet) content() {}
 func (TaggedAttributeSet) attrs()   {}
 func (UntaggedAttributeSet) attrs() {}
 
-func (b BinaryExpr) expr()  {}
-func (p PrimaryExpr) expr() {}
+func (b BinaryExpr) expr()   {}
+func (p PrimaryExpr) expr()  {}
+func (e IfExpression) expr() {}
 
 func (i IdentPropertyType) constant() {}
 func (e EnumPropertyType) constant()  {}
