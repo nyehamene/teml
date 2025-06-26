@@ -65,6 +65,12 @@ type Element struct {
 	children []Content
 }
 
+type IfElement struct {
+	cond       Expr
+	thenBranch Content
+	elseBranch Content
+}
+
 type AttributeSet interface {
 	content()
 	attrs()
@@ -118,6 +124,7 @@ func (IntErrorNode) node() {}
 
 func (Text) content()                 {}
 func (Element) content()              {}
+func (IfElement) content()            {}
 func (TaggedAttributeSet) content()   {}
 func (UntaggedAttributeSet) content() {}
 

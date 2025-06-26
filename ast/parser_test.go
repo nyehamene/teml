@@ -72,6 +72,8 @@ var valid = []string{
 	`(package p "path") (component C [a: (enum "A" "B")])`,
 	`(package p "path") (component C [a: (enum "A", "B")])`,
 	`(package p "path") (component C [a: (enum 0 1)])`,
+	`(package p "path") (document C [] (if true (div)))`,
+	`(package p "path") (component C [] (if f (div) (span)))`,
 }
 
 func TestParse_short_valid(t *testing.T) {
