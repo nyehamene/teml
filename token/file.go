@@ -32,7 +32,7 @@ func (f *File) Size() int {
 	return s
 }
 
-func (f *Tokenized) Texts() iter.Seq[string] {
+func (f *File) Texts() iter.Seq[string] {
 	return func(yield func(string) bool) {
 		for _, tok := range f.Tokens.Each() {
 			if txt, ok := f.Text(tok); ok {
@@ -44,7 +44,7 @@ func (f *Tokenized) Texts() iter.Seq[string] {
 	}
 }
 
-func (f Tokenized) Text(target Token) (string, bool) {
+func (f File) Text(target Token) (string, bool) {
 	assert.Assert(
 		f.Tokens.Size() == f.Pos.Size(),
 		"len of tokens and text are do not match",
@@ -66,7 +66,7 @@ func (f Tokenized) Text(target Token) (string, bool) {
 	return "", false
 }
 
-func (f *Tokenized) add(kind Kind, pos Pos) Position {
+func (f *File) add(kind Kind, pos Pos) Position {
 	assert.Assert(
 		f.Tokens.Size() == f.Pos.Size(),
 		"expect tokens, pos, and text to have the same len",
@@ -81,6 +81,6 @@ func (f *Tokenized) add(kind Kind, pos Pos) Position {
 	return Position(position)
 }
 
-func (f *Tokenized) addLine(line int) {
+func (f *File) addLine(line int) {
 	f.Lines.Add(line)
 }

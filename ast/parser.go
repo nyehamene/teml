@@ -10,7 +10,7 @@ import (
 )
 
 type parser struct {
-	src      token.Tokenized
+	src      token.File
 	cur      int
 	printerr func(string)
 	hasError bool
@@ -21,20 +21,20 @@ var (
 	eof token.Token = token.Token{Kind: -1, Pos: -1}
 )
 
-func Parse(toks token.Tokenized, flag token.Flags) (*File, bool) {
+func Parse(toks token.File, flag token.Flags) (*File, bool) {
 	printerr := func(s string) {
 		log.Println(s)
 	}
 	return ParseWithErrorHandler(toks, flag, printerr)
 }
 
-func ParseWithErrorHandler(toks token.Tokenized, flag token.Flags, printerr func(string)) (*File, bool) {
+func ParseWithErrorHandler(toks token.File, flag token.Flags, printerr func(string)) (*File, bool) {
 	f, ok := parse(toks, flag, printerr)
 	return f, ok
 
 }
 
-func parse(toks token.Tokenized, flag token.Flags, printerr func(string)) (*File, bool) {
+func parse(toks token.File, flag token.Flags, printerr func(string)) (*File, bool) {
 	f := &File{}
 
 	p := parser{

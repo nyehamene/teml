@@ -381,7 +381,7 @@ type entry[T any] struct {
 	value T
 }
 
-func getCountFromComment(f *token.Tokenized) iter.Seq[entry[int]] {
+func getCountFromComment(f *token.File) iter.Seq[entry[int]] {
 	return func(yield func(entry[int]) bool) {
 		for tok := range getKinds(f, token.Comment) {
 			cmt, ok := f.Text(tok)
@@ -407,7 +407,7 @@ func getCountFromComment(f *token.Tokenized) iter.Seq[entry[int]] {
 	}
 }
 
-func getErrorMessagesFromComment(f *token.Tokenized) iter.Seq[entry[string]] {
+func getErrorMessagesFromComment(f *token.File) iter.Seq[entry[string]] {
 	return func(yield func(entry[string]) bool) {
 		for tok := range getKinds(f, token.Comment) {
 			cmt, ok := f.Text(tok)
@@ -424,7 +424,7 @@ func getErrorMessagesFromComment(f *token.Tokenized) iter.Seq[entry[string]] {
 	}
 }
 
-func getKinds(f *token.Tokenized, kind token.Kind) iter.Seq[token.Token] {
+func getKinds(f *token.File, kind token.Kind) iter.Seq[token.Token] {
 	return func(yield func(token.Token) bool) {
 		for _, tok := range f.Tokens.Each() {
 			if tok.Kind != kind {

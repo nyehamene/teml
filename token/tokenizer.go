@@ -5,7 +5,7 @@ import (
 )
 
 type tokenizer struct {
-	f   *Tokenized
+	f   *File
 	cur int
 }
 
@@ -34,7 +34,7 @@ func Scan(src []byte, flags Flags) *File {
 }
 
 func count(src []byte) (lines int, size int) {
-	f := &Tokenized{src: src}
+	f := &File{src: src}
 	t := tokenizer{f: f}
 
 	for {
@@ -54,7 +54,7 @@ func count(src []byte) (lines int, size int) {
 	return lines, size
 }
 
-func scan(f *Tokenized, flags Flags) {
+func scan(f *File, flags Flags) {
 	t := tokenizer{f: f}
 
 	for {
