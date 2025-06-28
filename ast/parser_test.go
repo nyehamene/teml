@@ -1,4 +1,4 @@
-package ast
+package ast_test
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eml-lang/teml/ast"
 	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 )
@@ -91,7 +92,7 @@ func TestParse_short_valid(t *testing.T) {
 
 			tokens := token.Scan([]byte(source), 0)
 
-			_, hasError := ParseWithErrorHandler(*tokens, 0, func(err string) {
+			_, hasError := ast.ParseWithErrorHandler(*tokens, 0, func(err string) {
 				t.Error(err)
 			})
 
@@ -155,7 +156,7 @@ func TestParse_short_invalid(t *testing.T) {
 			tokens := token.Scan([]byte(source), token.PreserveComment)
 			goterrmsgs := map[string]string{}
 
-			_, hasError := ParseWithErrorHandler(*tokens, token.ExitOnError, func(err string) {
+			_, hasError := ast.ParseWithErrorHandler(*tokens, token.ExitOnError, func(err string) {
 				for e := range getEntriesFromString(err) {
 					goterrmsgs[e.key] = e.value
 				}
@@ -206,7 +207,7 @@ func TestValidCounting(t *testing.T) {
 		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
 
 			tokens := token.Scan([]byte(source), token.PreserveComment)
-			f, hasError := Parse(*tokens, 0)
+			f, hasError := ast.Parse(*tokens, 0)
 
 			if hasError {
 				t.Error("parser failed unexpectedly")
@@ -280,43 +281,23 @@ func TestValidCounting(t *testing.T) {
 	}
 }
 
-func FuzzParse(f *testing.F) {
-	f.Skip()
-	for _, source := range valid {
-		f.Add(source)
-	}
-
-	for _, source := range valid_count {
-		f.Add(source)
-	}
-
-	f.Fuzz(func(t *testing.T, source string) {
-		tokens := token.Scan([]byte(source), 0)
-		_, hasError := parse(*tokens, 0, func(s string) {})
-
-		if hasError {
-			t.Error("parse failed unexpectedly")
-		}
-	})
-}
-
-func getFirstAttributesAttributes(f *File, document bool) ([]Attribute, bool) {
+func getFirstAttributesAttributes(f *ast.File, document bool) ([]ast.Attribute, bool) {
 	e, ok := getFirstElement(f, document)
 	if !ok {
 		return nil, false
 	}
 	for _, c := range e.Children.Each() {
 		switch t := c.(type) {
-		case TaggedAttributeSet:
+		case ast.TaggedAttributeSet:
 			return t.Attributes.ItemsCopy(), true
-		case UntaggedAttributeSet:
+		case ast.UntaggedAttributeSet:
 			return t.Attributes.ItemsCopy(), true
 		}
 	}
 	return nil, false
 }
 
-func getChildren(f *File, document bool) ([]Content, bool) {
+func getChildren(f *ast.File, document bool) ([]ast.Content, bool) {
 	if document {
 		return f.Document.Children.ItemsCopy(), true
 	}
@@ -329,7 +310,7 @@ func getChildren(f *File, document bool) ([]Content, bool) {
 	return c.Children.ItemsCopy(), true
 }
 
-func getFirstProperties(f *File, document bool) ([]Property, bool) {
+func getFirstProperties(f *ast.File, document bool) ([]ast.Property, bool) {
 	if document {
 		return f.Document.Properties.ItemsCopy(), true
 	}
@@ -341,11 +322,11 @@ func getFirstProperties(f *File, document bool) ([]Property, bool) {
 	return c.Properties.ItemsCopy(), true
 }
 
-func getFirstComponent(f *File) (Component, bool) {
+func getFirstComponent(f *ast.File) (ast.Component, bool) {
 	return f.Components.Item(0)
 }
 
-func getFirstElementChildren(f *File, document bool) ([]Content, bool) {
+func getFirstElementChildren(f *ast.File, document bool) ([]ast.Content, bool) {
 	e, ok := getFirstElement(f, document)
 	if !ok {
 		return nil, false
@@ -353,15 +334,15 @@ func getFirstElementChildren(f *File, document bool) ([]Content, bool) {
 	return e.Children.ItemsCopy(), true
 }
 
-func getFirstElement(f *File, document bool) (Element, bool) {
-	getfirst := func(children slice.Slice[Content]) (Element, bool) {
+func getFirstElement(f *ast.File, document bool) (ast.Element, bool) {
+	getfirst := func(children slice.Slice[ast.Content]) (ast.Element, bool) {
 		for _, c := range children.Each() {
 			switch t := c.(type) {
-			case Element:
+			case ast.Element:
 				return t, true
 			}
 		}
-		return Element{}, false
+		return ast.Element{}, false
 	}
 
 	if document {
@@ -370,7 +351,7 @@ func getFirstElement(f *File, document bool) (Element, bool) {
 
 	c, ok := getFirstComponent(f)
 	if !ok {
-		return Element{}, false
+		return ast.Element{}, false
 	}
 
 	return getfirst(c.Children)
