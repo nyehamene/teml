@@ -4,6 +4,7 @@ import (
 	"iter"
 	"testing"
 
+	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 	"github.com/google/go-cmp/cmp"
 )
@@ -24,7 +25,7 @@ func TestScan_keyword(t *testing.T) {
 	}
 
 	f := token.Scan([]byte(source), 0)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
 		t.Error(diff)
@@ -36,7 +37,7 @@ func TestScan_ident(t *testing.T) {
 	expected := token.Ident
 
 	f := token.Scan([]byte(source), 0)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	for i, tok := range kinds {
 		if expected != tok {
@@ -57,7 +58,7 @@ func TestScan_bracket(t *testing.T) {
 	}
 
 	f := token.Scan([]byte(source), 0)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
 		t.Error(diff)
@@ -74,7 +75,7 @@ func TestScan_delimiter(t *testing.T) {
 	}
 
 	f := token.Scan([]byte(source), 0)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
 		t.Error(diff)
@@ -86,7 +87,7 @@ func TestScan_quoted_string(t *testing.T) {
 	expected := token.String
 
 	f := token.Scan([]byte(source), 0)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	for i, got := range kinds {
 		if expected != got {
@@ -100,7 +101,7 @@ func TestScan_line_string(t *testing.T) {
 	expected := token.StringLine
 
 	f := token.Scan([]byte(source), 0)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	for i, got := range kinds {
 		if expected != got {
@@ -114,7 +115,7 @@ func TestScan_quoted_string_template_string(t *testing.T) {
 	expected := token.StringTempl
 
 	f := token.Scan([]byte(source), 0)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	for i, got := range kinds {
 		if expected != got {
@@ -128,7 +129,7 @@ func TestScan_line_string_template_string(t *testing.T) {
 	expected := token.StringLineTempl
 
 	f := token.Scan([]byte(source), 0)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	for i, got := range kinds {
 		if expected != got {
@@ -144,7 +145,7 @@ func TestScan_newline(t *testing.T) {
 	expected := token.Newline
 
 	f := token.Scan([]byte(source), token.PreserveNewline)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	if len(kinds) == 0 {
 		t.Error("expected newline")
@@ -183,7 +184,7 @@ func TestScan_line_string_line(t *testing.T) {
 	}
 
 	f := token.Scan([]byte(source), 0)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
 		t.Error(diff)
@@ -201,16 +202,16 @@ func TestScan_position(t *testing.T) {
 	}
 
 	f := token.Scan([]byte(source), 0)
-	pos := getPosses(f.Posses())
+	pos := getPosses(f.Pos)
 
 	if diff := cmp.Diff(expected, pos); diff != "" {
 		t.Error(diff)
 	}
 }
 
-func getPosses(s iter.Seq[token.Pos]) []token.Pos {
+func getPosses(s slice.Slice[token.Pos]) []token.Pos {
 	pos := []token.Pos{}
-	for p := range s {
+	for _, p := range s.Each() {
 		pos = append(pos, p)
 	}
 	return pos
@@ -222,7 +223,7 @@ func TestScan_line(t *testing.T) {
 	expected := []int{7, 11}
 
 	f := token.Scan([]byte(source), 0)
-	lines := getLines(f.Lines())
+	lines := getLines(f.Lines)
 
 	if diff := cmp.Diff(expected, lines); diff != "" {
 		t.Error(diff)
@@ -234,7 +235,7 @@ func TestScan_number(t *testing.T) {
 	expected := token.Number
 
 	f := token.Scan([]byte(source), 0)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	for i, got := range kinds {
 		if expected != got {
@@ -248,7 +249,7 @@ func TestScan_comment(t *testing.T) {
 	expected := token.Comment
 
 	f := token.Scan([]byte(source), token.PreserveComment)
-	kinds := getKinds(f.Tokens())
+	kinds := getKinds(f.Tokens)
 
 	if len(kinds) == 0 {
 		t.Error("expected comment")
@@ -271,7 +272,7 @@ func TestScan_newline_after_string_line(t *testing.T) {
 	}
 
 	f := token.Scan([]byte(source), token.PreserveNewline)
-	nl := getNewlines(f.Tokens())
+	nl := getNewlines(f.Tokens)
 
 	if diff := cmp.Diff(expected, nl); diff != "" {
 		t.Error(diff)
@@ -288,16 +289,16 @@ func TestScan_newline_after_comment(t *testing.T) {
 	}
 
 	f := token.Scan([]byte(source), token.PreserveNewline)
-	nl := getKinds(f.Tokens())
+	nl := getKinds(f.Tokens)
 
 	if diff := cmp.Diff(expected, nl); diff != "" {
 		t.Error(diff)
 	}
 }
 
-func getNewlines(s iter.Seq2[int, token.Token]) []token.Kind {
+func getNewlines(s slice.Slice[token.Token]) []token.Kind {
 	kinds := []token.Kind{}
-	for _, tok := range s {
+	for _, tok := range s.Each() {
 		if tok.Kind != token.Newline {
 			continue
 		}
@@ -306,9 +307,9 @@ func getNewlines(s iter.Seq2[int, token.Token]) []token.Kind {
 	return kinds
 }
 
-func getLines(s iter.Seq[int]) []int {
+func getLines(s slice.Slice[int]) []int {
 	lines := []int{}
-	for line := range s {
+	for _, line := range s.Each() {
 		lines = append(lines, line)
 	}
 	return lines
@@ -322,9 +323,9 @@ func getTexts(s iter.Seq[string]) []string {
 	return texts
 }
 
-func getKinds(s iter.Seq2[int, token.Token]) []token.Kind {
+func getKinds(s slice.Slice[token.Token]) []token.Kind {
 	kinds := []token.Kind{}
-	for _, tok := range s {
+	for _, tok := range s.Each() {
 		kinds = append(kinds, tok.Kind)
 	}
 	return kinds

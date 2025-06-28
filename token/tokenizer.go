@@ -1,7 +1,7 @@
 package token
 
 import (
-	"github.com/eml-lang/teml/assert"
+	"github.com/eml-lang/teml/internal/assert"
 )
 
 type tokenizer struct {
@@ -19,12 +19,14 @@ const (
 	ReduceAlloc
 )
 
-func Scan(src []byte, flags Flags) *Tokenized {
-	f := Tokenized{src: src}
+func Scan(src []byte, flags Flags) *File {
+	var f File
 
 	if flags&ReduceAlloc != 0 {
 		lines, size := count(src)
-		f.adjustSize(size, lines)
+		f = *NewFile(src, size, lines)
+	} else {
+		f = File{src: src}
 	}
 
 	scan(&f, flags)

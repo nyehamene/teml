@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/eml-lang/teml/assert"
+	"github.com/eml-lang/teml/internal/assert"
+	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 )
 
@@ -68,18 +69,18 @@ func parse(toks token.Tokenized, flag token.Flags, printerr func(string)) (*File
 
 		switch d := decl.(type) {
 		case Package:
-			f.pkg = d
+			f.Package = d
 			lastOrder = OrderPackage
 
 		case Import:
-			f.imports = append(f.imports, d)
+			f.Imports.Add(d)
 			if lastOrder != OrderPackage && lastOrder != OrderImport {
 				p.addError("missing package declaration")
 			}
 			lastOrder = OrderImport
 
 		case Using:
-			f.usings = append(f.usings, d)
+			f.Usings.Add(d)
 			if lastOrder == OrderDeclaration {
 				p.addError("unexpected using declaration")
 			} else if lastOrder != OrderImport {
@@ -87,7 +88,7 @@ func parse(toks token.Tokenized, flag token.Flags, printerr func(string)) (*File
 			}
 
 		case Document:
-			f.document = d
+			f.Document = d
 			if hasDocument {
 				p.addError("duplicate document declaration")
 			}
@@ -96,7 +97,7 @@ func parse(toks token.Tokenized, flag token.Flags, printerr func(string)) (*File
 			hasDocument = true
 
 		case Component:
-			f.components = append(f.components, d)
+			f.Components.Add(d)
 			lastOrder = OrderDeclaration
 
 		default:
@@ -174,7 +175,7 @@ func (p *parser) parseUsing() (Using, bool) {
 				return Using{}, false
 			}
 
-			u.idents = append(u.idents, ident)
+			u.Idents.Add(ident)
 
 			if ch := p.peek(); ch.Kind == token.Comma {
 				p.advance()
@@ -185,7 +186,7 @@ func (p *parser) parseUsing() (Using, bool) {
 			return Using{}, false
 		}
 
-		if len(u.idents) == 0 {
+		if u.Idents.Size() == 0 {
 			p.addError("empty import alias list")
 			return Using{}, false
 		}
@@ -195,8 +196,7 @@ func (p *parser) parseUsing() (Using, bool) {
 		if !ok {
 			return Using{}, false
 		}
-
-		u.idents = append(u.idents, ident)
+		u.Idents.Add(ident)
 	}
 
 	var ok bool
@@ -238,7 +238,7 @@ func (p *parser) parseComponent() (Component, bool) {
 		children = append(children, templ)
 	}
 
-	c := Component{Ident: ident, properties: properties, children: children}
+	c := Component{Ident: ident, Properties: slice.New(properties), Children: slice.New(children)}
 
 	return c, true
 }
@@ -275,7 +275,7 @@ func (p *parser) parseDocument() (Document, bool) {
 		children = append(children, templ)
 	}
 
-	d := Document{Ident: ident, properties: properties, children: children}
+	d := Document{Ident: ident, Properties: slice.New(properties), Children: slice.New(children)}
 	return d, true
 }
 
@@ -356,7 +356,7 @@ func (p *parser) parseProperty() (Property, bool) {
 				} else {
 					constantKind = &ch.Kind
 				}
-				enumtype.constants = append(enumtype.constants, ch)
+				enumtype.Constants.Add(ch)
 
 			default:
 				p.addError("invalid enum constant")
@@ -494,7 +494,7 @@ func (p *parser) parseCondElement() (CondElement, bool) {
 
 	e := CondElement{
 		cond:    cond,
-		options: options,
+		Options: slice.New(options),
 	}
 
 	return e, true
@@ -579,7 +579,7 @@ loop:
 		return Element{}, false
 	}
 
-	e := Element{Ident: ident, children: children}
+	e := Element{Ident: ident, Children: slice.New(children)}
 	return e, true
 }
 
@@ -618,9 +618,9 @@ func (p *parser) parseAttributes() (AttributeSet, bool) {
 
 	var attrset AttributeSet
 	if tag != nil {
-		attrset = TaggedAttributeSet{tag: tag, attributes: attrs}
+		attrset = TaggedAttributeSet{tag: tag, Attributes: slice.New(attrs)}
 	} else {
-		attrset = UntaggedAttributeSet{attributes: attrs}
+		attrset = UntaggedAttributeSet{Attributes: slice.New(attrs)}
 	}
 
 	return attrset, true
@@ -816,7 +816,7 @@ func (p *parser) parseCondExpression() (Expr, bool) {
 		return nil, false
 	}
 
-	e := CondExpression{cond: cond, options: options}
+	e := CondExpression{cond: cond, Options: slice.New(options)}
 	return e, true
 }
 
@@ -896,7 +896,7 @@ func (p *parser) advance() {
 func (p *parser) skipComments() {
 	for !p.eof() {
 		next := p.cur
-		ch, ok := p.src.Token(next)
+		ch, ok := p.src.Tokens.Item(next)
 		if !ok {
 			break
 		}
@@ -913,7 +913,7 @@ func (p *parser) peekNext() token.Token {
 		return eof
 	}
 
-	tok, ok := p.src.Token(next)
+	tok, ok := p.src.Tokens.Item(next)
 	if !ok {
 		return eof
 	}
@@ -927,7 +927,7 @@ func (p *parser) peek() token.Token {
 	}
 
 	next := p.cur
-	node, ok := p.src.Token(next)
+	node, ok := p.src.Tokens.Item(next)
 	if !ok {
 		return eof
 	}

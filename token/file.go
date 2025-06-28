@@ -3,13 +3,22 @@ package token
 import (
 	"iter"
 
-	"github.com/eml-lang/teml/assert"
+	"github.com/eml-lang/teml/internal/assert"
+	"github.com/eml-lang/teml/internal/slice"
 )
 
-type Tokenized struct {
-	tokens []Token
-	pos    []Pos
-	lines  []int
+func NewFile(src []byte, size int, lines int) *File {
+	f := File{src: src}
+	f.Tokens = slice.Sized[Token](size)
+	f.Pos = slice.Sized[Pos](size)
+	f.Lines = slice.Sized[int](lines)
+	return &f
+}
+
+type File struct {
+	Tokens slice.Slice[Token]
+	Pos    slice.Slice[Pos]
+	Lines  slice.Slice[int]
 	src    []byte
 }
 
@@ -18,35 +27,14 @@ type Pos struct {
 	End   int
 }
 
-func (f *Tokenized) adjustSize(size int, lines int) {
-	f.tokens = make([]Token, 0, size)
-	f.pos = make([]Pos, 0, size)
-	f.lines = make([]int, 0, lines)
+func (f *File) Size() int {
+	s := f.Tokens.Size()
+	return s
 }
 
-func (f *Tokenized) TokensFrom(pos int) iter.Seq2[int, Token] {
-	return func(yield func(int, Token) bool) {
-		for i := 0; pos < len(f.tokens); pos++ {
-			if ch := f.tokens[pos]; !yield(i, ch) {
-				break
-			}
-		}
-	}
-}
-
-func (f *Tokenized) Tokens() iter.Seq2[int, Token] {
-	return func(yield func(int, Token) bool) {
-		for i, t := range f.tokens {
-			if !yield(i, t) {
-				break
-			}
-		}
-	}
-}
-
-func (f Tokenized) Texts() iter.Seq[string] {
+func (f *Tokenized) Texts() iter.Seq[string] {
 	return func(yield func(string) bool) {
-		for _, tok := range f.Tokens() {
+		for _, tok := range f.Tokens.Each() {
 			if txt, ok := f.Text(tok); ok {
 				if !yield(txt) {
 					return
@@ -56,50 +44,22 @@ func (f Tokenized) Texts() iter.Seq[string] {
 	}
 }
 
-func (f Tokenized) Posses() iter.Seq[Pos] {
-	return func(yield func(Pos) bool) {
-		for _, t := range f.pos {
-			if !yield(t) {
-				return
-			}
-		}
-	}
-}
-
-func (f Tokenized) Lines() iter.Seq[int] {
-	return func(yield func(int) bool) {
-		for _, l := range f.lines {
-			if !yield(l) {
-				return
-			}
-		}
-	}
-}
-
-func (f Tokenized) Size() int {
-	s := len(f.tokens)
-	return s
-}
-
-func (f Tokenized) Token(i int) (Token, bool) {
-	if i >= f.Size() {
-		return Token{}, false
-	}
-	tok := f.tokens[i]
-	return tok, true
-}
-
 func (f Tokenized) Text(target Token) (string, bool) {
 	assert.Assert(
-		len(f.tokens) == len(f.pos),
+		f.Tokens.Size() == f.Pos.Size(),
 		"len of tokens and text are do not match",
 	)
 
-	for i, tok := range f.Tokens() {
+	for i, tok := range f.Tokens.Each() {
 		if target != tok {
 			continue
 		}
-		pos := f.pos[i]
+
+		pos, ok := f.Pos.Item(i)
+		if !ok {
+			return "", false
+		}
+
 		txt := f.src[pos.Start:pos.End]
 		return string(txt), true
 	}
@@ -108,19 +68,19 @@ func (f Tokenized) Text(target Token) (string, bool) {
 
 func (f *Tokenized) add(kind Kind, pos Pos) Position {
 	assert.Assert(
-		len(f.tokens) == len(f.pos),
+		f.Tokens.Size() == f.Pos.Size(),
 		"expect tokens, pos, and text to have the same len",
 	)
 
-	position := len(f.tokens)
+	position := f.Tokens.Size()
 	p := Position(position)
 	tok := newToken(kind, p)
 
-	f.tokens = append(f.tokens, tok)
-	f.pos = append(f.pos, pos)
+	f.Tokens.Add(tok)
+	f.Pos.Add(pos)
 	return Position(position)
 }
 
 func (f *Tokenized) addLine(line int) {
-	f.lines = append(f.lines, line)
+	f.Lines.Add(line)
 }

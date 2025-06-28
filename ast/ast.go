@@ -1,21 +1,37 @@
 package ast
 
 import (
-	"iter"
-
+	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 )
 
-type File struct {
-	pkg        Package
-	imports    []Import
-	usings     []Using
-	document   Document
-	components []Component
-}
-
 type Node interface {
 	node()
+}
+
+type PropertyType interface {
+	constant()
+}
+
+type AttributeSet interface {
+	content()
+	attrs()
+}
+
+type Content interface {
+	content()
+}
+
+type Expr interface {
+	expr()
+}
+
+type File struct {
+	Package    Package
+	Document   Document
+	Imports    slice.Slice[Import]
+	Usings     slice.Slice[Using]
+	Components slice.Slice[Component]
 }
 
 type Package struct {
@@ -29,20 +45,20 @@ type Import struct {
 }
 
 type Using struct {
-	idents []token.Token
+	Idents slice.Slice[token.Token]
 	From   token.Token
 }
 
 type Document struct {
 	Ident      token.Token
-	properties []Property
-	children   []Content
+	Properties slice.Slice[Property]
+	Children   slice.Slice[Content]
 }
 
 type Component struct {
 	Ident      token.Token
-	properties []Property
-	children   []Content
+	Properties slice.Slice[Property]
+	Children   slice.Slice[Content]
 }
 
 type Property struct {
@@ -50,19 +66,15 @@ type Property struct {
 	Type  PropertyType
 }
 
-type PropertyType interface {
-	constant()
-}
-
 type IdentPropertyType token.Token
 
 type EnumPropertyType struct {
-	constants []token.Token
+	Constants slice.Slice[token.Token]
 }
 
 type Element struct {
 	Ident    Expr
-	children []Content
+	Children slice.Slice[Content]
 }
 
 type IfElement struct {
@@ -73,7 +85,7 @@ type IfElement struct {
 
 type CondElement struct {
 	cond    Expr
-	options []CondElementOption
+	Options slice.Slice[CondElementOption]
 }
 
 type CondElementOption struct {
@@ -81,18 +93,13 @@ type CondElementOption struct {
 	branch   Content
 }
 
-type AttributeSet interface {
-	content()
-	attrs()
-}
-
 type TaggedAttributeSet struct {
 	tag        Expr
-	attributes []Attribute
+	Attributes slice.Slice[Attribute]
 }
 
 type UntaggedAttributeSet struct {
-	attributes []Attribute
+	Attributes slice.Slice[Attribute]
 }
 
 type Attribute struct {
@@ -100,17 +107,9 @@ type Attribute struct {
 	value Expr
 }
 
-type Content interface {
-	content()
-}
-
 type Text token.Token
 
 type IntErrorNode int
-
-type Expr interface {
-	expr()
-}
 
 type PrimaryExpr token.Token
 
@@ -122,7 +121,7 @@ type IfExpression struct {
 
 type CondExpression struct {
 	cond    Expr
-	options []CondExpressionOption
+	Options slice.Slice[CondExpressionOption]
 }
 
 type CondExpressionOption struct {
@@ -137,7 +136,6 @@ type BinaryExpr struct {
 
 const (
 	badNode IntErrorNode = iota
-	unexpectedTokenError
 )
 
 func (Package) node()   {}
@@ -165,34 +163,3 @@ func (e CondExpression) expr() {}
 
 func (i IdentPropertyType) constant() {}
 func (e EnumPropertyType) constant()  {}
-
-func (f File) Package() Package {
-	return f.pkg
-}
-
-func (f File) Document() Document {
-	return f.document
-}
-
-func (f File) Components() iter.Seq2[int, Component] {
-	return seq(f.components, func(c Component) Component {
-		return c
-	})
-}
-
-func (c Component) Properties() iter.Seq2[int, Property] {
-	return seq(c.properties, func(p Property) Property {
-		return p
-	})
-}
-
-func seq[A any, E any](es []E, m func(E) A) iter.Seq2[int, A] {
-	return func(yield func(int, A) bool) {
-		for i, e := range es {
-			a := m(e)
-			if !yield(i, a) {
-				break
-			}
-		}
-	}
-}

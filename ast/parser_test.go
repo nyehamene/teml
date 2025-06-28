@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 )
 
@@ -304,12 +305,12 @@ func getFirstAttributesAttributes(f *File, document bool) ([]Attribute, bool) {
 	if !ok {
 		return nil, false
 	}
-	for _, c := range e.children {
+	for _, c := range e.Children.Each() {
 		switch t := c.(type) {
 		case TaggedAttributeSet:
-			return t.attributes, true
+			return t.Attributes.ItemsCopy(), true
 		case UntaggedAttributeSet:
-			return t.attributes, true
+			return t.Attributes.ItemsCopy(), true
 		}
 	}
 	return nil, false
@@ -317,7 +318,7 @@ func getFirstAttributesAttributes(f *File, document bool) ([]Attribute, bool) {
 
 func getChildren(f *File, document bool) ([]Content, bool) {
 	if document {
-		return f.document.children, true
+		return f.Document.Children.ItemsCopy(), true
 	}
 
 	c, ok := getFirstComponent(f)
@@ -325,27 +326,23 @@ func getChildren(f *File, document bool) ([]Content, bool) {
 		return nil, false
 	}
 
-	return c.children, true
+	return c.Children.ItemsCopy(), true
 }
 
 func getFirstProperties(f *File, document bool) ([]Property, bool) {
 	if document {
-		return f.document.properties, true
+		return f.Document.Properties.ItemsCopy(), true
 	}
 
 	c, ok := getFirstComponent(f)
 	if !ok {
 		return nil, false
 	}
-	return c.properties, true
+	return c.Properties.ItemsCopy(), true
 }
 
 func getFirstComponent(f *File) (Component, bool) {
-	if len(f.components) == 0 {
-		return Component{}, false
-	}
-
-	return f.components[0], true
+	return f.Components.Item(0)
 }
 
 func getFirstElementChildren(f *File, document bool) ([]Content, bool) {
@@ -353,13 +350,12 @@ func getFirstElementChildren(f *File, document bool) ([]Content, bool) {
 	if !ok {
 		return nil, false
 	}
-
-	return e.children, true
+	return e.Children.ItemsCopy(), true
 }
 
 func getFirstElement(f *File, document bool) (Element, bool) {
-	getfirst := func(children []Content) (Element, bool) {
-		for _, c := range children {
+	getfirst := func(children slice.Slice[Content]) (Element, bool) {
+		for _, c := range children.Each() {
 			switch t := c.(type) {
 			case Element:
 				return t, true
@@ -369,7 +365,7 @@ func getFirstElement(f *File, document bool) (Element, bool) {
 	}
 
 	if document {
-		return getfirst(f.document.children)
+		return getfirst(f.Document.Children)
 	}
 
 	c, ok := getFirstComponent(f)
@@ -377,7 +373,7 @@ func getFirstElement(f *File, document bool) (Element, bool) {
 		return Element{}, false
 	}
 
-	return getfirst(c.children)
+	return getfirst(c.Children)
 }
 
 type entry[T any] struct {
@@ -387,7 +383,7 @@ type entry[T any] struct {
 
 func getCountFromComment(f *token.Tokenized) iter.Seq[entry[int]] {
 	return func(yield func(entry[int]) bool) {
-		for tok := range getKind(f, token.Comment) {
+		for tok := range getKinds(f, token.Comment) {
 			cmt, ok := f.Text(tok)
 			if !ok {
 				continue
@@ -413,7 +409,7 @@ func getCountFromComment(f *token.Tokenized) iter.Seq[entry[int]] {
 
 func getErrorMessagesFromComment(f *token.Tokenized) iter.Seq[entry[string]] {
 	return func(yield func(entry[string]) bool) {
-		for tok := range getKind(f, token.Comment) {
+		for tok := range getKinds(f, token.Comment) {
 			cmt, ok := f.Text(tok)
 			if !ok {
 				continue
@@ -428,9 +424,9 @@ func getErrorMessagesFromComment(f *token.Tokenized) iter.Seq[entry[string]] {
 	}
 }
 
-func getKind(f *token.Tokenized, kind token.Kind) iter.Seq[token.Token] {
+func getKinds(f *token.Tokenized, kind token.Kind) iter.Seq[token.Token] {
 	return func(yield func(token.Token) bool) {
-		for _, tok := range f.Tokens() {
+		for _, tok := range f.Tokens.Each() {
 			if tok.Kind != kind {
 				continue
 			}
