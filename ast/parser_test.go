@@ -92,7 +92,7 @@ func TestParse_short_valid(t *testing.T) {
 
 			tokens := token.Scan([]byte(source), 0)
 
-			_, hasError := ast.ParseWithErrorHandler(*tokens, 0, func(err string) {
+			_, hasError := ast.ParseWithErrorHandler(tokens, 0, func(err string) {
 				t.Error(err)
 			})
 
@@ -156,7 +156,7 @@ func TestParse_short_invalid(t *testing.T) {
 			tokens := token.Scan([]byte(source), token.PreserveComment)
 			goterrmsgs := map[string]string{}
 
-			_, hasError := ast.ParseWithErrorHandler(*tokens, token.ExitOnError, func(err string) {
+			_, hasError := ast.ParseWithErrorHandler(tokens, token.ExitOnError, func(err string) {
 				for e := range getEntriesFromString(err) {
 					goterrmsgs[e.key] = e.value
 				}
@@ -189,7 +189,7 @@ var valid_count = []string{
 	`(document [] (div (one (one)))) ;document_content: 1`,
 	`(document [] (div (one) (two) (three))) ;document_nested: 3`,
 	`(document [] (div "one" "two")) ;document_nested: 2`,
-	"(document [] (div --one\n --two\n --three\n --four\n)) ;document_nested: 4",
+	"(document [] (div --one\n --two\n --three\n --four\n)) ;document_nested: 1",
 	"(document [] (div \"one\" --one\n (one))) ;document_nested: 3",
 
 	`(component F [a: A, b: B]) ;property: 2`,
@@ -198,7 +198,7 @@ var valid_count = []string{
 	`(component F [] (div (one (one)))) ;content: 1`,
 	`(component F [] (div (one) (two) (three))) ;nested: 3`,
 	`(component F [] (div "one" "two")) ;nested: 2`,
-	"(component F [] (div --one\n --two\n --three\n --four\n)) ;nested: 4",
+	"(component F [] (div --one\n --two\n --three\n --four\n)) ;nested: 1",
 	"(component F [] (div \"one\" --one\n (one))) ;nested: 3",
 }
 
@@ -207,7 +207,7 @@ func TestValidCounting(t *testing.T) {
 		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
 
 			tokens := token.Scan([]byte(source), token.PreserveComment)
-			f, hasError := ast.Parse(*tokens, 0)
+			f, hasError := ast.Parse(tokens, 0)
 
 			if hasError {
 				t.Error("parser failed unexpectedly")

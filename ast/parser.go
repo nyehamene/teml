@@ -10,7 +10,7 @@ import (
 )
 
 type parser struct {
-	src      token.File
+	src      *token.File
 	cur      int
 	printerr func(string)
 	hasError bool
@@ -21,20 +21,20 @@ var (
 	eof token.Token = token.Token{Kind: -1, Pos: -1}
 )
 
-func Parse(toks token.File, flag token.Flags) (*File, bool) {
+func Parse(toks *token.File, flag token.Flags) (*File, bool) {
 	printerr := func(s string) {
 		log.Println(s)
 	}
 	return ParseWithErrorHandler(toks, flag, printerr)
 }
 
-func ParseWithErrorHandler(toks token.File, flag token.Flags, printerr func(string)) (*File, bool) {
+func ParseWithErrorHandler(toks *token.File, flag token.Flags, printerr func(string)) (*File, bool) {
 	f, ok := parse(toks, flag, printerr)
 	return f, ok
 
 }
 
-func parse(toks token.File, flag token.Flags, printerr func(string)) (*File, bool) {
+func parse(toks *token.File, flag token.Flags, printerr func(string)) (*File, bool) {
 	f := &File{}
 
 	p := parser{
@@ -676,14 +676,29 @@ func (p *parser) parseTemplate() (Content, bool) {
 			}
 		}
 
-	case token.String,
-		token.StringLine,
-		token.StringTempl,
+	case token.String, token.StringTempl:
+		p.advance()
+		text := Text(ch)
+		return Text(text), true
+
+	case token.StringLine,
 		token.StringLineTempl:
 
 		p.advance()
-		text := Text(ch)
-		return text, true
+		textGroup := TextGroup{}
+		textGroup = append(textGroup, Text(ch))
+
+		for !p.eof() {
+			ch := p.peek()
+			if ch.Kind != token.StringLine && ch.Kind != token.StringLineTempl {
+				break
+			}
+
+			textGroup = append(textGroup, Text(ch))
+			p.advance()
+		}
+
+		return textGroup, true
 
 	case token.Ident:
 		p.addError("invalid content")

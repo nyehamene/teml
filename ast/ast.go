@@ -109,6 +109,8 @@ type Attribute struct {
 
 type Text token.Token
 
+type TextGroup []Text
+
 type IntErrorNode int
 
 type PrimaryExpr token.Token
@@ -147,6 +149,7 @@ func (Component) node() {}
 func (IntErrorNode) node() {}
 
 func (Text) content()                 {}
+func (TextGroup) content()            {}
 func (Element) content()              {}
 func (IfElement) content()            {}
 func (CondElement) content()          {}
