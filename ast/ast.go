@@ -73,8 +73,9 @@ type EnumPropertyType struct {
 }
 
 type Element struct {
-	Ident    Expr
-	Children slice.Slice[Content]
+	Ident      Expr
+	Attributes slice.Slice[AttributeSet]
+	Children   slice.Slice[Content]
 }
 
 type IfElement struct {

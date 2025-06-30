@@ -286,7 +286,7 @@ func getFirstAttributesAttributes(f *ast.File, document bool) ([]ast.Attribute, 
 	if !ok {
 		return nil, false
 	}
-	for _, c := range e.Children.Each() {
+	for _, c := range e.Attributes.Each() {
 		switch t := c.(type) {
 		case ast.TaggedAttributeSet:
 			return t.Attributes.ItemsCopy(), true

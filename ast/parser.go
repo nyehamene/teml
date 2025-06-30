@@ -393,7 +393,6 @@ func (p *parser) parseDeclaration() (Node, bool) {
 	var ok bool
 
 	if _, ok := p.expect(token.ParenOpen, "missing opening parenthesis"); !ok {
-		// TODO move to parse method
 		p.recover()
 		return badNode, false
 	}
@@ -540,6 +539,7 @@ func (p *parser) parseIfElement() (IfElement, bool) {
 
 func (p *parser) parseElement(skipParenOpen bool) (Element, bool) {
 	var ident Expr
+	var attributes []AttributeSet
 	var children []Content
 	var ok bool
 
@@ -564,7 +564,7 @@ loop:
 			if !ok {
 				return Element{}, false
 			}
-			children = append(children, attrs)
+			attributes = append(attributes, attrs)
 
 		default:
 			templ, ok := p.parseTemplate()
@@ -579,7 +579,7 @@ loop:
 		return Element{}, false
 	}
 
-	e := Element{Ident: ident, Children: slice.New(children)}
+	e := Element{Ident: ident, Attributes: slice.New(attributes), Children: slice.New(children)}
 	return e, true
 }
 
