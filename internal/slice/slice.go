@@ -1,6 +1,8 @@
 package slice
 
-import "iter"
+import (
+	"iter"
+)
 
 func New[T any](data []T) Slice[T] {
 	return Slice[T]{data}
@@ -31,7 +33,7 @@ func (s *Slice[T]) Add(val T) *Slice[T] {
 }
 
 func (s *Slice[T]) Item(index int) (T, bool) {
-	if l := len(s.items); index >= l {
+	if l := len(s.items); index >= l || index < 0 {
 		var zero T
 		return zero, false
 	}

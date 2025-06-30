@@ -78,7 +78,7 @@ func (f *File) add(kind Kind, pos Pos) Position {
 
 	f.Tokens.Add(tok)
 	f.Pos.Add(pos)
-	return Position(position)
+	return p
 }
 
 func (f *File) addLine(line int) {

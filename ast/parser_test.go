@@ -92,11 +92,9 @@ func TestParse_short_valid(t *testing.T) {
 
 			tokens := token.Scan([]byte(source), 0)
 
-			_, hasError := ast.ParseWithErrorHandler(tokens, 0, func(err string) {
-				t.Error(err)
-			})
+			file := ast.Parse(tokens, 0)
 
-			if hasError {
+			if file.HasError() {
 				t.Error("Parser failed unexpectedly")
 			}
 
@@ -156,13 +154,15 @@ func TestParse_short_invalid(t *testing.T) {
 			tokens := token.Scan([]byte(source), token.PreserveComment)
 			goterrmsgs := map[string]string{}
 
-			_, hasError := ast.ParseWithErrorHandler(tokens, token.ExitOnError, func(err string) {
-				for e := range getEntriesFromString(err) {
+			file := ast.Parse(tokens, token.ExitOnError)
+
+			for _, err := range file.Errors.Each() {
+				for e := range getEntriesFromString(err.Message) {
 					goterrmsgs[e.key] = e.value
 				}
-			})
+			}
 
-			if !hasError {
+			if !file.HasError() {
 				t.Error("Parser succeeded unexpectedly")
 			}
 
@@ -207,9 +207,9 @@ func TestValidCounting(t *testing.T) {
 		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
 
 			tokens := token.Scan([]byte(source), token.PreserveComment)
-			f, hasError := ast.Parse(tokens, 0)
+			file := ast.Parse(tokens, 0)
 
-			if hasError {
+			if file.HasError() {
 				t.Error("parser failed unexpectedly")
 			}
 
@@ -222,7 +222,7 @@ func TestValidCounting(t *testing.T) {
 					fallthrough
 
 				case "property":
-					props, ok := getFirstProperties(f, document)
+					props, ok := getFirstProperties(file, document)
 					if !ok {
 						t.Error("no properties found")
 					}
@@ -236,7 +236,7 @@ func TestValidCounting(t *testing.T) {
 					fallthrough
 
 				case "attribute":
-					attrs, ok := getFirstAttributesAttributes(f, document)
+					attrs, ok := getFirstAttributesAttributes(file, document)
 					if !ok {
 						t.Error("no element found")
 					}
@@ -250,7 +250,7 @@ func TestValidCounting(t *testing.T) {
 					fallthrough
 
 				case "content":
-					children, ok := getChildren(f, document)
+					children, ok := getChildren(file, document)
 					if !ok {
 						t.Error("no children found")
 					}
@@ -264,7 +264,7 @@ func TestValidCounting(t *testing.T) {
 					fallthrough
 
 				case "nested":
-					el, ok := getFirstElementChildren(f, document)
+					el, ok := getFirstElementChildren(file, document)
 					if !ok {
 						t.Error("no element found")
 					}

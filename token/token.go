@@ -7,7 +7,7 @@ type Token struct {
 	Pos  Position
 }
 
-type Position int
+type Position = int
 
 //go:generate stringer -type=Kind
 type Kind int

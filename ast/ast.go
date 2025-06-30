@@ -26,14 +26,6 @@ type Expr interface {
 	expr()
 }
 
-type File struct {
-	Package    Package
-	Document   Document
-	Imports    slice.Slice[Import]
-	Usings     slice.Slice[Using]
-	Components slice.Slice[Component]
-}
-
 type Package struct {
 	Ident token.Token
 	Path  token.Token

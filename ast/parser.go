@@ -1,52 +1,33 @@
 package ast
 
 import (
-	"fmt"
-	"log"
-
 	"github.com/eml-lang/teml/internal/assert"
 	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 )
 
 type parser struct {
-	src      *token.File
-	cur      int
-	printerr func(string)
-	hasError bool
-	flag     token.Flags
+	src  *token.File
+	dst  *File
+	cur  int
+	flag token.Flags
 }
 
 var (
 	eof token.Token = token.Token{Kind: -1, Pos: -1}
 )
 
-func Parse(toks *token.File, flag token.Flags) (*File, bool) {
-	printerr := func(s string) {
-		log.Println(s)
-	}
-	return ParseWithErrorHandler(toks, flag, printerr)
-}
-
-func ParseWithErrorHandler(toks *token.File, flag token.Flags, printerr func(string)) (*File, bool) {
-	f, ok := parse(toks, flag, printerr)
-	return f, ok
-
-}
-
-func parse(toks *token.File, flag token.Flags, printerr func(string)) (*File, bool) {
-	f := &File{}
-
+func Parse(toks *token.File, flag token.Flags) *File {
 	p := parser{
 		src:  toks,
 		flag: flag,
+		dst:  &File{},
 	}
+	p.parse(flag)
+	return p.dst
+}
 
-	p.printerr = func(s string) {
-		p.hasError = true
-		printerr(s)
-	}
-
+func (p *parser) parse(flag token.Flags) {
 	type Order int
 	const (
 		OrderNone Order = iota
@@ -62,25 +43,25 @@ func parse(toks *token.File, flag token.Flags, printerr func(string)) (*File, bo
 		decl, ok := p.parseDeclaration()
 		if !ok {
 			if flag&token.ExitOnError != 0 {
-				return f, p.hasError
+				return
 			}
 			continue
 		}
 
 		switch d := decl.(type) {
 		case Package:
-			f.Package = d
+			p.dst.Package = d
 			lastOrder = OrderPackage
 
 		case Import:
-			f.Imports.Add(d)
+			p.dst.Imports.Add(d)
 			if lastOrder != OrderPackage && lastOrder != OrderImport {
 				p.addError("missing package declaration")
 			}
 			lastOrder = OrderImport
 
 		case Using:
-			f.Usings.Add(d)
+			p.dst.Usings.Add(d)
 			if lastOrder == OrderDeclaration {
 				p.addError("unexpected using declaration")
 			} else if lastOrder != OrderImport {
@@ -88,7 +69,7 @@ func parse(toks *token.File, flag token.Flags, printerr func(string)) (*File, bo
 			}
 
 		case Document:
-			f.Document = d
+			p.dst.Document = d
 			if hasDocument {
 				p.addError("duplicate document declaration")
 			}
@@ -97,7 +78,7 @@ func parse(toks *token.File, flag token.Flags, printerr func(string)) (*File, bo
 			hasDocument = true
 
 		case Component:
-			f.Components.Add(d)
+			p.dst.Components.Add(d)
 			lastOrder = OrderDeclaration
 
 		default:
@@ -106,8 +87,6 @@ func parse(toks *token.File, flag token.Flags, printerr func(string)) (*File, bo
 	}
 
 	assert.Assert(p.eof(), "expected eof")
-
-	return f, p.hasError
 }
 
 func (p *parser) parsePackage() (Package, bool) {
@@ -873,9 +852,9 @@ func (p *parser) parseIfExpression() (Expr, bool) {
 func (p *parser) expect(k token.Kind, msg errmessage) (token.Token, bool) {
 	ch := p.peek()
 	if ch.Kind != k {
-		p.printerr(errfmt.desc(msg))
-		p.printerr(errfmt.expect(k))
-		p.printerr(errfmt.got(ch.Kind))
+		p.addError(msg)
+		// p.addError(k.String())
+		// p.addError(ch.Kind.String())
 		return ch, false
 	}
 	p.advance()
@@ -955,28 +934,33 @@ func (p *parser) eof() bool {
 	return e
 }
 
-func (p *parser) addError(msg errmessage) {
-	p.hasError = true
-	p.printerr(errfmt.desc(msg))
-}
+func (p *parser) addError(msg string) {
+	tok := p.peek()
 
-type stringer interface {
-	String() string
-}
+	if tok == eof {
+		p.dst.Errors.Add(ParseError{Message: errfmt.desc(msg)})
+		return
+	}
 
-type errformatter struct{}
-type errmessage = string
+	position, ok := p.src.Pos.Item(tok.Pos)
+	if !ok {
+		panic("Invalid token postion")
+	}
 
-var errfmt errformatter
+	line := -1
+	col := -1
+	{
+		lst := -1
+		for i, l := range p.src.Lines.Each() {
+			if l > position.Start {
+				break
+			}
+			line = i
+			lst = l
+		}
+		col = lst - position.Start
+	}
 
-func (errformatter) desc(msg string) errmessage {
-	return fmt.Sprintf(";desc: %s", msg)
-}
-
-func (errformatter) expect(msg stringer) errmessage {
-	return fmt.Sprintf(";expected: %s", msg)
-}
-
-func (errformatter) got(msg stringer) errmessage {
-	return fmt.Sprintf(";got: %s", msg)
+	err := ParseError{Line: line, Col: col, Message: errfmt.desc(msg)}
+	p.dst.Errors.Add(err)
 }
