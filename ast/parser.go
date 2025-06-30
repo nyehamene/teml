@@ -627,7 +627,7 @@ func (p *parser) parseAttribute() (Attribute, bool) {
 		p.advance()
 	}
 
-	return Attribute{Key: key, value: value}, true
+	return Attribute{Key: key, Value: value}, true
 }
 
 func (p *parser) parseTemplate() (Content, bool) {

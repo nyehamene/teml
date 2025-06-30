@@ -97,7 +97,7 @@ type UntaggedAttributeSet struct {
 
 type Attribute struct {
 	Key   token.Token
-	value Expr
+	Value Expr
 }
 
 type Text token.Token
