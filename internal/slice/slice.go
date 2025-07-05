@@ -5,7 +5,7 @@ import (
 )
 
 func New[T any](data []T) Slice[T] {
-	return Slice[T]{data}
+	return Slice[T]{items: data}
 }
 
 func Empty[T any]() Slice[T] {
@@ -20,16 +20,24 @@ func Sized[T any](size int) Slice[T] {
 }
 
 type Slice[T any] struct {
-	items []T
+	items  []T
+	frozen bool
 }
 
 func (s *Slice[T]) Size() int {
 	return len(s.items)
 }
 
-func (s *Slice[T]) Add(val T) *Slice[T] {
+func (s *Slice[T]) Freeze() {
+	s.frozen = true
+}
+
+func (s *Slice[T]) Add(val T) bool {
+	if s.frozen {
+		return false
+	}
 	s.items = append(s.items, val)
-	return s
+	return true
 }
 
 func (s *Slice[T]) Item(index int) (T, bool) {
