@@ -1,6 +1,9 @@
 package ast
 
-import "github.com/eml-lang/teml/internal/slice"
+import (
+	"github.com/eml-lang/teml/internal/errors"
+	"github.com/eml-lang/teml/internal/slice"
+)
 
 type File struct {
 	Package    Package
@@ -8,7 +11,7 @@ type File struct {
 	Imports    slice.Slice[Import]
 	Usings     slice.Slice[Using]
 	Components slice.Slice[Component]
-	Errors     slice.Slice[ParseError]
+	Errors     slice.Slice[errors.Error]
 }
 
 func (p *File) HasError() bool {

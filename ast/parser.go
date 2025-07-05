@@ -2,9 +2,12 @@ package ast
 
 import (
 	"github.com/eml-lang/teml/internal/assert"
+	"github.com/eml-lang/teml/internal/errors"
 	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 )
+
+type errmessage = string
 
 type parser struct {
 	src  *token.File
@@ -938,7 +941,7 @@ func (p *parser) addError(msg string) {
 	tok := p.peek()
 
 	if tok == eof {
-		p.dst.Errors.Add(ParseError{Message: errfmt.desc(msg)})
+		p.dst.Errors.Add(errors.Error{Message: errors.Desc(msg)})
 		return
 	}
 
@@ -961,6 +964,6 @@ func (p *parser) addError(msg string) {
 		col = lst - position.Start
 	}
 
-	err := ParseError{Line: line, Col: col, Message: errfmt.desc(msg)}
+	err := errors.Error{Line: line, Col: col, Message: errors.Desc(msg)}
 	p.dst.Errors.Add(err)
 }
