@@ -94,7 +94,7 @@ func TestParse_short_valid(t *testing.T) {
 
 			tokens := token.Scan([]byte(source), 0)
 
-			file := ast.Parse(tokens, 0)
+			file := ast.ParseFile(tokens, 0)
 
 			if file.HasError() {
 				t.Error("Parser failed unexpectedly")
@@ -105,16 +105,16 @@ func TestParse_short_valid(t *testing.T) {
 }
 
 var invalid = []string{
-	"(package) ;desc: missing package identifier",
+	"(package) ;desc: missing identifier",
 	"(package p) ;desc: missing package path",
 	`(package p "" ;desc: missing closing parenthesis`,
-	`(import) ;desc: missing import identifier`,
+	`(import) ;desc: missing identifier`,
 	`(import i) ;desc: missing import path`,
-	"(using) ;desc: missing import alias",
-	"(using i) ;desc: missing package to alias from",
+	"(using) ;desc: missing identifier",
+	"(using i) ;desc: missing identifier",
 	"(using []) ;desc: empty import alias list",
 	"(using [i) ;desc: missing closing bracket",
-	"(using ]) ;desc: missing import alias",
+	"(using ]) ;desc: missing identifier",
 	"(document) ;desc: missing opening bracket",
 	"(document [) ;desc: missing closing bracket",
 	"(document [a]) ;desc: missing type separator",
@@ -127,7 +127,7 @@ var invalid = []string{
 	"(document [] (div {a: -- foo\n})) ;desc: line string literal is not a valid expression",
 	"(document [] (div {a: -- foo\\(foo)\n})) ;desc: line string literal is not a valid expression",
 	"(document [] (div a)) ;desc: identifier is not a valid template content",
-	"(component) ;desc: missing component identifier",
+	"(component) ;desc: missing identifier",
 	"(component A) ;desc: missing opening bracket",
 	"(component A [) ;desc: missing closing bracket",
 	"(component A [a]) ;desc: missing type separator",
@@ -156,7 +156,7 @@ func TestParse_short_invalid(t *testing.T) {
 			tokens := token.Scan([]byte(source), token.PreserveComment)
 			goterrmsgs := map[string]string{}
 
-			file := ast.Parse(tokens, token.ExitOnError)
+			file := ast.ParseFile(tokens, token.ExitOnError)
 
 			for _, err := range file.Errors.Each() {
 				for e := range getEntriesFromString(err.Message) {
@@ -209,7 +209,7 @@ func TestValidCounting(t *testing.T) {
 		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
 
 			tokens := token.Scan([]byte(source), token.PreserveComment)
-			file := ast.Parse(tokens, 0)
+			file := ast.ParseFile(tokens, 0)
 
 			if file.HasError() {
 				t.Error("parser failed unexpectedly")

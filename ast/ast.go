@@ -20,7 +20,7 @@ type PropertyType interface {
 	proptype()
 }
 
-func (SimpleType) proptype()    {}
+func (Var) proptype()           {}
 func (Enum) proptype()          {}
 func (QualifiedType) proptype() {}
 
@@ -51,45 +51,43 @@ func (IfExpression) expr()   {}
 func (CondExpression) expr() {}
 
 type Package struct {
-	Ident token.Token
+	Ident Var
 	Path  token.Token
 }
 
 type Import struct {
-	Ident token.Token
-	Path  token.Token
+	Ident Var
+	Path  PrimaryExpr
 }
 
 type Using struct {
-	Idents slice.Slice[token.Token]
-	From   token.Token
+	Idents slice.Slice[Var]
+	From   Var
 }
 
 type Document struct {
-	Ident      token.Token
+	Ident      Var
 	Properties slice.Slice[Property]
 	Children   slice.Slice[Content]
 }
 
 type Component struct {
-	Ident      token.Token
+	Ident      Var
 	Properties slice.Slice[Property]
 	Children   slice.Slice[Content]
 }
 
 type Property struct {
-	Ident token.Token
+	Ident Var
 	Type  PropertyType
 }
 
-type SimpleType token.Token
-
 type Enum struct {
-	Constants slice.Slice[token.Token]
+	Constants slice.Slice[PrimaryExpr]
 }
 
 type QualifiedType struct {
-	Object PropertyType
+	Object Var
 	Name   PropertyType
 }
 
@@ -125,9 +123,11 @@ type UntaggedAttributeSet struct {
 }
 
 type Attribute struct {
-	Key   token.Token
+	Key   Var
 	Value Expr
 }
+
+type Var token.Token
 
 type Text token.Token
 

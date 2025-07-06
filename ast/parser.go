@@ -20,7 +20,7 @@ var (
 	eof token.Token = token.Token{Kind: -1, Pos: -1}
 )
 
-func Parse(toks *token.File, flag token.Flags) *File {
+func ParseFile(toks *token.File, flag token.Flags) *File {
 	p := parser{
 		src:  toks,
 		flag: flag,
@@ -95,14 +95,14 @@ func (p *parser) parse(flag token.Flags) {
 func (p *parser) parsePackage() (Package, bool) {
 	assert.Assert(p.peek().Kind == token.Package, "expected package keyword")
 
-	var ident token.Token
+	var ident Var
 	var path token.Token
 	var ok bool
 
 	// consume package keyword
 	p.advance()
 
-	if ident, ok = p.expect(token.Ident, "missing package identifier"); !ok {
+	if ident, ok = p.parseVar(); !ok {
 		return Package{}, false
 	}
 
@@ -116,14 +116,14 @@ func (p *parser) parsePackage() (Package, bool) {
 func (p *parser) parseImport() (Import, bool) {
 	assert.Assert(p.peek().Kind == token.Import, "expected import keyword")
 
-	var ident token.Token
+	var ident Var
 	var path token.Token
 	var ok bool
 
 	// consume import keyword
 	p.advance()
 
-	if ident, ok = p.expect(token.Ident, "missing import identifier"); !ok {
+	if ident, ok = p.parseVar(); !ok {
 		return Import{}, false
 	}
 
@@ -131,7 +131,7 @@ func (p *parser) parseImport() (Import, bool) {
 		return Import{}, false
 	}
 
-	return Import{Ident: ident, Path: path}, true
+	return Import{Ident: ident, Path: Constant(path)}, true
 }
 
 func (p *parser) parseUsing() (Using, bool) {
@@ -152,7 +152,7 @@ func (p *parser) parseUsing() (Using, bool) {
 				break
 			}
 
-			ident, ok := p.expect(token.Ident, "missing import alias")
+			ident, ok := p.parseVar()
 			if !ok {
 				return Using{}, false
 			}
@@ -174,7 +174,7 @@ func (p *parser) parseUsing() (Using, bool) {
 		}
 
 	} else {
-		ident, ok := p.expect(token.Ident, "missing import alias")
+		ident, ok := p.parseVar()
 		if !ok {
 			return Using{}, false
 		}
@@ -182,17 +182,20 @@ func (p *parser) parseUsing() (Using, bool) {
 	}
 
 	var ok bool
-	if u.From, ok = p.expect(token.Ident, "missing package to alias from"); !ok {
+	var from Var
+
+	if from, ok = p.parseVar(); !ok {
 		return Using{}, false
 	}
 
+	u.From = from
 	return u, true
 }
 
 func (p *parser) parseComponent() (Component, bool) {
 	assert.Assert(p.peek().Kind == token.Component, "expected component keyword")
 
-	var ident token.Token
+	var ident Var
 	var properties []Property
 	var children []Content
 	var ok bool
@@ -200,7 +203,7 @@ func (p *parser) parseComponent() (Component, bool) {
 	// consume component keyword
 	p.advance()
 
-	if ident, ok = p.expect(token.Ident, "missing component identifier"); !ok {
+	if ident, ok = p.parseVar(); !ok {
 		return Component{}, false
 	}
 
@@ -228,7 +231,7 @@ func (p *parser) parseComponent() (Component, bool) {
 func (p *parser) parseDocument() (Document, bool) {
 	assert.Assert(p.peek().Kind == token.Document, "expected document keyword")
 
-	var ident token.Token
+	var ident Var
 	var properties []Property
 	var children []Content
 	var ok bool
@@ -237,8 +240,7 @@ func (p *parser) parseDocument() (Document, bool) {
 	p.advance()
 
 	if ch := p.peek(); ch.Kind == token.Ident {
-		p.advance()
-		ident = ch
+		ident, _ = p.parseVar()
 	}
 
 	if properties, ok = p.parseProperties(); !ok {
@@ -294,12 +296,12 @@ func (p *parser) parseProperties() ([]Property, bool) {
 }
 
 func (p *parser) parseProperty() (Property, bool) {
-	var ident token.Token
+	var ident Var
 	// TODO type should be a qualified identifier
 	var Type PropertyType
 	var ok bool
 
-	if ident, ok = p.expect(token.Ident, "missing property identifier"); !ok {
+	if ident, ok = p.parseVar(); !ok {
 		return Property{}, false
 	}
 
@@ -319,11 +321,17 @@ func (p *parser) parseProperty() (Property, bool) {
 func (p *parser) parsePropertyType() (PropertyType, bool) {
 	switch ch := p.peek(); ch.Kind {
 	case token.Ident:
-		p.advance()
+		var left Expr
 
-		left := SimpleType(ch)
-		if ch := p.peek(); ch.Kind != token.FSlash {
-			return left, true
+		left, _ = p.parseVar()
+		for p.peek().Kind == token.FSlash {
+			p.advance() // consume forward slash
+
+			right, ok := p.parseVar()
+			if !ok {
+				return nil, false
+			}
+			left = MemberAccess{Object: left, Member: right}
 		}
 
 		// consume forward slash
@@ -364,7 +372,7 @@ func (p *parser) parsePropertyType() (PropertyType, bool) {
 				constantKind = &constant.Kind
 			}
 
-			enumtype.Constants.Add(constant)
+			enumtype.Constants.Add(PrimaryExpr(constant))
 		}
 
 		// TODO fail if enum constants is empty
@@ -642,11 +650,11 @@ func (p *parser) parseAttributes() (AttributeSet, bool) {
 }
 
 func (p *parser) parseAttribute() (Attribute, bool) {
-	var key token.Token
+	var key Var
 	var value Expr
 	var ok bool
 
-	if key, ok = p.expect(token.Ident, "missing attribute key"); !ok {
+	if key, ok = p.parseVar(); !ok {
 		return Attribute{}, false
 	}
 
@@ -763,8 +771,7 @@ func (p *parser) parseExpr() (Expr, bool) {
 		p.addError("missing expression")
 
 	case token.Ident:
-		p.advance()
-		expr, ok = PrimaryExpr(ch), true
+		expr, ok = p.parseVar()
 
 		// parse member access
 		for !p.eof() {

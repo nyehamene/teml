@@ -19,7 +19,7 @@ func TestScanParse(t *testing.T) {
 		}
 	}
 
-	file := ast.Parse(f, 0)
+	file := ast.ParseFile(f, 0)
 
 	if file.HasError() {
 		t.Fail()
@@ -29,13 +29,13 @@ func TestScanParse(t *testing.T) {
 func BenchmarkScan(b *testing.B) {
 	for b.Loop() {
 		f := token.Scan(examplefile, 0)
-		ast.Parse(f, 0)
+		ast.ParseFile(f, 0)
 	}
 }
 
 func BenchmarkScanReduceAlloc(b *testing.B) {
 	for b.Loop() {
 		f := token.Scan(examplefile, token.ReduceAlloc)
-		ast.Parse(f, token.ReduceAlloc)
+		ast.ParseFile(f, token.ReduceAlloc)
 	}
 }
