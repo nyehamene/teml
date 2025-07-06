@@ -220,7 +220,7 @@ func getPosses(s slice.Slice[token.Pos]) []token.Pos {
 func TestScan_line(t *testing.T) {
 	source := "package\nfoo\n"
 	//         0123456.7890.12
-	expected := []int{7, 11}
+	expected := []int{-1, 7, 11}
 
 	f := token.Scan([]byte(source), 0)
 	lines := getLines(f.Lines)

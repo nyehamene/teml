@@ -1,6 +1,7 @@
 package token
 
 import (
+	"fmt"
 	"iter"
 
 	"github.com/eml-lang/teml/internal/assert"
@@ -12,6 +13,10 @@ func NewFile(src []byte, size int, lines int) *File {
 	f.Tokens = slice.Sized[Token](size)
 	f.Pos = slice.Sized[Pos](size)
 	f.Lines = slice.Sized[int](lines)
+	// NOTE for better line and column numbering
+	if len(src) > 0 {
+		f.Lines.Add(-1)
+	}
 	return &f
 }
 
@@ -64,6 +69,26 @@ func (f File) Text(target Token) (string, bool) {
 		return string(txt), true
 	}
 	return "", false
+}
+
+func (f *File) Line(tok Token) (line int, col int) {
+	pos, okpos := f.Pos.Item(tok.Pos)
+	if !okpos {
+		panic(fmt.Sprintf("could not get positon of token: %v", tok))
+	}
+
+	lst := 0
+	offset := 0
+
+	for _, ln := range f.Lines.Each() {
+		if ln > pos.Start {
+			break
+		}
+		lst += 1
+		offset = ln
+	}
+
+	return lst, pos.Start - offset
 }
 
 func (f *File) add(kind Kind, pos Pos) Position {

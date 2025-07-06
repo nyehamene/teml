@@ -26,7 +26,7 @@ func Scan(src []byte, flags Flags) *File {
 		lines, size := count(src)
 		f = *NewFile(src, size, lines)
 	} else {
-		f = File{src: src}
+		f = *NewFile(src, 0, 0)
 	}
 
 	scan(&f, flags)
