@@ -1,3 +1,4 @@
+// @deprecated
 package slice
 
 import (
@@ -19,6 +20,7 @@ func Sized[T any](size int) Slice[T] {
 	return slice
 }
 
+// @deprecated
 type Slice[T any] struct {
 	items  []T
 	frozen bool
