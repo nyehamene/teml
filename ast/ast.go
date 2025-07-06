@@ -9,22 +9,46 @@ type Node interface {
 	node()
 }
 
+func (Package) node()      {}
+func (Import) node()       {}
+func (Using) node()        {}
+func (Document) node()     {}
+func (Component) node()    {}
+func (IntErrorNode) node() {}
+
 type PropertyType interface {
-	constant()
+	proptype()
 }
 
+func (SimpleType) proptype()    {}
+func (Enum) proptype()          {}
+func (QualifiedType) proptype() {}
+
 type AttributeSet interface {
-	content()
 	attrs()
 }
+
+func (TaggedAttributeSet) attrs()   {}
+func (UntaggedAttributeSet) attrs() {}
 
 type Content interface {
 	content()
 }
 
+func (Text) content()        {}
+func (TextGroup) content()   {}
+func (Element) content()     {}
+func (IfElement) content()   {}
+func (CondElement) content() {}
+
 type Expr interface {
 	expr()
 }
+
+func (PrimaryExpr) expr()    {}
+func (MemberAccess) expr()   {}
+func (IfExpression) expr()   {}
+func (CondExpression) expr() {}
 
 type Package struct {
 	Ident token.Token
@@ -58,10 +82,15 @@ type Property struct {
 	Type  PropertyType
 }
 
-type IdentPropertyType token.Token
+type SimpleType token.Token
 
-type EnumPropertyType struct {
+type Enum struct {
 	Constants slice.Slice[token.Token]
+}
+
+type QualifiedType struct {
+	Object PropertyType
+	Name   PropertyType
 }
 
 type Element struct {
@@ -71,23 +100,23 @@ type Element struct {
 }
 
 type IfElement struct {
-	cond       Expr
-	thenBranch Content
-	elseBranch Content
+	Cond Expr
+	Then Content
+	Else Content
 }
 
 type CondElement struct {
-	cond    Expr
-	Options slice.Slice[CondElementOption]
+	Target Expr
+	Cases  slice.Slice[CaseElement]
 }
 
-type CondElementOption struct {
-	constant Expr
-	branch   Content
+type CaseElement struct {
+	Cond   Expr
+	Branch Content
 }
 
 type TaggedAttributeSet struct {
-	tag        Expr
+	Tag        Expr
 	Attributes slice.Slice[Attribute]
 }
 
@@ -109,53 +138,30 @@ type IntErrorNode int
 type PrimaryExpr token.Token
 
 type IfExpression struct {
-	cond       Expr
-	thenBranch Expr
-	elseBranch Expr
+	Cond Expr
+	Then Expr
+	Else Expr
 }
 
 type CondExpression struct {
-	cond    Expr
-	Options slice.Slice[CondExpressionOption]
+	Target Expr
+	Cases  slice.Slice[Case]
 }
 
-type CondExpressionOption struct {
-	constant Expr
-	value    Expr
+type Case struct {
+	Cond   Expr
+	Branch Expr
 }
 
-type BinaryExpr struct {
-	left  Expr
-	right Expr
+type MemberAccess struct {
+	Object Expr
+	Member Var
 }
 
 const (
 	badNode IntErrorNode = iota
 )
 
-func (Package) node()   {}
-func (Import) node()    {}
-func (Using) node()     {}
-func (Document) node()  {}
-func (Component) node() {}
-
-func (IntErrorNode) node() {}
-
-func (Text) content()                 {}
-func (TextGroup) content()            {}
-func (Element) content()              {}
-func (IfElement) content()            {}
-func (CondElement) content()          {}
-func (TaggedAttributeSet) content()   {}
-func (UntaggedAttributeSet) content() {}
-
-func (TaggedAttributeSet) attrs()   {}
-func (UntaggedAttributeSet) attrs() {}
-
-func (b BinaryExpr) expr()     {}
-func (p PrimaryExpr) expr()    {}
-func (e IfExpression) expr()   {}
-func (e CondExpression) expr() {}
-
-func (i IdentPropertyType) constant() {}
-func (e EnumPropertyType) constant()  {}
+func (d Document) IsNamed() bool {
+	return d.Ident.Kind != token.Invalid
+}

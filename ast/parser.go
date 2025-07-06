@@ -308,66 +308,94 @@ func (p *parser) parseProperty() (Property, bool) {
 	}
 
 	// parse property type
-	switch ch := p.peek(); ch.Kind {
-	case token.Ident:
-		p.advance()
-		Type = IdentPropertyType(ch)
-
-	case token.ParenOpen:
-		p.advance()
-
-		if _, ok := p.expect(token.Enum, "missing enum keyword"); !ok {
-			return Property{}, false
-		}
-
-		enumtype := EnumPropertyType{}
-
-		var constantKind *token.Kind
-
-	loop:
-		for !p.eof() {
-			ch := p.peek()
-
-			switch ch.Kind {
-			case token.ParenClose:
-				break loop
-
-			case token.String, token.Number:
-				if constantKind != nil && ch.Kind != *constantKind {
-					p.addError("mismatch enum constant type")
-				} else {
-					constantKind = &ch.Kind
-				}
-				enumtype.Constants.Add(ch)
-
-			default:
-				p.addError("invalid enum constant")
-				return Property{}, false
-			}
-
-			// reached only when a valid constant is matched
-			p.advance()
-
-			if ch := p.peek(); ch.Kind == token.Comma {
-				p.advance()
-			}
-		}
-
-		// TODO fail is enum constants is empty
-
-		if _, ok := p.expect(token.ParenClose, "missing close parenthesis"); !ok {
-			return Property{}, false
-		}
-
-		Type = enumtype
-
-	default:
-		p.addError("missing property type")
+	if Type, ok = p.parsePropertyType(); !ok {
 		return Property{}, false
 	}
 
 	prop := Property{Ident: ident, Type: Type}
 	return prop, true
+}
+
+func (p *parser) parsePropertyType() (PropertyType, bool) {
+	switch ch := p.peek(); ch.Kind {
+	case token.Ident:
+		p.advance()
+
+		left := SimpleType(ch)
+		if ch := p.peek(); ch.Kind != token.FSlash {
+			return left, true
+		}
+
+		// consume forward slash
+		p.advance()
+
+		right, ok := p.parsePropertyType()
+		if !ok {
+			return nil, false
+		}
+
+		node := QualifiedType{Object: left, Name: right}
+		return node, true
+
+	case token.ParenOpen:
+		p.advance()
+		if _, ok := p.expect(token.Enum, "missing enum keyword"); !ok {
+			return nil, false
+		}
+
+		enumtype := Enum{}
+		var constantKind *token.Kind
+
+		for !p.eof() {
+			var constant token.Token
+			var ok bool
+
+			if ch := p.peek(); ch.Kind == token.ParenClose {
+				break
+			}
+
+			if constant, ok = p.parseEnumConstant(); !ok {
+				return nil, false
+			}
+
+			if constantKind != nil && constant.Kind != *constantKind {
+				p.addError("mismatch enum constant type")
+			} else {
+				constantKind = &constant.Kind
+			}
+
+			enumtype.Constants.Add(constant)
+		}
+
+		// TODO fail if enum constants is empty
+
+		if _, ok := p.expect(token.ParenClose, "missing close parenthesis"); !ok {
+			return nil, false
+		}
+
+		return enumtype, true
+
+	default:
+		p.addError("missing property type")
+		return nil, false
+	}
+}
+
+func (p *parser) parseEnumConstant() (token.Token, bool) {
+	switch ch := p.peek(); ch.Kind {
+	case token.String,
+		token.Number:
+
+		p.advance()
+		// consume semicolon
+		if ch := p.peek(); ch.Kind == token.Comma {
+			p.advance()
+		}
+		return ch, true
+	default:
+		p.addError("invalid enum constant")
+		return token.Token{}, false
+	}
 }
 
 func (p *parser) parseDeclaration() (Node, bool) {
@@ -424,7 +452,7 @@ func (p *parser) parseDeclaration() (Node, bool) {
 
 func (p *parser) parseCondElement() (CondElement, bool) {
 	var cond Expr
-	var options []CondElementOption
+	var options []CaseElement
 	var ok bool
 
 	if _, ok = p.expect(token.ParenOpen, "missing opening parenthesis"); !ok {
@@ -461,9 +489,9 @@ func (p *parser) parseCondElement() (CondElement, bool) {
 			p.advance()
 		}
 
-		option := CondElementOption{
-			constant: lit,
-			branch:   content,
+		option := CaseElement{
+			Cond:   lit,
+			Branch: content,
 		}
 
 		options = append(options, option)
@@ -474,8 +502,8 @@ func (p *parser) parseCondElement() (CondElement, bool) {
 	}
 
 	e := CondElement{
-		cond:    cond,
-		Options: slice.New(options),
+		Target: cond,
+		Cases:  slice.New(options),
 	}
 
 	return e, true
@@ -516,7 +544,7 @@ func (p *parser) parseIfElement() (IfElement, bool) {
 		return IfElement{}, false
 	}
 
-	return IfElement{cond: cond, thenBranch: thenBranch, elseBranch: elseBranch}, true
+	return IfElement{Cond: cond, Then: thenBranch, Else: elseBranch}, true
 }
 
 func (p *parser) parseElement(skipParenOpen bool) (Element, bool) {
@@ -531,7 +559,7 @@ func (p *parser) parseElement(skipParenOpen bool) (Element, bool) {
 		}
 	}
 
-	if ident, ok = p.parseQualifiedName(); !ok {
+	if ident, ok = p.parseExpr(); !ok {
 		return Element{}, false
 	}
 
@@ -571,7 +599,12 @@ func (p *parser) parseAttributes() (AttributeSet, bool) {
 
 	if ch := p.peek(); ch.Kind == token.Hash {
 		p.advance()
-		if tag, ok = p.parseQualifiedName(); !ok {
+		if ch := p.peek(); ch.Kind == token.BraceOpen {
+			p.addError("missing identifier")
+			return nil, false
+		}
+
+		if tag, ok = p.parseExpr(); !ok {
 			return nil, false
 		}
 	}
@@ -600,7 +633,7 @@ func (p *parser) parseAttributes() (AttributeSet, bool) {
 
 	var attrset AttributeSet
 	if tag != nil {
-		attrset = TaggedAttributeSet{tag: tag, Attributes: slice.New(attrs)}
+		attrset = TaggedAttributeSet{Tag: tag, Attributes: slice.New(attrs)}
 	} else {
 		attrset = UntaggedAttributeSet{Attributes: slice.New(attrs)}
 	}
@@ -622,7 +655,7 @@ func (p *parser) parseAttribute() (Attribute, bool) {
 	}
 
 	value, ok = p.parseExpr()
-	if value == nil {
+	if value == nil || !ok {
 		return Attribute{}, false
 	}
 
@@ -683,37 +716,13 @@ func (p *parser) parseTemplate() (Content, bool) {
 		return textGroup, true
 
 	case token.Ident:
-		p.addError("invalid content")
+		p.addError("identifier is not a valid template content")
 
 	default:
-		p.addError("missing content")
+		p.addError("no content")
 	}
 
 	return nil, false
-}
-
-func (p *parser) parseQualifiedName() (Expr, bool) {
-	var val token.Token
-	var ok bool
-
-	if val, ok = p.expect(token.Ident, "missing identifier"); !ok {
-		return nil, false
-	}
-
-	var expr Expr = PrimaryExpr(val)
-
-	for p.peek().Kind == token.FSlash {
-		p.advance()
-
-		if val, ok = p.expect(token.Ident, "missing identifier"); !ok {
-			return nil, false
-		}
-
-		right := PrimaryExpr(val)
-		expr = BinaryExpr{left: expr, right: right}
-	}
-
-	return expr, true
 }
 
 func (p *parser) parseLiteral() (Expr, bool) {
@@ -729,8 +738,14 @@ func (p *parser) parseLiteral() (Expr, bool) {
 
 		expr, ok = PrimaryExpr(ch), true
 
+	case token.StringLine,
+		token.StringLineTempl:
+
+		p.addError("line string literal is not a valid expression")
+
 	default:
 		p.addError("invalid expression")
+		return nil, false
 	}
 
 	p.advance()
@@ -751,6 +766,23 @@ func (p *parser) parseExpr() (Expr, bool) {
 		p.advance()
 		expr, ok = PrimaryExpr(ch), true
 
+		// parse member access
+		for !p.eof() {
+			ch := p.peek()
+			if ch.Kind != token.FSlash {
+				break
+			}
+
+			p.advance()
+
+			var right Var
+			if right, ok = p.parseVar(); !ok {
+				return nil, false
+			}
+
+			expr = MemberAccess{Object: expr, Member: right}
+		}
+
 	case token.ParenOpen:
 
 		switch ch := p.peekNext(); ch.Kind {
@@ -767,9 +799,19 @@ func (p *parser) parseExpr() (Expr, bool) {
 	return expr, ok
 }
 
+func (p *parser) parseVar() (Var, bool) {
+	tok := p.peek()
+	if tok.Kind != token.Ident {
+		p.addError("missing identifier")
+		return Var{}, false
+	}
+	p.advance()
+	return Var(tok), true
+}
+
 func (p *parser) parseCondExpression() (Expr, bool) {
 	var cond Expr
-	var options []CondExpressionOption
+	var options []Case
 	var ok bool
 
 	if _, ok = p.expect(token.ParenOpen, "missing opening parenthesis"); !ok {
@@ -805,7 +847,7 @@ func (p *parser) parseCondExpression() (Expr, bool) {
 			p.advance()
 		}
 
-		option := CondExpressionOption{constant: lit, value: value}
+		option := Case{Cond: lit, Branch: value}
 		options = append(options, option)
 	}
 
@@ -813,7 +855,7 @@ func (p *parser) parseCondExpression() (Expr, bool) {
 		return nil, false
 	}
 
-	e := CondExpression{cond: cond, Options: slice.New(options)}
+	e := CondExpression{Target: cond, Cases: slice.New(options)}
 	return e, true
 }
 
@@ -849,7 +891,7 @@ func (p *parser) parseIfExpression() (Expr, bool) {
 		return nil, false
 	}
 
-	return IfExpression{cond: cond, thenBranch: thenBranch, elseBranch: elseBranch}, true
+	return IfExpression{Cond: cond, Then: thenBranch, Else: elseBranch}, true
 }
 
 func (p *parser) expect(k token.Kind, msg errmessage) (token.Token, bool) {
