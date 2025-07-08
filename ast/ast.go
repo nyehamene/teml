@@ -16,14 +16,6 @@ func (Document) node()     {}
 func (Component) node()    {}
 func (IntErrorNode) node() {}
 
-type PropertyType interface {
-	proptype()
-}
-
-func (Var) proptype()           {}
-func (Enum) proptype()          {}
-func (QualifiedType) proptype() {}
-
 type AttributeSet interface {
 	attrs()
 }
@@ -45,10 +37,12 @@ type Expr interface {
 	expr()
 }
 
+func (Var) expr()            {}
 func (PrimaryExpr) expr()    {}
 func (MemberAccess) expr()   {}
 func (IfExpression) expr()   {}
 func (CondExpression) expr() {}
+func (Enum) expr()           {}
 
 type Package struct {
 	Ident Var
@@ -79,16 +73,11 @@ type Component struct {
 
 type Property struct {
 	Ident Var
-	Type  PropertyType
+	Type  Expr
 }
 
 type Enum struct {
 	Constants slice.Slice[PrimaryExpr]
-}
-
-type QualifiedType struct {
-	Object Var
-	Name   PropertyType
 }
 
 type Element struct {
