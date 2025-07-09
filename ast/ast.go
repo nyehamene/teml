@@ -44,6 +44,14 @@ func (IfExpression) expr()   {}
 func (CondExpression) expr() {}
 func (Enum) expr()           {}
 
+type PropertyType interface {
+	typeExpr()
+}
+
+func (Enum) typeExpr()         {}
+func (Var) typeExpr()          {}
+func (MemberAccess) typeExpr() {}
+
 type Package struct {
 	Ident Var
 	Path  token.Token
@@ -73,7 +81,7 @@ type Component struct {
 
 type Property struct {
 	Ident Var
-	Type  Expr
+	Type  PropertyType
 }
 
 type Enum struct {

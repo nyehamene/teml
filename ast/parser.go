@@ -297,8 +297,7 @@ func (p *parser) parseProperties() ([]Property, bool) {
 
 func (p *parser) parseProperty() (Property, bool) {
 	var ident Var
-	// TODO type should be a qualified identifier
-	var Type Expr
+	var Type PropertyType
 	var ok bool
 
 	if ident, ok = p.parseVar(); !ok {
@@ -318,23 +317,30 @@ func (p *parser) parseProperty() (Property, bool) {
 	return prop, true
 }
 
-func (p *parser) parsePropertyType() (Expr, bool) {
+func (p *parser) parsePropertyType() (PropertyType, bool) {
 	switch ch := p.peek(); ch.Kind {
 	case token.Ident:
-		var left Expr
+		switch ch := p.peekNext(); ch.Kind {
+		case token.FSlash:
+			var left Expr
 
-		left, _ = p.parseVar()
-		for p.peek().Kind == token.FSlash {
-			p.advance() // consume forward slash
+			left, _ = p.parseVar()
+			for p.peek().Kind == token.FSlash {
+				p.advance() // consume forward slash
 
-			right, ok := p.parseVar()
-			if !ok {
-				return nil, false
+				right, ok := p.parseVar()
+				if !ok {
+					return nil, false
+				}
+				left = MemberAccess{Object: left, Member: right}
 			}
-			left = MemberAccess{Object: left, Member: right}
-		}
 
-		return left, true
+			return left.(MemberAccess), true
+
+		default:
+			ident, _ := p.parseVar()
+			return ident, true
+		}
 
 	case token.ParenOpen:
 		p.advance()

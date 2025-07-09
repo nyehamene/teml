@@ -33,6 +33,7 @@ var valid = []string{
 	`(package p "a") (document Foo [a: A, b: B])`,
 	`(package p "a") (document Foo [a: A,])`,
 	`(package p "a") (document Foo [a: a/A])`,
+	`(package p "a") (document Foo [a: a/A, b: b/B])`,
 	`(package p "a") (document Foo [] (div) (div))`,
 	`(package p "a") (document Foo [] (div))`,
 	`(package p "a") (document Foo [] (div) (div))`,
@@ -100,6 +101,11 @@ func TestParse_short_valid(t *testing.T) {
 				t.Error("Parser failed unexpectedly")
 			}
 
+			for _, tok := range tokens.Tokens.Each() {
+				if tok.Kind == token.Invalid {
+					t.Error("Parser emitted an invalid token without failing")
+				}
+			}
 		})
 	}
 }
