@@ -38,7 +38,7 @@ type Expr interface {
 }
 
 func (Var) expr()            {}
-func (PrimaryExpr) expr()    {}
+func (Constant) expr()       {}
 func (MemberAccess) expr()   {}
 func (IfExpression) expr()   {}
 func (CondExpression) expr() {}
@@ -51,7 +51,7 @@ type Package struct {
 
 type Import struct {
 	Ident Var
-	Path  PrimaryExpr
+	Path  Constant
 }
 
 type Using struct {
@@ -77,7 +77,7 @@ type Property struct {
 }
 
 type Enum struct {
-	Constants slice.Slice[PrimaryExpr]
+	Constants slice.Slice[Constant]
 }
 
 type Element struct {
@@ -124,7 +124,7 @@ type TextGroup []Text
 
 type IntErrorNode int
 
-type PrimaryExpr token.Token
+type Constant token.Token
 
 type IfExpression struct {
 	Cond Expr

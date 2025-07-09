@@ -363,7 +363,7 @@ func (p *parser) parsePropertyType() (Expr, bool) {
 				constantKind = &constant.Kind
 			}
 
-			enumtype.Constants.Add(PrimaryExpr(constant))
+			enumtype.Constants.Add(Constant(constant))
 		}
 
 		// TODO fail if enum constants is empty
@@ -735,7 +735,7 @@ func (p *parser) parseLiteral() (Expr, bool) {
 		token.String,
 		token.StringTempl:
 
-		expr, ok = PrimaryExpr(ch), true
+		expr, ok = Constant(ch), true
 
 	case token.StringLine,
 		token.StringLineTempl:
