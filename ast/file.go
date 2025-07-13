@@ -17,3 +17,7 @@ type File struct {
 func (p *File) HasError() bool {
 	return p.Errors.Size() > 0
 }
+
+func (p *File) HasDocument() bool {
+	return p.Document.IsNamed() || p.Document.Properties.Size() > 0 || p.Document.Children.Size() > 0
+}

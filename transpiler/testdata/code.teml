@@ -1,0 +1,29 @@
+(package p "views")
+
+(import i "views/other")
+(import ii "views/other")
+
+(using card i)
+(using [container, box] ii)
+
+(document home [x: i/A, y: B, z: (enum 0 1)])
+
+(component A [x: i/A, y: B, z: (enum "A" "B")])
+
+(component C [a-card: card, mode: (enum "open" "close")]
+  (div {id: "foo"} "text" (div))
+  (div
+    -- line 1
+    -- line 2
+    )
+  (if true (div) (span))
+  (cond mode
+    "open": (div)
+    "close": (span))
+  (a-card {id: "card", enabled: true}
+  (i/card)
+    #data{ number: 100
+         , step: (cond mode "open": 10 "close": 20)
+         }
+    #css/grid{display: (if true "grid" "flex")}
+    (div)))
