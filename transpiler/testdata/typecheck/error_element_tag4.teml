@@ -1,0 +1,4 @@
+(package pp "views")
+
+;; error: b is a bool used as an element
+(document C [b: Bool] (b))

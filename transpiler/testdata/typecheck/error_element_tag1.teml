@@ -1,0 +1,4 @@
+(package pp "views")
+
+;; error: pp is a package used as a element
+(document [] (pp))

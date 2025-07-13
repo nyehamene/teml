@@ -1,0 +1,6 @@
+(package p "views")
+
+(document B [])
+
+;; error: B is a document used as a property
+(component A [a: B])

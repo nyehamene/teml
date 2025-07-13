@@ -24,7 +24,12 @@ type Element interface {
 }
 
 func (TextElement) element()      {}
+func (NumberElement) element()    {}
+func (StringElement) element()    {}
+func (ComponentElement) element() {}
+func (InstanceElement) element()  {}
 func (genericElement) element()   {}
+func (NativeElement) element()    {}
 func (IFElement) element()        {}
 func (CondElement) element()      {}
 
@@ -87,7 +92,36 @@ type TextElement struct {
 	Text string
 }
 
+type NumberElement struct {
+	Tag        Expr
+	Attributes []Attr
+}
+
+type StringElement struct {
+	Tag        Expr
+	Attributes []Attr
+}
+
 type genericElement struct {
+	Tag        Expr
+	Parameter  []KeyVal
+	Attributes []Attr
+	Body       []Stmt
+}
+
+type NativeElement struct {
+	Tag        Expr
+	Attributes []Attr
+	Body       []Stmt
+}
+
+type ComponentElement struct {
+	Tag        Expr
+	Attributes []Attr
+	Body       []Stmt
+}
+
+type InstanceElement struct {
 	Tag        Expr
 	Parameter  []KeyVal
 	Attributes []Attr

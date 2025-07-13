@@ -1,0 +1,4 @@
+(package pp "views")
+
+;; error: b is an enum used as an element
+(document [b: (enum "yes" "no")] (b))

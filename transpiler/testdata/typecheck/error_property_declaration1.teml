@@ -1,0 +1,4 @@
+(package p "views")
+
+;; error: recursive type definition. A refers to itself.
+(document A [a: A])

@@ -125,3 +125,8 @@ func resolveFile(f *File, flag Flag) Env {
 	return env
 }
 
+func TypecheckFile(src *File, env Env) Env {
+	t := typechecker{src: src}
+	e := t.typecheckFile(env)
+	return e
+}

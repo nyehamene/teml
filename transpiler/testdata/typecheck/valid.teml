@@ -1,0 +1,10 @@
+(package p "views")
+
+(document H [a: A])
+
+(component A [b: B])
+(component B [c: String])
+(component C [c: Number])
+(component D [c: Bool])
+(component E [c: (enum "one" "two")])
+
