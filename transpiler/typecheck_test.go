@@ -2,7 +2,10 @@ package ast_test
 
 import (
 	"embed"
+	"strings"
 	"testing"
+
+	"github.com/eml-lang/teml/internal/tests"
 )
 
 //go:embed testdata/typecheck
@@ -12,9 +15,19 @@ var typecheckerBaseFS embed.FS
 var typecheckerBasepath = "testdata/typecheck"
 
 func TestTypecheckValid(t *testing.T) {
-	checkValidFiles(t, typecheckerBaseFS, typecheckerBasepath, TypecheckerStage)
+	const stage = tests.StageTypechecked
+	fileFilter := func(filename string) bool { return strings.Contains(filename, "valid") }
+	errhandler := tests.NewErrorHandler(stage, false)
+	outhandler := func(string, string) error { return nil }
+
+	tests.CompileFiles(t, typecheckerBaseFS, typecheckerBasepath, fileFilter, outhandler, errhandler)
 }
 
 func TestTypecheckInvalid(t *testing.T) {
-	checkInvalidFiles(t, typecheckerBaseFS, typecheckerBasepath, TypecheckerStage)
+	const stage = tests.StageTypechecked
+	fileFilter := func(filename string) bool { return !strings.Contains(filename, "valid") }
+	errhandler := tests.NewErrorHandler(stage, true)
+	outhandler := func(string, string) error { return nil }
+
+	tests.CompileFiles(t, typecheckerBaseFS, typecheckerBasepath, fileFilter, outhandler, errhandler)
 }

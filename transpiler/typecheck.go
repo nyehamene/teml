@@ -184,6 +184,8 @@ func (t *typechecker) typecheckStmts(env Env, stmts []Stmt) {
 func (t *typechecker) typecheckElement(env Env, expr Element) Element {
 	switch tt := expr.(type) {
 	case TextElement:
+		return expr
+
 	case InstanceElement, ComponentElement, NativeElement, NumberElement, StringElement:
 		// NOTE these are not produce by the parser
 		panic("Unreachable")
