@@ -1,0 +1,3 @@
+(package p "views")
+
+(document A [x: String, x: String])

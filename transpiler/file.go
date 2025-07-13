@@ -16,6 +16,8 @@ type Pos struct {
 	Col   int
 }
 
+type Flag uint
+
 type File struct {
 	Package      Package
 	Imports      []Import
@@ -23,6 +25,11 @@ type File struct {
 	Declarations []Declaration
 	errs         []errors.Error
 }
+
+const (
+	FlagNoBuiltinElement Flag = 1 << iota
+	FlagNoBuiltinType
+)
 
 func (f *File) HasError() bool {
 	if f == nil {
@@ -61,5 +68,60 @@ func parseFile(src *ast.File, toks *token.File) *File {
 
 	f.Declarations = decls
 	return f
+}
+
+func ResolveFile(src *File, flags ...Flag) Env {
+	var flag Flag
+	for _, f := range flags {
+		flag |= f
+	}
+
+	e := resolveFile(src, flag)
+	return e
+}
+
+func resolveFile(f *File, flag Flag) Env {
+	env := createEnv(nil)
+
+	if flag&FlagNoBuiltinType == 0 {
+		env = bindBuiltinTypes(env)
+	}
+
+	r := &resolver{src: f}
+	r.resolvePackage(env)
+	// TODO handle import and using declarations
+	f.Declarations = r.resolveDeclarations(env)
+
+	for _, tmpl := range f.Declarations {
+		var name string
+		var props []Property
+		var stmts []Stmt
+
+		switch t := tmpl.(type) {
+		case Document:
+			name = t.Ident.Name
+			props = t.Properties
+			stmts = t.Stmts
+
+		case Component:
+			name = t.Ident.Name
+			props = t.Properties
+			stmts = t.Stmts
+
+		default:
+			panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(t)))
+		}
+
+		nestedEnv := env.Nest(name)
+		r.resolveProperties(nestedEnv, props)
+
+		if flag&FlagNoBuiltinElement == 0 {
+			bindNativeElements(nestedEnv)
+		}
+
+		r.resolveStmts(nestedEnv, stmts)
+	}
+
+	return env
 }
 

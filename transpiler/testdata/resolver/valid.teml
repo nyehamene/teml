@@ -1,0 +1,14 @@
+(package p "views")
+
+(document D [fst: A, snd: B]
+  (fst)
+  (snd))
+
+(component A [name: String, other: B]
+  (name {id: name})
+  (other {id: name})
+  (div {id: name}
+    (name)))
+
+(component B []
+  (div))

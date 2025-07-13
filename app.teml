@@ -1,4 +1,4 @@
-(package p "view/app")
+(package pp "view/app")
 
 (import ui "https://github.com/ui/ui")
 
@@ -14,34 +14,35 @@
 ;; can defined before or after a document
 (component Dog
 	[ name: String
-	, age: Int
-	, isAdult: bool
+	, age: Number
+	, isAdult: Bool
 	, color: (enum "brown" "black")
 	]
-	(card {id: "dog-card"}
+	(box {id: "dog-card"}
 		-- The quick brown fox jumped over the lazy dog!
 		-- The fox named \(name) is \(age) \((if isAdult "years" "year")) old.
 		(div {data-message:
 						(cond color
 							"brown": "a good dog"
 							"black": "a naughty dog")})
-		(fancy-button "Click Me")
+		;; (card (fancy-button "Click Me"))
 		-- namespaced reference
 		-- not a template \\(foo)
-		(ui/badge {value: "name"})))
+		;; (ui/badge {value: "name"})
+		))
 
 ;; zero or more layouts per file
 ;; can be defined before or after a document
 (component BaseLayout
-	[ header: Fragment
-	, content: Fragment
-	, footer: Fragement
+	[ header1: Fragment
+	, content1: Fragment
+	, footer1: Fragment
 	]
-	(header)
+	(header1)
 	-- Leading paragraph
-	(content)
+	(content1)
 	-- Trailing paragraph
-	(footer))
+	(footer1))
 
 (component Foo []
 	(div
@@ -50,8 +51,11 @@
 						 , justify-items: "center"
 						 }
 		(div "first child")
-		#data{ bind: "value"
-				 , signal: "foo"
-				 }
+				 #data{ bind: "value"
+				 			, signal: "foo"
+				 			}
 		(div "second child")
 		(div {} "third child")))
+
+(component box [])
+(component Fragment [])

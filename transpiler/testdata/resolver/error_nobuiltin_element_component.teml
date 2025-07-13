@@ -1,0 +1,5 @@
+(package p "views")
+
+;; error: div is undefined
+(component H [] (div))
+

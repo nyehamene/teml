@@ -1,0 +1,5 @@
+(package p "views")
+
+(component A [])
+
+(component A [])
