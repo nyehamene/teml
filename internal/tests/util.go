@@ -15,42 +15,16 @@ import (
 	transpiler "github.com/eml-lang/teml/transpiler"
 )
 
-type ErrorHandler func(t *testing.T, ctx CompilationContext) bool
 type ErrorSeq = func(yield func(int, perrors.Error) bool)
 
-type CompilationStage int
-
-const (
-	StageParsed CompilationStage = iota
-	StageTransformed
-	StageResolved
-	StageTypechecked
-	StageGenerated
-)
-
-type CompilationContext struct {
-	stage    CompilationStage
-	hasError bool
-	errseq   ErrorSeq
-}
-
-func (ctx CompilationContext) Stage() CompilationStage {
-	return ctx.stage
-}
-
-func (ctx CompilationContext) HasError() bool {
-	return ctx.hasError
-}
-
-func (ctx CompilationContext) Errors() ErrorSeq {
-	return ctx.errseq
-}
+type ErrorHandler func(t *testing.T, stage CompilationStage, hasError bool, errors ErrorSeq) bool
+type ResultHandler func(fn string, result string) error
 
 func NewErrorHandler(targetStage CompilationStage, failOnSuccessFlag bool) ErrorHandler {
-	return func(t *testing.T, ctx CompilationContext) bool {
+	return func(t *testing.T, stage CompilationStage, hasError bool, errors ErrorSeq) bool {
 		lbl := "unknown stage"
 
-		switch ctx.stage {
+		switch stage {
 		case StageParsed:
 			lbl = "parsing"
 		case StageTransformed:
@@ -63,15 +37,15 @@ func NewErrorHandler(targetStage CompilationStage, failOnSuccessFlag bool) Error
 			lbl = "generation"
 		}
 
-		if ctx.stage != targetStage {
-			failOnError(t, lbl, ctx.hasError, ctx.errseq)
+		if stage != targetStage {
+			failOnError(t, lbl, hasError, errors)
 			return true
 		}
 
 		if failOnSuccessFlag {
-			failOnSuccess(t, lbl, ctx.hasError, ctx.errseq)
+			failOnSuccess(t, lbl, hasError, errors)
 		} else {
-			failOnError(t, lbl, ctx.hasError, ctx.errseq)
+			failOnError(t, lbl, hasError, errors)
 		}
 		return false
 	}
@@ -105,42 +79,57 @@ func CompileFiles(
 
 		buf := readFile(basefs, file)
 
-		t.Run(file, func(t *testing.T) {
-			tok := token.Scan(buf, 0)
+		opts := []CompilationOption{
+			SetName(file),
+			SetResolverFlag(flag),
+			SetResultHandler(outputhandler),
+			SetErrorHandler(errhandler),
+		}
 
-			astp := parser.ParseFile(tok, 0)
-			if !errhandler(t, CompilationContext{stage: StageParsed, hasError: astp.HasError(), errseq: astp.Errors.Each()}) {
-				return
-			}
-
-			nodes := transpiler.ParseFile(astp, tok)
-			if !errhandler(t, CompilationContext{stage: StageTransformed, hasError: nodes.HasError(), errseq: nodes.Errors()}) {
-				return
-			}
-
-			env := transpiler.ResolveFile(nodes, flag)
-			if !errhandler(t, CompilationContext{stage: StageResolved, hasError: nodes.HasError(), errseq: nodes.Errors()}) {
-				return
-			}
-
-			_ = transpiler.TypecheckFile(nodes, env)
-			if !errhandler(t, CompilationContext{stage: StageTypechecked, hasError: nodes.HasError(), errseq: nodes.Errors()}) {
-				return
-			}
-
-			w := strings.Builder{}
-			gonodes := gotranspiler.Parse(nodes)
-			err := codegen.Generate(&w, &gonodes)
-
-			if err := outputhandler(file, w.String()); err != nil {
-				t.Error(err)
-			}
-
-			if !errhandler(t, CompilationContext{stage: StageGenerated, hasError: err != nil, errseq: errorSeqFunc(err)}) {
-				return
-			}
-		})
+		CompileSource(t, buf, opts...)
 	}
+}
+
+func CompileSource(t *testing.T, buf []byte, opts ...CompilationOption) {
+	t.Helper()
+
+	ctx := NewCompilationContext(opts...)
+	name := ctx.name
+
+	t.Run(name, func(t *testing.T) {
+		tok := token.Scan(buf, 0)
+
+		astp := parser.ParseFile(tok, 0)
+		if !ctx.errhandler(t, StageParsed, astp.HasError(), astp.Errors.Each()) {
+			return
+		}
+
+		nodes := transpiler.ParseFile(astp, tok)
+		if !ctx.errhandler(t, StageTransformed, nodes.HasError(), nodes.Errors()) {
+			return
+		}
+
+		env := transpiler.ResolveFile(nodes, ctx.resolverFlag)
+		if !ctx.errhandler(t, StageResolved, nodes.HasError(), nodes.Errors()) {
+			return
+		}
+
+		_ = transpiler.TypecheckFile(nodes, env)
+		if !ctx.errhandler(t, StageTypechecked, nodes.HasError(), nodes.Errors()) {
+			return
+		}
+
+		w := strings.Builder{}
+		gonodes := gotranspiler.Parse(nodes)
+		err := codegen.Generate(&w, &gonodes)
+		if !ctx.errhandler(t, StageGenerated, err != nil, errorSeqFunc(err)) {
+			return
+		}
+
+		if err = ctx.resultHandler(name, w.String()); err != nil {
+			t.Error(err)
+		}
+	})
 }
 
 func errorSeqFunc(err error) ErrorSeq {
