@@ -1,0 +1,4 @@
+(package p "views")
+
+(component A [num: Number]
+  (num))

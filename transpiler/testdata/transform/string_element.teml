@@ -1,0 +1,4 @@
+(package p "views")
+
+(component A [text: String]
+  (text))

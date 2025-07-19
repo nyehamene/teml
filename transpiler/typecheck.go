@@ -237,59 +237,82 @@ func (t *typechecker) transformElement(env Env, node genericElement) Element {
 		element = node
 
 	case Var:
-		vartype := t.lookup(env, nodetype)
-		switch vartype := vartype.(type) {
-		case NativeElementType:
-			element = NativeElement{
-				Tag:        node.Tag,
-				Attributes: node.Attributes,
-				Body:       node.Body,
-			}
-
-		case TypeVar:
-			element = ComponentElement{
-				Tag:        node.Tag,
-				Attributes: node.Attributes,
-				Body:       node.Body,
-			}
-
-		case TypeDeclaration:
-			element = InstanceElement{
-				Tag:        node.Tag,
-				Parameter:  node.Parameter,
-				Attributes: node.Attributes,
-				Body:       node.Body,
-			}
-
-		case TypeEnum:
-			// NOTE an enum cannot be used as a tag name
-			// NOTE an error should have been reported already
-			// TODO add a test case
-			element = node
-
-		case BuiltinType:
-			switch vartype {
-			case TypeString:
-				element = StringElement{
-					Tag:        node.Tag,
-					Attributes: node.Attributes,
-				}
-			case TypeNumber:
-				element = NumberElement{
-					Tag:        node.Tag,
-					Attributes: node.Attributes,
-				}
-			case TypeBool, TypeUnchecked:
-				// NOTE an should have already been reported when type checking element tag name expression
-				// TODO add a test case
-				element = node
-			}
-		}
+		tag := t.lookup(env, nodetype)
+		element = t.transformElementByTagType(env, node, tag, false)
 
 	case MemberAccess:
 		// TODO transform element with member access tag expression
 		// NOTE can be transformed to either component or instance element
 		panic(errors.ErrUnsupported)
+	}
+
+	return element
+}
+
+func (t *typechecker) transformElementByTagType(env Env, genElem genericElement, tag Symbol, component bool) Element {
+	var element Element
+
+	switch tagtype := tag.(type) {
+	case TypePackage:
+		// NOTE an package cannot be used as a tag
+		// NOTE an error should have been reported already
+		// TODO add a test case
+		element = genElem
+
+	case TypeEnum:
+		// NOTE an enum cannot be used as a tag name
+		// NOTE an error should have been reported already
+		// TODO add a test case
+		element = genElem
+
+	case NativeElementType:
+		element = NativeElement{
+			Tag:        genElem.Tag,
+			Attributes: genElem.Attributes,
+			Body:       genElem.Body,
+		}
+
+	case TypeVar:
+		return t.transformElementByTagType(env, genElem, tagtype.Type, true)
+
+	case TypeDeclaration:
+		if component {
+			element = ComponentElement{
+				Tag:        genElem.Tag,
+				Attributes: genElem.Attributes,
+				Body:       genElem.Body,
+			}
+		} else {
+			element = InstanceElement{
+				Tag:        genElem.Tag,
+				Parameter:  genElem.Parameter,
+				Attributes: genElem.Attributes,
+				Body:       genElem.Body,
+			}
+		}
+
+	case BuiltinType:
+		switch tagtype {
+		case TypeString:
+			element = StringElement{
+				Tag:        genElem.Tag,
+				Attributes: genElem.Attributes,
+			}
+		case TypeNumber:
+			element = NumberElement{
+				Tag:        genElem.Tag,
+				Attributes: genElem.Attributes,
+			}
+		case TypeBool, TypeUnchecked:
+			// NOTE an should have already been reported when type checking element tag name expression
+			// TODO add a test case
+			element = genElem
+		default:
+			panic(fmt.Sprintf("unexpected builtin type: %v", reflect.TypeOf(tag)))
+		}
+
+	default:
+		panic(fmt.Sprintf("unexpected element symbol type: %v", reflect.TypeOf(tag)))
 	}
 
 	return element
