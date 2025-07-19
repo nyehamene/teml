@@ -25,9 +25,10 @@ type StructField struct {
 }
 
 type Method struct {
-	Name string
-	Type string
-	Body []Stmt
+	Name     string
+	Type     string
+	Receiver string
+	Body     []Stmt
 }
 
 type Stmt interface {
@@ -37,10 +38,16 @@ type Stmt interface {
 func (ReturnNil) stmt()          {}
 func (ReturnIfNotNil) stmt()     {}
 func (WriteLiteralString) stmt() {}
+func (WriteStringExpr) stmt()    {}
 
 type WriteLiteralString struct {
-	Literal string
-	Var     string
+	Value    string
+	Variable string
+}
+
+type WriteStringExpr struct {
+	Value    string
+	Variable string
 }
 
 type ReturnNil struct{}

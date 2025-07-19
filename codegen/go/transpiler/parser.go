@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	ast "github.com/eml-lang/teml/transpiler"
 )
@@ -75,7 +76,7 @@ func (p *parser) parseStruct(decl ast.Declaration) Struct {
 func (p *parser) parseStructField(prop ast.Property) StructField {
 	name := prop.Ident.Name
 	// TODO resolve property type
-	type0 := "any"
+	type0 := p.resolveType(prop.Type)
 	node := StructField{
 		Name: name,
 		Type: type0,
@@ -100,60 +101,106 @@ func (p *parser) parseMethod(decl ast.Declaration) Method {
 		panic(fmt.Sprintf("unexpected declaration type: %v", reflect.TypeOf(decl)))
 	}
 
+	// method receiver variable name
+	receiver := strings.ToLower(typename[0:1])
+
 	// + the return statement at the end of the function
 	body := make([]Stmt, 0, len(stmts)+1)
 
+	m := methodinfo{
+		receiver: receiver,
+		typename: typename,
+		name:     methodname,
+	}
 	for _, stmt := range stmts {
-		p.parseStmt(stmt.Element, &body)
+		p.parseStmt(m, stmt.Element, &body)
 	}
 
 	// add return statement
 	body = append(body, ReturnNil{})
 
 	node := Method{
-		Name: methodname,
-		Type: typename,
-		Body: body,
+		Name:     methodname,
+		Type:     typename,
+		Receiver: receiver,
+		Body:     body,
 	}
 	return node
 }
 
-func (p *parser) parseStmt(elem ast.Element, stmts *[]Stmt) {
-	switch t := elem.(type) {
+type methodinfo struct {
+	receiver string
+	typename string
+	name     string
+}
+
+func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
+	switch elem := node.(type) {
 	case ast.TextElement:
 		errvar := makeErrVar()
-		pe := doubleQuoteString(formatParagraph(stripDoubleQuote(t.Text)))
-		stmt1 := WriteLiteralString{Literal: pe, Var: errvar}
+		pe := doubleQuoteString(formatParagraph(stripDoubleQuote(elem.Text)))
+		stmt1 := WriteLiteralString{Value: pe, Variable: errvar}
 		stmt2 := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt1, stmt2)
 
 	case ast.TextGroupElement:
 		// open tag
 		errvar := makeErrVar()
-		stmt1 := WriteLiteralString{Literal: doubleQuoteString("<p>\\n"), Var: errvar}
-		stmt2 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt1, stmt2)
+		stmt1 := WriteLiteralString{Value: doubleQuoteString("<p>\\n"), Variable: errvar}
+		ret1 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt1, ret1)
 
 		// paragraph lines
-		for _, line := range t.Lines {
+		for _, line := range elem.Lines {
 			errvar := makeErrVar()
 			line = line + "\\n"
 			txt := doubleQuoteString(line)
-			stmt3 := WriteLiteralString{Literal: txt, Var: errvar}
-			stmt4 := ReturnIfNotNil(errvar)
-			*stmts = append(*stmts, stmt3, stmt4)
+			stmt2 := WriteLiteralString{Value: txt, Variable: errvar}
+			ret2 := ReturnIfNotNil(errvar)
+			*stmts = append(*stmts, stmt2, ret2)
 		}
 
 		// close tag
 		errvar = makeErrVar()
-		stmt5 := WriteLiteralString{Literal: doubleQuoteString("</p>\\n"), Var: errvar}
-		stmt6 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt5, stmt6)
+		stmt3 := WriteLiteralString{Value: doubleQuoteString("</p>\\n"), Variable: errvar}
+		ret3 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt3, ret3)
 
 	case ast.NumberElement:
 		panic(errors.ErrUnsupported)
+
 	case ast.StringElement:
-		panic(errors.ErrUnsupported)
+		// begin open tag
+		errvar := makeErrVar()
+		stmt1 := WriteLiteralString{Value: doubleQuoteString("<p"), Variable: errvar}
+		ret1 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt1, ret1)
+
+		// attribues
+		for _, attr := range elem.Attributes {
+			p.parseAttr(attr, stmts)
+		}
+
+		// end open tag
+		errvar = makeErrVar()
+		stmt3 := WriteLiteralString{Value: doubleQuoteString(">"), Variable: errvar}
+		ret3 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt3, ret3)
+
+		// content: member access expression
+		name := p.resolveName(elem.Tag)
+		memberAccess := m.receiver + "." + name
+		errvar = makeErrVar()
+		stmt4 := WriteStringExpr{Value: memberAccess, Variable: errvar}
+		ret4 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt4, ret4)
+
+		// close tag
+		errvar = makeErrVar()
+		stmt5 := WriteLiteralString{Value: doubleQuoteString("</p>\\n"), Variable: errvar}
+		ret5 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt5, ret5)
+
 	case ast.ComponentElement:
 		panic(errors.ErrUnsupported)
 	case ast.InstanceElement:
@@ -165,6 +212,53 @@ func (p *parser) parseStmt(elem ast.Element, stmts *[]Stmt) {
 	case ast.CondElement:
 		panic(errors.ErrUnsupported)
 	default:
-		panic(fmt.Sprintf("unexpected element type: %v", reflect.TypeOf(elem)))
+		panic(fmt.Sprintf("unexpected element type: %v", reflect.TypeOf(node)))
 	}
+}
+
+func (p *parser) parseAttr(attr ast.Attr, stmts *[]Stmt) {
+	for _, entry := range attr.Entries {
+		p.parseEntry(entry, stmts)
+	}
+}
+
+func (p *parser) parseEntry(entry ast.KeyVal, stmts *[]Stmt) {
+	key := entry.Key.Name
+	var value string
+
+	switch t := entry.Value.(type) {
+	case ast.String:
+		value = string(t)
+
+	case ast.Number:
+		value = string(t)
+
+	case ast.Bool:
+		value = string(t)
+
+	case ast.Var:
+		value = t.Name
+
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
+
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+
+	case ast.Enum:
+		panic(errors.ErrUnsupported)
+
+	default:
+		panic(fmt.Sprintf("unexpected expression type: %v", reflect.TypeOf(entry.Value)))
+	}
+
+	attr := " " + key + "=" + value
+
+	errvar := makeErrVar()
+	stmt := WriteLiteralString{Value: attr, Variable: errvar}
+	ret := ReturnIfNotNil(errvar)
+	*stmts = append(*stmts, stmt, ret)
 }

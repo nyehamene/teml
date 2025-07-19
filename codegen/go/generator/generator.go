@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"strings"
 
 	html "github.com/eml-lang/teml/codegen/go/source"
 	ast "github.com/eml-lang/teml/codegen/go/transpiler"
@@ -64,6 +63,12 @@ func (g *generator) writeStruct(st ast.Struct) error {
 		return err
 	}
 
+	for _, field := range st.Fields {
+		if err := g.writeField(field); err != nil {
+			return err
+		}
+	}
+
 	if err := g.writeln("}"); err != nil {
 		return err
 	}
@@ -71,9 +76,15 @@ func (g *generator) writeStruct(st ast.Struct) error {
 	return nil
 }
 
+func (g *generator) writeField(f ast.StructField) error {
+	if err := g.writeln(f.Name + " " + f.Type); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (g *generator) writeMethod(m ast.Method) error {
-	methodReceiver := strings.ToLower(m.Type[0:1])
-	header := fmt.Sprintf("func (%s %s) %s(ctx context.Context, w io.Writer) error {", methodReceiver, m.Type, m.Name)
+	header := fmt.Sprintf("func (%s %s) %s(ctx context.Context, w io.Writer) error {", m.Receiver, m.Type, m.Name)
 	if err := g.writeln(header); err != nil {
 		return err
 	}
@@ -111,7 +122,11 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 		err = g.writeln("}")
 
 	case ast.WriteLiteralString:
-		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Var, t.Literal))
+		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Variable, t.Value))
+
+	case ast.WriteStringExpr:
+		// TODO sanitize user input (t.Value)
+		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Variable, t.Value))
 
 	default:
 		panic(fmt.Sprintf("unexpected stmt type: %v", reflect.TypeOf(stmt)))

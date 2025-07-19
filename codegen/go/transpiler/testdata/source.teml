@@ -1,0 +1,10 @@
+(package p "views")
+
+(import buttons "views/buttons")
+
+(using Primary buttons)
+(using [Secondary Neutral] buttons)
+
+(component A [text: String]
+  (div "Hello, World!")
+  (text { class: "content" }))

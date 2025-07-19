@@ -16,6 +16,8 @@ import (
 	"github.com/eml-lang/teml/internal/assert"
 )
 
+const defaultTestFileName = "render_test.go"
+
 var usageText = `usage: eml <command> [<args>...]
 
 eml - build  HTML UIs in a simple templating language
@@ -29,8 +31,9 @@ supported platforms:
 `
 
 func main() {
-	// w := strings.Builder{}
-	w := bytes.Buffer{}
+	// srcout := strings.Builder{}
+	srcout := bytes.Buffer{}
+	testout := bytes.Buffer{}
 
 	wd, errcwd := os.Getwd()
 	if errcwd != nil {
@@ -43,18 +46,21 @@ func main() {
 	}
 	defer root.Close()
 
-	result := run(root, &w, os.Stderr, os.Args)
+	result := run(root, &srcout, &testout, os.Stderr, os.Args)
 
 	switch t := result.(type) {
 	case cmd.Error:
 		panic(t.Result)
 	case cmd.File:
-		err := writeFile(root, t, &w)
+		err := writeFile(root, t, &srcout)
 		if err != nil {
 			panic(err)
 		}
-		writeTestFile(root, t)
-		println("wrote source code to:", t.File)
+		println("source code written to:", t.File)
+
+		testFile := filepath.Join(filepath.Dir(t.File), defaultTestFileName)
+		writeFile(root, cmd.NewFile(testFile), &testout)
+		println("test code written to:", testFile)
 	default:
 		panic(fmt.Sprintf("unexpected cmd result type: %s", reflect.TypeOf(result)))
 	}
@@ -95,62 +101,7 @@ func writeFile(root *os.Root, f cmd.File, r io.Reader) error {
 	return nil
 }
 
-func writeTestFile(root *os.Root, f cmd.File) error {
-	assert.Assert(root != nil, "root is nil")
-	assert.Assert(f.File != "", "filename is empty")
-
-	path := filepath.Dir(f.File)
-	path = filepath.Join(path, "render_test.go")
-
-	nf, ferr := root.Create(path)
-	if ferr != nil {
-		return ferr
-	}
-	defer nf.Close()
-
-	source := `
-package views
-
-import (
-	"context"
-	_ "embed"
-	"strings"
-	"testing"
-
-	"github.com/google/go-cmp/cmp"
-)
-
-//go:embed expected.html
-var expectedHTML string
-
-func TestRender(t *testing.T) {
-	data := A{}
-
-	ctx := context.Background()
-	w := strings.Builder{}
-
-	err := data.Render(ctx, &w)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	gotHTML := w.String()
-
-	if diff := cmp.Diff(expectedHTML, gotHTML); diff != "" {
-		t.Error(diff)
-	}
-}
-	`
-
-	_, errwrt := io.WriteString(nf, source)
-	if errwrt != nil {
-		return errwrt
-	}
-
-	return nil
-}
-
-func run(root *os.Root, w, stderr io.Writer, args []string) cmd.Result {
+func run(root *os.Root, stdout, testout, stderr io.Writer, args []string) cmd.Result {
 	if len(args) < 2 {
 		io.WriteString(stderr, usageText)
 		os.Exit(64)
@@ -158,7 +109,7 @@ func run(root *os.Root, w, stderr io.Writer, args []string) cmd.Result {
 
 	switch cmdarg := args[1]; cmdarg {
 	case "generate":
-		return generateCmd(root, w, args[2:])
+		return generateCmd(root, stdout, testout, args[2:])
 
 	default:
 		err := fmt.Errorf("Unexpected command: %s", cmdarg)
@@ -166,7 +117,7 @@ func run(root *os.Root, w, stderr io.Writer, args []string) cmd.Result {
 	}
 }
 
-func generateCmd(root *os.Root, w io.Writer, args []string) cmd.Result {
+func generateCmd(root *os.Root, stdout, testout io.Writer, args []string) cmd.Result {
 	var file string
 
 	flags := flag.NewFlagSet("generate", flag.ExitOnError)
@@ -183,9 +134,10 @@ func generateCmd(root *os.Root, w io.Writer, args []string) cmd.Result {
 	// }
 
 	cmdargs := generatecmd.Arguments{
-		Writer: w,
-		File:   file,
-		Root:   root,
+		Writer:     stdout,
+		TestWriter: testout,
+		File:       file,
+		Root:       root,
 	}
 
 	result := generatecmd.Generate(cmdargs)
