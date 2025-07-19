@@ -127,6 +127,29 @@ func (p *parser) parseStmt(elem ast.Element, stmts *[]Stmt) {
 		stmt2 := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt1, stmt2)
 
+	case ast.TextGroupElement:
+		// open tag
+		errvar := makeErrVar()
+		stmt1 := WriteLiteralString{Literal: doubleQuoteString("<p>\\n"), Var: errvar}
+		stmt2 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt1, stmt2)
+
+		// paragraph lines
+		for _, line := range t.Lines {
+			errvar := makeErrVar()
+			line = line + "\\n"
+			txt := doubleQuoteString(line)
+			stmt3 := WriteLiteralString{Literal: txt, Var: errvar}
+			stmt4 := ReturnIfNotNil(errvar)
+			*stmts = append(*stmts, stmt3, stmt4)
+		}
+
+		// close tag
+		errvar = makeErrVar()
+		stmt5 := WriteLiteralString{Literal: doubleQuoteString("</p>\\n"), Var: errvar}
+		stmt6 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt5, stmt6)
+
 	case ast.NumberElement:
 		panic(errors.ErrUnsupported)
 	case ast.StringElement:

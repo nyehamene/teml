@@ -1,0 +1,6 @@
+(package p "views")
+
+(component A []
+  -- Hello, World!
+  -- How are you today?
+  )

@@ -3,7 +3,6 @@ package ast
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/eml-lang/teml/ast"
 	"github.com/eml-lang/teml/internal/slice"
@@ -176,15 +175,15 @@ func (p *parser) parseExprStmt(c ast.Content) Element {
 
 	case ast.TextGroup:
 		var tg ast.TextGroup = t
-		buf := strings.Builder{}
-		buf.Grow(len(tg))
+
+		lines := make([]string, 0, len(tg))
 		for _, t := range tg {
 			line := p.text(token.Token(t))
-			buf.WriteString(line)
-			buf.WriteString("\n")
+			// strip line string marker: --
+			line = line[2:]
+			lines = append(lines, line)
 		}
-		txt := buf.String()
-		node := TextElement{txt}
+		node := TextGroupElement{lines}
 		return node
 
 	case ast.Element:

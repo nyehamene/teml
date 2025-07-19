@@ -4,4 +4,4 @@
 
 @test:
 	just run-src text-element
-	# just run-src text-group-element
+	just run-src text-group-element

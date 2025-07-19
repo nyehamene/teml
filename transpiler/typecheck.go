@@ -186,6 +186,9 @@ func (t *typechecker) typecheckElement(env Env, expr Element) Element {
 	case TextElement:
 		return expr
 
+	case TextGroupElement:
+		return expr
+
 	case InstanceElement, ComponentElement, NativeElement, NumberElement, StringElement:
 		// NOTE these are not produce by the parser
 		panic("Unreachable")

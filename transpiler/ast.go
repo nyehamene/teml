@@ -24,6 +24,7 @@ type Element interface {
 }
 
 func (TextElement) element()      {}
+func (TextGroupElement) element() {}
 func (NumberElement) element()    {}
 func (StringElement) element()    {}
 func (ComponentElement) element() {}
@@ -90,6 +91,10 @@ type Stmt struct {
 
 type TextElement struct {
 	Text string
+}
+
+type TextGroupElement struct {
+	Lines []string
 }
 
 type NumberElement struct {

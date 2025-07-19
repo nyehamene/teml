@@ -53,6 +53,7 @@ func (r *resolver) resolveStmts(env Env, stmts []Stmt) {
 func (r *resolver) resolveElement(env Env, expr Element) {
 	switch t := expr.(type) {
 	case TextElement:
+	case TextGroupElement:
 	case ComponentElement, NativeElement, NumberElement, StringElement:
 		// NOTE these are not produce by the parser
 
