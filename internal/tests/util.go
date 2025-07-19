@@ -6,7 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	codegen "github.com/eml-lang/teml/codegen/go"
+	codegen "github.com/eml-lang/teml/codegen/go/generator"
+	gotranspiler "github.com/eml-lang/teml/codegen/go/transpiler"
 	"github.com/eml-lang/teml/token"
 
 	parser "github.com/eml-lang/teml/ast"
@@ -128,7 +129,8 @@ func CompileFiles(
 			}
 
 			w := strings.Builder{}
-			err := codegen.Generate(&w, nodes)
+			gonodes := gotranspiler.Parse(nodes)
+			err := codegen.Generate(&w, &gonodes)
 
 			if err := outputhandler(file, w.String()); err != nil {
 				t.Error(err)

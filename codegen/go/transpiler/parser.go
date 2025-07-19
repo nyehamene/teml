@@ -92,8 +92,10 @@ func (p *parser) parseMethod(decl ast.Declaration) Method {
 	case ast.Component:
 		typename = t.Ident.Name
 		stmts = t.Stmts
+
 	case ast.Document:
 		panic(errors.ErrUnsupported)
+
 	default:
 		panic(fmt.Sprintf("unexpected declaration type: %v", reflect.TypeOf(decl)))
 	}
@@ -120,7 +122,7 @@ func (p *parser) parseStmt(elem ast.Element, stmts *[]Stmt) {
 	switch t := elem.(type) {
 	case ast.TextElement:
 		errvar := makeErrVar()
-		pe := formatParagraph(stripDoubleQuote(t.Text))
+		pe := doubleQuoteString(formatParagraph(stripDoubleQuote(t.Text)))
 		stmt1 := WriteLiteralString{Literal: pe, Var: errvar}
 		stmt2 := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt1, stmt2)

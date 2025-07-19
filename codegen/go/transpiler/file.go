@@ -15,7 +15,10 @@ func Parse(fsrc *ast.File) File {
 
 	pkg := psr.parsePackage()
 
-	imports := make([]Import, 0, len(fsrc.Imports))
+	imports := make([]Import, 0, len(fsrc.Imports)+2)
+
+	addDefaultImports(&imports)
+
 	for _, i := range fsrc.Imports {
 		node := psr.parseImport(i)
 		imports = append(imports, node)
@@ -53,4 +56,11 @@ func Parse(fsrc *ast.File) File {
 		Methods:     methods,
 	}
 	return fdest
+}
+
+func addDefaultImports(imports *[]Import) {
+	context := Import{Name: "context", Path: doubleQuoteString("context")}
+	io := Import{Name: "io", Path: doubleQuoteString("io")}
+
+	*imports = append(*imports, context, io)
 }

@@ -18,5 +18,9 @@ func Desc(msg string) string {
 }
 
 func (p Error) String() string {
-	return p.Message
+	return fmt.Sprintf("%s (%d, %d)", p.Message, p.Line, p.Col)
+}
+
+func (p Error) Error() string {
+	return p.String()
 }
