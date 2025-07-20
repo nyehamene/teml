@@ -197,7 +197,10 @@ func (p *parser) parseExprStmt(c ast.Content) Element {
 	case ast.IfElement:
 		cond := p.parseExpr(t.Cond)
 		then := p.parseExprStmt(t.Then)
-		els := p.parseExprStmt(t.Else)
+		var els Element
+		if t.Else != nil {
+			els = p.parseExprStmt(t.Else)
+		}
 		return IFElement{Cond: cond, Then: then, Else: els}
 
 	case ast.CondElement:

@@ -56,6 +56,7 @@ func (CallRenderFunction) stmt()        {}
 func (MapVar) stmt()                    {}
 func (MapEntry) stmt()                  {}
 func (CopyContextWithAttributes) stmt() {}
+func (If) stmt()                        {}
 
 type WriteLiteralString struct {
 	Value    string
@@ -114,6 +115,13 @@ type MapEntry struct {
 type CopyContextWithAttributes struct {
 	Attrs    string
 	Variable string
+}
+
+type If struct {
+	//Cond expression
+	Cond string
+	Then []Stmt
+	Else []Stmt
 }
 
 type Expr interface {

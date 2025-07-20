@@ -203,7 +203,9 @@ func (t *typechecker) typecheckElement(env Env, expr Element) Element {
 	case IFElement:
 		t.typecheckExpr(env, tt.Cond)
 		t.typecheckElement(env, tt.Then)
-		t.typecheckElement(env, tt.Else)
+		if tt.Else != nil {
+			t.typecheckElement(env, tt.Else)
+		}
 		return tt
 
 	case CondElement:

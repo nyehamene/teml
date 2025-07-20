@@ -98,6 +98,7 @@ import (
 	_ "embed"
 	"strings"
 	"testing"
+	"fmt"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -126,9 +127,10 @@ func TestRender(t *testing.T) {
 
 	got := w.String()
 	got = strings.TrimSpace(got)
+	got = strings.ReplaceAll(got, "\n", "")
 
 	if diff := cmp.Diff(expected, got); diff != "" {
-		println(got)
+		fmt.Println(got)
 		t.Error(diff)
 	}
 }

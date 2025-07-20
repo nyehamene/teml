@@ -9,12 +9,10 @@ import (
 	ast "github.com/eml-lang/teml/transpiler"
 )
 
-type parser struct {
-	fsrc *ast.File
-}
+type parser struct{}
 
-func (p *parser) parsePackage() Package {
-	name := p.fsrc.Package.Path
+func (p *parser) parsePackage(pkg ast.Package) Package {
+	name := pkg.Path
 	name = stripDoubleQuote(name)
 	node := Package{name}
 	return node
@@ -237,10 +235,26 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 
 	case ast.InstanceElement:
 		panic(errors.ErrUnsupported)
+
 	case ast.IFElement:
-		panic(errors.ErrUnsupported)
+		cond := p.resolveIfCond(m, elem.Cond)
+
+		// then branch
+		thenBranch := []Stmt{}
+		p.parseStmt(m, elem.Then, &thenBranch)
+
+		// else branch
+		elseBranch := []Stmt{}
+		if elem.Else != nil {
+			p.parseStmt(m, elem.Else, &elseBranch)
+		}
+
+		stmt1 := If{Cond: cond, Then: thenBranch, Else: elseBranch}
+		*stmts = append(*stmts, stmt1)
+
 	case ast.CondElement:
 		panic(errors.ErrUnsupported)
+
 	default:
 		panic(fmt.Sprintf("unexpected element type: %v", reflect.TypeOf(node)))
 	}

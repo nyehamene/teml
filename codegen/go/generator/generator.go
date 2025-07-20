@@ -273,11 +273,48 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 	case ast.CallRenderFunction:
 		err = g.writeln(fmt.Sprintf("%s := %s.%s(%s)", t.Variable, t.Receiver, t.Name, t.Context))
 
+	case ast.If:
+		err = g.writeIfStmt(t)
+
 	default:
 		panic(fmt.Sprintf("unexpected stmt type: %v", reflect.TypeOf(stmt)))
 	}
 
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *generator) writeIfStmt(ifsmt ast.If) error {
+	if err := g.writeln(fmt.Sprintf("if %s {", ifsmt.Cond)); err != nil {
+		return err
+	}
+
+	for _, stmt := range ifsmt.Then {
+		err := g.writeStmt(stmt)
+		if err != nil {
+			return err
+		}
+	}
+
+	// then
+	if len(ifsmt.Else) > 0 {
+		if err := g.writeln("} else {"); err != nil {
+			return err
+		}
+
+		// else
+		for _, stmt := range ifsmt.Else {
+			err := g.writeStmt(stmt)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := g.writeln("}"); err != nil {
 		return err
 	}
 

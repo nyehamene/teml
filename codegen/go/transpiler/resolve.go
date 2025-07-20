@@ -16,6 +16,8 @@ func (p *parser) resolveType(expr ast.PropertyType) string {
 			return "string"
 		case "Number":
 			return "int"
+		case "Bool":
+			return "bool"
 		}
 		return t.Name
 
@@ -63,6 +65,29 @@ func (p *parser) resolveValue(expr ast.Expr) Expr {
 		return Number(t)
 	case ast.Bool:
 		return Bool(t)
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
+	case ast.Enum:
+		panic(errors.ErrUnsupported)
+	default:
+		panic(errors.ErrUnsupported)
+	}
+}
+
+func (p *parser) resolveIfCond(m methodinfo, expr ast.Expr) string {
+	switch t := expr.(type) {
+	case ast.Var:
+		return m.receiver + "." + t.Name
+	case ast.Bool:
+		return string(t)
+	case ast.String:
+		panic(errors.ErrUnsupported)
+	case ast.Number:
+		panic(errors.ErrUnsupported)
 	case ast.MemberAccess:
 		panic(errors.ErrUnsupported)
 	case ast.IFExpr:

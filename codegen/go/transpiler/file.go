@@ -25,9 +25,9 @@ const (
 )
 
 func Parse(fsrc *ast.File) File {
-	psr := parser{fsrc}
+	psr := parser{}
 
-	pkg := psr.parsePackage()
+	pkg := psr.parsePackage(fsrc.Package)
 
 	imports := make([]Import, 0, len(fsrc.Imports)+2)
 

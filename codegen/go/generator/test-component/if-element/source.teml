@@ -1,0 +1,7 @@
+(package p "views")
+
+;;test:instance A{test: true}
+(component A [test: Bool]
+  (if true "Yes")
+  (if false "Bad" "Good")
+  (if test "True" "False"))

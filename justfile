@@ -13,4 +13,5 @@
 	just test component-element-attr
 	just test native-element
 	just test native-element-attr
+	just test if-element
 

@@ -66,7 +66,9 @@ func (r *resolver) resolveElement(env Env, expr Element) {
 	case IFElement:
 		r.resolveExpr(env, t.Cond)
 		r.resolveElement(env, t.Then)
-		r.resolveElement(env, t.Else)
+		if t.Else != nil {
+			r.resolveElement(env, t.Else)
+		}
 
 	case CondElement:
 		r.resolveExpr(env, t.Target)
