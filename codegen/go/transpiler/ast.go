@@ -27,7 +27,7 @@ type Struct struct {
 
 type StructField struct {
 	Name string
-	Type string
+	Type Type
 }
 
 type RenderMethod struct {
@@ -57,6 +57,7 @@ func (MapVar) stmt()                    {}
 func (MapEntry) stmt()                  {}
 func (CopyContextWithAttributes) stmt() {}
 func (If) stmt()                        {}
+func (Cond) stmt()                      {}
 
 type WriteLiteralString struct {
 	Value    string
@@ -124,6 +125,16 @@ type If struct {
 	Else []Stmt
 }
 
+type Cond struct {
+	Target Expr
+	Cases  []Case
+}
+
+type Case struct {
+	Match  Expr
+	Branch []Stmt
+}
+
 type Expr interface {
 	expr()
 }
@@ -137,3 +148,27 @@ type String string
 type Number string
 type Bool string
 type Var string
+
+type Type interface {
+	kind()
+	Name() string
+}
+
+func (String) kind() {}
+func (Number) kind() {}
+func (Bool) kind()   {}
+func (Var) kind()    {}
+func (Enum) kind()   {}
+
+func (s String) Name() string { return string(s) }
+func (n Number) Name() string { return string(n) }
+func (b Bool) Name() string   { return string(b) }
+func (v Var) Name() string    { return string(v) }
+func (e Enum) Name() string   { return e.TypeName }
+
+type Enum struct {
+	//TypeName
+	TypeName string
+	// TODO add the constant value type. accept only number and string (maybe accept bool)
+	Constants []Expr
+}

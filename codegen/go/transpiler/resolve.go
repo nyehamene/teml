@@ -4,27 +4,40 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	ast "github.com/eml-lang/teml/transpiler"
 )
 
-func (p *parser) resolveType(expr ast.PropertyType) string {
+func (p *parser) resolveFieldType(structname, field string, expr ast.PropertyType) Type {
 	switch t := expr.(type) {
 	case ast.Var:
 		switch t.Name {
 		case "String":
-			return "string"
+			return String("string")
 		case "Number":
-			return "int"
+			return Number("int")
 		case "Bool":
-			return "bool"
+			return Bool("bool")
 		}
-		return t.Name
-
-	case ast.MemberAccess:
-		panic(errors.ErrUnsupported)
+		return Var(t.Name)
 
 	case ast.Enum:
+		typename := structname + strings.ToUpper(field[0:1]) + field[1:]
+
+		constants := []Expr{}
+		for _, c := range t.Constants {
+			constant := p.resolveValue(c)
+			constants = append(constants, constant)
+		}
+
+		e := Enum{
+			TypeName:  typename,
+			Constants: []Expr{},
+		}
+		return e
+
+	case ast.MemberAccess:
 		panic(errors.ErrUnsupported)
 
 	default:
@@ -87,6 +100,52 @@ func (p *parser) resolveIfCond(m methodinfo, expr ast.Expr) string {
 	case ast.String:
 		panic(errors.ErrUnsupported)
 	case ast.Number:
+		panic(errors.ErrUnsupported)
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
+	case ast.Enum:
+		panic(errors.ErrUnsupported)
+	default:
+		panic(errors.ErrUnsupported)
+	}
+}
+
+func (p *parser) resolveCondTarget(m methodinfo, expr ast.Expr) Expr {
+	switch t := expr.(type) {
+	case ast.Var:
+		return Var(m.receiver + "." + t.Name)
+	case ast.Bool:
+		return Bool(t)
+	case ast.String:
+		return String(t)
+	case ast.Number:
+		return Number(t)
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
+	case ast.Enum:
+		panic(errors.ErrUnsupported)
+	default:
+		panic(errors.ErrUnsupported)
+	}
+}
+
+func (p *parser) resolveCondCase(expr ast.Expr) Expr {
+	switch t := expr.(type) {
+	case ast.Bool:
+		return Bool(t)
+	case ast.String:
+		return String(t)
+	case ast.Number:
+		return Number(t)
+	case ast.Var:
 		panic(errors.ErrUnsupported)
 	case ast.MemberAccess:
 		panic(errors.ErrUnsupported)

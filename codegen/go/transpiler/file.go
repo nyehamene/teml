@@ -94,15 +94,15 @@ func createRenderContextStruct() RenderContextStruct {
 			Fields: []StructField{
 				{
 					Name: RenderContextContextField,
-					Type: "context.Context",
+					Type: Var("context.Context"),
 				},
 				{
 					Name: RenderContextWriterField,
-					Type: "io.Writer",
+					Type: Var("io.Writer"),
 				},
 				{
 					Name: RenderContextAttrsField,
-					Type: "map[string]string",
+					Type: Var("map[string]string"),
 				},
 			},
 		},

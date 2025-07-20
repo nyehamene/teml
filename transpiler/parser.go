@@ -359,7 +359,7 @@ func (p *parser) parseEnum(e ast.Enum) Enum {
 
 	constants := make([]EnumConstant, 0, e.Constants.Size())
 	for _, c := range e.Constants.Each() {
-		constant := EnumConstant(c)
+		constant := EnumConstant(p.parseExpr(c))
 		constants = append(constants, constant)
 	}
 

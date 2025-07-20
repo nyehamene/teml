@@ -7,8 +7,6 @@ import (
 
 	"github.com/eml-lang/teml/internal/assert"
 	perrors "github.com/eml-lang/teml/internal/errors"
-
-	"github.com/eml-lang/teml/token"
 )
 
 type typechecker struct {
@@ -159,13 +157,17 @@ func (t *typechecker) validateEnumConstants(cons []EnumConstant) Symbol {
 
 	var constantType Symbol
 	for _, c := range cons {
-		switch c.Kind {
-		case token.Number:
-			constantType = validateType(constantType, TypeNumber)
-
-		case token.String:
+		switch c.(type) {
+		case String:
 			constantType = validateType(constantType, TypeString)
-
+		case Number:
+			constantType = validateType(constantType, TypeNumber)
+		case Bool:
+		case IFExpr:
+		case CondExpr:
+		case Var:
+		case MemberAccess:
+		case Enum:
 		default:
 			panic(fmt.Sprintf("unexpected enum constant: %v", reflect.TypeOf(c)))
 		}

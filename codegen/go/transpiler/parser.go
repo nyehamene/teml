@@ -58,7 +58,7 @@ func (p *parser) parseStruct(decl ast.Declaration) Struct {
 
 	fields := make([]StructField, 0, len(props))
 	for _, prop := range props {
-		field := p.parseStructField(prop)
+		field := p.parseStructField(name, prop)
 		fields = append(fields, field)
 	}
 	node := Struct{
@@ -69,10 +69,10 @@ func (p *parser) parseStruct(decl ast.Declaration) Struct {
 	return node
 }
 
-func (p *parser) parseStructField(prop ast.Property) StructField {
+func (p *parser) parseStructField(structname string, prop ast.Property) StructField {
 	name := prop.Ident.Name
 	// TODO resolve property type
-	type0 := p.resolveType(prop.Type)
+	type0 := p.resolveFieldType(structname, name, prop.Type)
 	node := StructField{
 		Name: name,
 		Type: type0,
@@ -234,6 +234,7 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		*stmts = append(*stmts, stmt1, stmt2, ret2)
 
 	case ast.InstanceElement:
+		// TODO generate html for instance element
 		panic(errors.ErrUnsupported)
 
 	case ast.IFElement:
@@ -253,7 +254,19 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		*stmts = append(*stmts, stmt1)
 
 	case ast.CondElement:
-		panic(errors.ErrUnsupported)
+		target := p.resolveCondTarget(m, elem.Target)
+
+		// cases
+		cases := []Case{}
+		for _, c := range elem.Cases {
+			branch := []Stmt{}
+			cond := p.resolveCondCase(c.Cond)
+			p.parseStmt(m, c.Branch.Element, &branch)
+			cases = append(cases, Case{Match: cond, Branch: branch})
+		}
+
+		stmt1 := Cond{Target: target, Cases: cases}
+		*stmts = append(*stmts, stmt1)
 
 	default:
 		panic(fmt.Sprintf("unexpected element type: %v", reflect.TypeOf(node)))

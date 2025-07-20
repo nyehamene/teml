@@ -14,4 +14,5 @@
 	just test native-element
 	just test native-element-attr
 	just test if-element
+	just test cond-element
 

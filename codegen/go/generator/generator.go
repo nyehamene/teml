@@ -87,11 +87,46 @@ func (g *generator) writeStruct(st ast.Struct) error {
 		return err
 	}
 
+	if err := g.writeEnumType(st.Fields); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *generator) writeEnumType(fields []ast.StructField) error {
+	enums := []ast.Enum{}
+	for _, field := range fields {
+		switch t := field.Type.(type) {
+		case ast.String: // noop
+		case ast.Number: // noop
+		case ast.Bool: // noop
+		case ast.Var: // noop
+		case ast.Enum:
+			enums = append(enums, t)
+		default:
+			panic(fmt.Sprintf("unexpected field type: %v", reflect.TypeOf(field)))
+		}
+	}
+
+	for _, enum := range enums {
+		if err := g.writeln(fmt.Sprintf("type %s string", enum.Name())); err != nil {
+			return err
+		}
+		for _, c := range enum.Constants {
+			value := g.resolveValue(c)
+			name := enum.TypeName + value
+			if err := g.writeln(fmt.Sprintf("const %s = %s", name, value)); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
 func (g *generator) writeField(f ast.StructField) error {
-	if err := g.writeln(f.Name + " " + f.Type); err != nil {
+	if err := g.writeln(f.Name + " " + f.Type.Name()); err != nil {
 		return err
 	}
 	return nil
@@ -276,11 +311,49 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 	case ast.If:
 		err = g.writeIfStmt(t)
 
+	case ast.Cond:
+		err = g.writeCond(t)
+
 	default:
 		panic(fmt.Sprintf("unexpected stmt type: %v", reflect.TypeOf(stmt)))
 	}
 
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *generator) writeCond(condsmt ast.Cond) error {
+	target := g.resolveValue(condsmt.Target)
+
+	if err := g.writeln(fmt.Sprintf("switch %s {", target)); err != nil {
+		return err
+	}
+
+	for _, c := range condsmt.Cases {
+		match := g.resolveSwitchTarget(c.Match)
+
+		if err := g.writeln(fmt.Sprintf("case %s:", match)); err != nil {
+			return err
+		}
+		for _, stmt := range c.Branch {
+			if err := g.writeStmt(stmt); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := g.writeln("default:"); err != nil {
+		return err
+	}
+
+	if err := g.writeln(fmt.Sprintf("panic(%s)", fmt.Sprintf("fmt.Sprintf(%q, %s)", "unexpected enum value: %s", target))); err != nil {
+		return err
+	}
+
+	if err := g.writeln("}"); err != nil {
 		return err
 	}
 

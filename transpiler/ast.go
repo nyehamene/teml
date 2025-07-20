@@ -1,7 +1,5 @@
 package ast
 
-import "github.com/eml-lang/teml/token"
-
 type Node interface {
 	code()
 }
@@ -180,8 +178,6 @@ type Var struct {
 	Pos  Pos
 }
 
-type Constant token.Token
-
 type Enum struct {
 	Constants []EnumConstant
 }
@@ -191,7 +187,7 @@ type KeyVal struct {
 	Value Expr
 }
 
-type EnumConstant Constant
+type EnumConstant Expr
 
 type Attr struct {
 	Tag     Expr
