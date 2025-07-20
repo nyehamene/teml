@@ -1,0 +1,11 @@
+(package p "views")
+
+(component A [header: String footer: Number]
+  (header)
+  "Hello!"
+  -- How are you?
+  (footer))
+
+;;test:instance B{element: A{header: "Header", footer: 100}}
+(component B [element: A]
+  (element { class: "content" }))

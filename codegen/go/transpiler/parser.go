@@ -9,8 +9,6 @@ import (
 	ast "github.com/eml-lang/teml/transpiler"
 )
 
-const defaultMethodName = "Render"
-
 type parser struct {
 	fsrc *ast.File
 }
@@ -84,8 +82,8 @@ func (p *parser) parseStructField(prop ast.Property) StructField {
 	return node
 }
 
-func (p *parser) parseMethod(decl ast.Declaration) Method {
-	var methodname = defaultMethodName
+func (p *parser) parseMethod(decl ast.Declaration) RenderMethod {
+	var methodname = RenderComponentMethod
 	var typename string
 	var stmts []ast.Stmt
 
@@ -119,7 +117,7 @@ func (p *parser) parseMethod(decl ast.Declaration) Method {
 	// add return statement
 	body = append(body, ReturnNil{})
 
-	node := Method{
+	node := RenderMethod{
 		Name:     methodname,
 		Type:     typename,
 		Receiver: receiver,
@@ -137,23 +135,36 @@ type methodinfo struct {
 func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 	switch elem := node.(type) {
 	case ast.TextElement:
+		const tag = "p"
+		// open tag
+		// NOTE A text group element cannot have attributes, however
+		// NOTE they can inherit attributes from their parent
+		p.parseOpenTagWithAttributes(tag, nil, stmts)
+
 		errvar := makeErrVar()
-		pe := doubleQuoteString(formatParagraph(stripDoubleQuote(elem.Text)))
-		stmt1 := WriteLiteralString{Value: pe, Variable: errvar}
-		stmt2 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt1, stmt2)
+		stmt1 := WriteLiteralString{Value: elem.Text, Variable: errvar}
+		ret1 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt1, ret1)
+
+		p.parseCloseTag(tag, stmts)
 
 	case ast.TextGroupElement:
+		const tag = "p"
+		const newline = "\\n"
 		// open tag
+		// NOTE A text group element cannot have attributes, however
+		// NOTE they can inherit attributes from their parent
+		p.parseOpenTagWithAttributes(tag, nil, stmts)
+
 		errvar := makeErrVar()
-		stmt1 := WriteLiteralString{Value: doubleQuoteString("<p>\\n"), Variable: errvar}
+		stmt1 := WriteLiteralString{Value: doubleQuoteString(newline), Variable: errvar}
 		ret1 := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt1, ret1)
 
 		// paragraph lines
 		for _, line := range elem.Lines {
 			errvar := makeErrVar()
-			line = line + "\\n"
+			line = line + newline
 			txt := doubleQuoteString(line)
 			stmt2 := WriteLiteralString{Value: txt, Variable: errvar}
 			ret2 := ReturnIfNotNil(errvar)
@@ -161,10 +172,7 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		}
 
 		// close tag
-		errvar = makeErrVar()
-		stmt3 := WriteLiteralString{Value: doubleQuoteString("</p>\\n"), Variable: errvar}
-		ret3 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt3, ret3)
+		p.parseCloseTag(tag, stmts)
 
 	case ast.NumberElement:
 		// open tag
@@ -172,8 +180,8 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		p.parseOpenTagWithAttributes(tag, elem.Attributes, stmts)
 
 		// content
-		name := p.resolveName(elem.Tag)
-		memberAccess := m.receiver + "." + name
+		member := p.resolveName(elem.Tag)
+		memberAccess := m.receiver + "." + member
 
 		tempvar := makeTempVar()
 		stmt1 := FormatNumber{Value: memberAccess, Variable: tempvar}
@@ -191,8 +199,8 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		p.parseOpenTagWithAttributes(tag, elem.Attributes, stmts)
 
 		// content
-		name := p.resolveName(elem.Tag)
-		memberAccess := m.receiver + "." + name
+		member := p.resolveName(elem.Tag)
+		memberAccess := m.receiver + "." + member
 		errvar := makeErrVar()
 		stmt := WriteStringMemberAccess{Value: memberAccess, Variable: errvar}
 		ret := ReturnIfNotNil(errvar)
@@ -202,7 +210,19 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		p.parseCloseTag(tag, stmts)
 
 	case ast.ComponentElement:
-		panic(errors.ErrUnsupported)
+		// attributes
+		attrvar := p.parseAttribute(elem.Attributes, stmts)
+		ctxvar := makeTempVar()
+		stmt1 := CopyContextWithAttributes{Attrs: attrvar, Variable: ctxvar}
+
+		name := m.name
+		member := p.resolveName(elem.Tag)
+		memberAccess := m.receiver + "." + member
+		errvar := makeErrVar()
+		stmt2 := CallRenderFunction{Context: ctxvar, Name: name, Receiver: memberAccess, Variable: errvar}
+		ret2 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt1, stmt2, ret2)
+
 	case ast.InstanceElement:
 		panic(errors.ErrUnsupported)
 	case ast.NativeElement:
@@ -216,12 +236,32 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 	}
 }
 
+func (p *parser) parseAttribute(attrs []ast.Attr, stmts *[]Stmt) string {
+	mapvar := makeTempVar()
+	stmt1 := MapVar{Variable: mapvar}
+	*stmts = append(*stmts, stmt1)
+
+	for _, attr := range attrs {
+		for _, entry := range attr.Entries {
+			key := entry.Key.Name
+			value := p.resolveValue(entry.Value)
+			stmt2 := MapEntry{Name: mapvar, Key: key, Value: value}
+			*stmts = append(*stmts, stmt2)
+		}
+	}
+	return mapvar
+}
+
 func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, stmts *[]Stmt) {
 	// begin open tag
 	errvar := makeErrVar()
 	stmt1 := WriteLiteralString{Value: doubleQuoteString(fmt.Sprintf("<%s", name)), Variable: errvar}
 	ret1 := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt1, ret1)
+
+	errvar = makeErrVar()
+	stmti := WriteInheritedAttributes{Variable: errvar}
+	*stmts = append(*stmts, stmti)
 
 	// attribues
 	for _, attr := range attrs {

@@ -52,3 +52,26 @@ func (p *parser) resolveName(expr ast.Expr) string {
 		panic(fmt.Sprintf("expected expression type: %v", reflect.TypeOf(expr)))
 	}
 }
+
+func (p *parser) resolveValue(expr ast.Expr) Expr {
+	switch t := expr.(type) {
+	case ast.Var:
+		return Var(t.Name)
+	case ast.String:
+		return String(t)
+	case ast.Number:
+		return Number(t)
+	case ast.Bool:
+		return Bool(t)
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
+	case ast.Enum:
+		panic(errors.ErrUnsupported)
+	default:
+		panic(errors.ErrUnsupported)
+	}
+}

@@ -1,6 +1,7 @@
 (package p "views")
 
-(component A [])
+(component A []
+  (div))
 
 (component B [a: A]
-  (a))
+  (a {id: "id"}))

@@ -9,6 +9,8 @@
 	just run-src string-element-attr
 	just run-src number-element
 	just run-src number-element-attr
+	just run-src component-element
+	just run-src component-element-attr
 
 @test TARGET:
 	just run-src {{TARGET}}

@@ -1,15 +1,28 @@
 package ast
 
-import ast "github.com/eml-lang/teml/transpiler"
+import (
+	ast "github.com/eml-lang/teml/transpiler"
+)
 
 type File struct {
-	Package     Package
-	Imports     []Import
-	TypeAliases []TypeAlias
-	Structs     []Struct
-	Methods     []Method
-	GlobalVars  []AssignBlank
+	Package       Package
+	Imports       []Import
+	TypeAliases   []TypeAlias
+	Structs       []Struct
+	Methods       []RenderMethod
+	GlobalVars    []BlankVar
+	RenderContext RenderContextStruct
 }
+
+const (
+	RenderContext             = "RenderContext"
+	RenderContextOption       = "RenderContextOption"
+	RenderContextContructor   = "NewRenderContext"
+	RenderComponentMethod     = "Render"
+	RenderContextContextField = "ctx"
+	RenderContextWriterField  = "writer"
+	RenderContextAttrsField   = "attrs"
+)
 
 func Parse(fsrc *ast.File) File {
 	psr := parser{fsrc}
@@ -37,7 +50,7 @@ func Parse(fsrc *ast.File) File {
 	}
 
 	structs := make([]Struct, 0, len(fsrc.Declarations))
-	methods := make([]Method, 0, len(fsrc.Declarations))
+	methods := make([]RenderMethod, 0, len(fsrc.Declarations))
 
 	for _, decl := range fsrc.Declarations {
 		// reset temp variable counter
@@ -51,17 +64,18 @@ func Parse(fsrc *ast.File) File {
 	}
 
 	// NOTE prevents 'unused variable error'
-	globalVars := []AssignBlank{
-		AssignBlank("fmt.Append"),
+	globalVars := []BlankVar{
+		BlankVar("fmt.Append"),
 	}
 
 	fdest := File{
-		Package:     pkg,
-		Imports:     imports,
-		TypeAliases: typeAliases,
-		Structs:     structs,
-		Methods:     methods,
-		GlobalVars:  globalVars,
+		Package:       pkg,
+		Imports:       imports,
+		TypeAliases:   typeAliases,
+		RenderContext: createRenderContextStruct(),
+		Structs:       structs,
+		Methods:       methods,
+		GlobalVars:    globalVars,
 	}
 	return fdest
 }
@@ -72,4 +86,28 @@ func addDefaultImports(imports *[]Import) {
 	fmt := Import{Name: "fmt", Path: doubleQuoteString("fmt")}
 
 	*imports = append(*imports, context, io, fmt)
+}
+
+func createRenderContextStruct() RenderContextStruct {
+	context := RenderContextStruct{
+		Struct: Struct{Name: RenderContext,
+			Fields: []StructField{
+				{
+					Name: RenderContextContextField,
+					Type: "context.Context",
+				},
+				{
+					Name: RenderContextWriterField,
+					Type: "io.Writer",
+				},
+				{
+					Name: RenderContextAttrsField,
+					Type: "map[string]string",
+				},
+			},
+		},
+		Constructor: RenderContextContructor,
+		OptionType:  RenderContextOption,
+	}
+	return context
 }

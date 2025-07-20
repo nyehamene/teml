@@ -14,6 +14,12 @@ type Import struct {
 	Path string
 }
 
+type RenderContextStruct struct {
+	Struct
+	Constructor string
+	OptionType  string
+}
+
 type Struct struct {
 	Name   string
 	Fields []StructField
@@ -24,23 +30,32 @@ type StructField struct {
 	Type string
 }
 
-type Method struct {
-	Name     string
-	Type     string
+type RenderMethod struct {
+	//Name of the method
+	Name string
+	//Type the method is defined for
+	Type string
+	//Receiver variable name for the method
 	Receiver string
-	Body     []Stmt
+	//Body
+	Body []Stmt
 }
 
 type Stmt interface {
 	stmt()
 }
 
-func (ReturnNil) stmt()               {}
-func (ReturnIfNotNil) stmt()          {}
-func (WriteLiteralString) stmt()      {}
-func (WriteStringMemberAccess) stmt() {}
-func (WriteNumberMemberAccess) stmt() {}
-func (FormatNumber) stmt()            {}
+func (ReturnNil) stmt()                 {}
+func (ReturnIfNotNil) stmt()            {}
+func (WriteLiteralString) stmt()        {}
+func (WriteStringMemberAccess) stmt()   {}
+func (WriteNumberMemberAccess) stmt()   {}
+func (WriteInheritedAttributes) stmt()  {}
+func (FormatNumber) stmt()              {}
+func (CallRenderFunction) stmt()        {}
+func (MapVar) stmt()                    {}
+func (MapEntry) stmt()                  {}
+func (CopyContextWithAttributes) stmt() {}
 
 type WriteLiteralString struct {
 	Value    string
@@ -57,6 +72,11 @@ type WriteNumberMemberAccess struct {
 	Variable string
 }
 
+type WriteInheritedAttributes struct {
+	//Variable for the error returned from the attributes
+	Variable string
+}
+
 type FormatNumber struct {
 	Value    string
 	Variable string
@@ -65,4 +85,47 @@ type FormatNumber struct {
 type ReturnNil struct{}
 type ReturnIfNotNil string
 
-type AssignBlank string
+type CallRenderFunction struct {
+	//Name of method to call
+	Name string
+	//Receiver variable name
+	Receiver string
+	//Variable stores the error return from the function call
+	Variable string
+	//Context variable name
+	Context string
+}
+
+type BlankVar string
+
+type MapVar struct {
+	Variable string
+}
+
+type MapEntry struct {
+	//Name of the map variable
+	Name string
+	//Key of the entry
+	Key string
+	//Value of the entry
+	Value Expr
+}
+
+type CopyContextWithAttributes struct {
+	Attrs    string
+	Variable string
+}
+
+type Expr interface {
+	expr()
+}
+
+func (String) expr() {}
+func (Number) expr() {}
+func (Var) expr()    {}
+func (Bool) expr()   {}
+
+type String string
+type Number string
+type Bool string
+type Var string

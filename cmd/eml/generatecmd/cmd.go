@@ -111,7 +111,12 @@ func TestRender(t *testing.T) {
 	ctx := context.Background()
 	w := strings.Builder{}
 
-	err := data.Render(ctx, &w)
+	rdrctx := %s{
+		ctx: ctx,
+		writer: &w,
+	}
+
+	err := data.%s(rdrctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,12 +124,16 @@ func TestRender(t *testing.T) {
 	gotHTML := w.String()
 
 	if diff := cmp.Diff(expectedHTML, gotHTML); diff != "" {
+		println(gotHTML)
 		t.Error(diff)
 	}
 }
 	`
 
-	_, errwrt := io.WriteString(stdout, fmt.Sprintf(source, data))
+	_, errwrt := io.WriteString(
+		stdout,
+		fmt.Sprintf(source, data, gotranspiler.RenderContext, gotranspiler.RenderComponentMethod),
+	)
 	if errwrt != nil {
 		return errwrt
 	}
