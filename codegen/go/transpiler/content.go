@@ -32,3 +32,11 @@ func makeErrVar() string {
 	errvarCount += 1
 	return name
 }
+
+var tempvarCount = 0
+
+func makeTempVar() string {
+	name := fmt.Sprintf("temp%d", tempvarCount)	
+	tempvarCount += 1
+	return name
+}

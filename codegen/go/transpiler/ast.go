@@ -35,20 +35,34 @@ type Stmt interface {
 	stmt()
 }
 
-func (ReturnNil) stmt()          {}
-func (ReturnIfNotNil) stmt()     {}
-func (WriteLiteralString) stmt() {}
-func (WriteStringExpr) stmt()    {}
+func (ReturnNil) stmt()               {}
+func (ReturnIfNotNil) stmt()          {}
+func (WriteLiteralString) stmt()      {}
+func (WriteStringMemberAccess) stmt() {}
+func (WriteNumberMemberAccess) stmt() {}
+func (FormatNumber) stmt()            {}
 
 type WriteLiteralString struct {
 	Value    string
 	Variable string
 }
 
-type WriteStringExpr struct {
+type WriteStringMemberAccess struct {
+	Value    string
+	Variable string
+}
+
+type WriteNumberMemberAccess struct {
+	Value    string
+	Variable string
+}
+
+type FormatNumber struct {
 	Value    string
 	Variable string
 }
 
 type ReturnNil struct{}
 type ReturnIfNotNil string
+
+type AssignBlank string

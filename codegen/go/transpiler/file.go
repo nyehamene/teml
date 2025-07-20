@@ -8,6 +8,7 @@ type File struct {
 	TypeAliases []TypeAlias
 	Structs     []Struct
 	Methods     []Method
+	GlobalVars  []AssignBlank
 }
 
 func Parse(fsrc *ast.File) File {
@@ -39,13 +40,19 @@ func Parse(fsrc *ast.File) File {
 	methods := make([]Method, 0, len(fsrc.Declarations))
 
 	for _, decl := range fsrc.Declarations {
-		// reset temp err variable name counter
+		// reset temp variable counter
 		errvarCount = 0
+		tempvarCount = 0
 
 		node := psr.parseStruct(decl)
 		method := psr.parseMethod(decl)
 		structs = append(structs, node)
 		methods = append(methods, method)
+	}
+
+	// NOTE prevents 'unused variable error'
+	globalVars := []AssignBlank{
+		AssignBlank("fmt.Append"),
 	}
 
 	fdest := File{
@@ -54,6 +61,7 @@ func Parse(fsrc *ast.File) File {
 		TypeAliases: typeAliases,
 		Structs:     structs,
 		Methods:     methods,
+		GlobalVars:  globalVars,
 	}
 	return fdest
 }
@@ -61,6 +69,7 @@ func Parse(fsrc *ast.File) File {
 func addDefaultImports(imports *[]Import) {
 	context := Import{Name: "context", Path: doubleQuoteString("context")}
 	io := Import{Name: "io", Path: doubleQuoteString("io")}
+	fmt := Import{Name: "fmt", Path: doubleQuoteString("fmt")}
 
-	*imports = append(*imports, context, io)
+	*imports = append(*imports, context, io, fmt)
 }

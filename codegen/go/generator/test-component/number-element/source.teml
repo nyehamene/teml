@@ -1,0 +1,5 @@
+(package p "views")
+
+;;test:instance A{num: 100}
+(component A [num: Number]
+  (num))

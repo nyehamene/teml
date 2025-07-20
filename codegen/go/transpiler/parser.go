@@ -167,39 +167,39 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		*stmts = append(*stmts, stmt3, ret3)
 
 	case ast.NumberElement:
-		panic(errors.ErrUnsupported)
+		// open tag
+		const tag = "p"
+		p.parseOpenTagWithAttributes(tag, elem.Attributes, stmts)
 
-	case ast.StringElement:
-		// begin open tag
-		errvar := makeErrVar()
-		stmt1 := WriteLiteralString{Value: doubleQuoteString("<p"), Variable: errvar}
-		ret1 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt1, ret1)
-
-		// attribues
-		for _, attr := range elem.Attributes {
-			p.parseAttr(attr, stmts)
-		}
-
-		// end open tag
-		errvar = makeErrVar()
-		stmt3 := WriteLiteralString{Value: doubleQuoteString(">"), Variable: errvar}
-		ret3 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt3, ret3)
-
-		// content: member access expression
+		// content
 		name := p.resolveName(elem.Tag)
 		memberAccess := m.receiver + "." + name
-		errvar = makeErrVar()
-		stmt4 := WriteStringExpr{Value: memberAccess, Variable: errvar}
-		ret4 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt4, ret4)
+
+		tempvar := makeTempVar()
+		stmt1 := FormatNumber{Value: memberAccess, Variable: tempvar}
+		errvar := makeErrVar()
+		stmt2 := WriteNumberMemberAccess{Value: tempvar, Variable: errvar}
+		ret2 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt1, stmt2, ret2)
 
 		// close tag
-		errvar = makeErrVar()
-		stmt5 := WriteLiteralString{Value: doubleQuoteString("</p>\\n"), Variable: errvar}
-		ret5 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt5, ret5)
+		p.parseCloseTag(tag, stmts)
+
+	case ast.StringElement:
+		// open tag
+		const tag = "p"
+		p.parseOpenTagWithAttributes(tag, elem.Attributes, stmts)
+
+		// content
+		name := p.resolveName(elem.Tag)
+		memberAccess := m.receiver + "." + name
+		errvar := makeErrVar()
+		stmt := WriteStringMemberAccess{Value: memberAccess, Variable: errvar}
+		ret := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt, ret)
+
+		// close tag
+		p.parseCloseTag(tag, stmts)
 
 	case ast.ComponentElement:
 		panic(errors.ErrUnsupported)
@@ -214,6 +214,32 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 	default:
 		panic(fmt.Sprintf("unexpected element type: %v", reflect.TypeOf(node)))
 	}
+}
+
+func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, stmts *[]Stmt) {
+	// begin open tag
+	errvar := makeErrVar()
+	stmt1 := WriteLiteralString{Value: doubleQuoteString(fmt.Sprintf("<%s", name)), Variable: errvar}
+	ret1 := ReturnIfNotNil(errvar)
+	*stmts = append(*stmts, stmt1, ret1)
+
+	// attribues
+	for _, attr := range attrs {
+		p.parseAttr(attr, stmts)
+	}
+
+	// end open tag
+	errvar = makeErrVar()
+	stmt2 := WriteLiteralString{Value: doubleQuoteString(">"), Variable: errvar}
+	ret2 := ReturnIfNotNil(errvar)
+	*stmts = append(*stmts, stmt2, ret2)
+}
+
+func (p *parser) parseCloseTag(name string, stmts *[]Stmt) {
+	errvar := makeErrVar()
+	stmt := WriteLiteralString{Value: doubleQuoteString(fmt.Sprintf("</%s>\\n", name)), Variable: errvar}
+	ret := ReturnIfNotNil(errvar)
+	*stmts = append(*stmts, stmt, ret)
 }
 
 func (p *parser) parseAttr(attr ast.Attr, stmts *[]Stmt) {

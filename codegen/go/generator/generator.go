@@ -31,6 +31,12 @@ func Generate(stdout io.Writer, fsrc *ast.File) error {
 		}
 	}
 
+	for _, gvar := range fsrc.GlobalVars {
+		if err := g.writeGlobalVar(gvar); err != nil {
+			return err
+		}
+	}
+
 	for _, m := range fsrc.Methods {
 		if err := g.writeMethod(m); err != nil {
 			return err
@@ -121,10 +127,17 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 
 		err = g.writeln("}")
 
+	case ast.FormatNumber:
+		err = g.writeln(fmt.Sprintf("%s := fmt.Sprintf(%q, %s)", t.Variable, "%d", t.Value))
+
 	case ast.WriteLiteralString:
 		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Variable, t.Value))
 
-	case ast.WriteStringExpr:
+	case ast.WriteStringMemberAccess:
+		// TODO sanitize user input (t.Value)
+		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Variable, t.Value))
+
+	case ast.WriteNumberMemberAccess:
 		// TODO sanitize user input (t.Value)
 		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Variable, t.Value))
 
@@ -136,6 +149,11 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 		return err
 	}
 
+	return nil
+}
+
+func (g *generator) writeGlobalVar(gvar ast.AssignBlank) error {
+	g.writeln("var _ = " + string(gvar))
 	return nil
 }
 
