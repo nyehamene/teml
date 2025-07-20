@@ -1,9 +1,24 @@
 package ast
 
-import "fmt"
+import (
+	"fmt"
 
-func formatParagraph(text string) string {
-	return "<p>" + text + "</p>\\n"
+	ast "github.com/eml-lang/teml/transpiler"
+)
+
+func createAttributes(kvs map[string]string) []ast.Attr {
+	entries := []ast.KeyVal{}
+	for k, v := range kvs {
+		entry := ast.KeyVal{Key: ast.Var{Name: k}, Value: ast.String(doubleQuoteString(v))}
+		entries = append(entries, entry)
+	}
+	attrs := []ast.Attr{
+		{
+			Tag:     nil,
+			Entries: entries,
+		},
+	}
+	return attrs
 }
 
 func stripDoubleQuote(quotedstr string) string {
@@ -36,7 +51,7 @@ func makeErrVar() string {
 var tempvarCount = 0
 
 func makeTempVar() string {
-	name := fmt.Sprintf("temp%d", tempvarCount)	
+	name := fmt.Sprintf("temp%d", tempvarCount)
 	tempvarCount += 1
 	return name
 }

@@ -135,36 +135,31 @@ type methodinfo struct {
 func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 	switch elem := node.(type) {
 	case ast.TextElement:
-		const tag = "p"
+		const tag = "span"
+		const inheritParentAttr = false
+		attrs := createAttributes(map[string]string{"style": "display: contents"})
 		// open tag
-		// NOTE A text group element cannot have attributes, however
-		// NOTE they can inherit attributes from their parent
-		p.parseOpenTagWithAttributes(tag, nil, stmts)
+		p.parseOpenTagWithAttributes(tag, attrs, inheritParentAttr, stmts)
 
+		// content
 		errvar := makeErrVar()
 		stmt1 := WriteLiteralString{Value: elem.Text, Variable: errvar}
 		ret1 := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt1, ret1)
 
+		// close tag
 		p.parseCloseTag(tag, stmts)
 
 	case ast.TextGroupElement:
-		const tag = "p"
-		const newline = "\\n"
+		const tag = "span"
+		const inheritParentAttr = false
+		attrs := createAttributes(map[string]string{"style": "display: contents"})
 		// open tag
-		// NOTE A text group element cannot have attributes, however
-		// NOTE they can inherit attributes from their parent
-		p.parseOpenTagWithAttributes(tag, nil, stmts)
-
-		errvar := makeErrVar()
-		stmt1 := WriteLiteralString{Value: doubleQuoteString(newline), Variable: errvar}
-		ret1 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt1, ret1)
+		p.parseOpenTagWithAttributes(tag, attrs, inheritParentAttr, stmts)
 
 		// paragraph lines
 		for _, line := range elem.Lines {
 			errvar := makeErrVar()
-			line = line + newline
 			txt := doubleQuoteString(line)
 			stmt2 := WriteLiteralString{Value: txt, Variable: errvar}
 			ret2 := ReturnIfNotNil(errvar)
@@ -176,8 +171,9 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 
 	case ast.NumberElement:
 		// open tag
-		const tag = "p"
-		p.parseOpenTagWithAttributes(tag, elem.Attributes, stmts)
+		const tag = "data"
+		const inheritParentAttr = true
+		p.parseOpenTagWithAttributes(tag, elem.Attributes, inheritParentAttr, stmts)
 
 		// content
 		member := p.resolveName(elem.Tag)
@@ -195,8 +191,9 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 
 	case ast.StringElement:
 		// open tag
-		const tag = "p"
-		p.parseOpenTagWithAttributes(tag, elem.Attributes, stmts)
+		const tag = "span"
+		const inheritParentAttr = true
+		p.parseOpenTagWithAttributes(tag, elem.Attributes, inheritParentAttr, stmts)
 
 		// content
 		member := p.resolveName(elem.Tag)
@@ -209,11 +206,26 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		// close tag
 		p.parseCloseTag(tag, stmts)
 
+	case ast.NativeElement:
+		const inheritParentAttr = true
+		// open tag
+		tag := p.resolveName(elem.Tag)
+		p.parseOpenTagWithAttributes(tag, elem.Attributes, inheritParentAttr, stmts)
+
+		for _, stmt := range elem.Body {
+			p.parseStmt(m, stmt.Element, stmts)
+		}
+
+		// close tag
+		p.parseCloseTag(tag, stmts)
+
 	case ast.ComponentElement:
 		// attributes
 		attrvar := p.parseAttribute(elem.Attributes, stmts)
 		ctxvar := makeTempVar()
 		stmt1 := CopyContextWithAttributes{Attrs: attrvar, Variable: ctxvar}
+
+		// TODO render component body
 
 		name := m.name
 		member := p.resolveName(elem.Tag)
@@ -224,8 +236,6 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		*stmts = append(*stmts, stmt1, stmt2, ret2)
 
 	case ast.InstanceElement:
-		panic(errors.ErrUnsupported)
-	case ast.NativeElement:
 		panic(errors.ErrUnsupported)
 	case ast.IFElement:
 		panic(errors.ErrUnsupported)
@@ -252,16 +262,18 @@ func (p *parser) parseAttribute(attrs []ast.Attr, stmts *[]Stmt) string {
 	return mapvar
 }
 
-func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, stmts *[]Stmt) {
+func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, inherit bool, stmts *[]Stmt) {
 	// begin open tag
 	errvar := makeErrVar()
 	stmt1 := WriteLiteralString{Value: doubleQuoteString(fmt.Sprintf("<%s", name)), Variable: errvar}
 	ret1 := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt1, ret1)
 
-	errvar = makeErrVar()
-	stmti := WriteInheritedAttributes{Variable: errvar}
-	*stmts = append(*stmts, stmti)
+	if inherit {
+		errvar = makeErrVar()
+		stmti := WriteInheritedAttributes{Variable: errvar}
+		*stmts = append(*stmts, stmti)
+	}
 
 	// attribues
 	for _, attr := range attrs {
@@ -277,7 +289,7 @@ func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, stmts
 
 func (p *parser) parseCloseTag(name string, stmts *[]Stmt) {
 	errvar := makeErrVar()
-	stmt := WriteLiteralString{Value: doubleQuoteString(fmt.Sprintf("</%s>\\n", name)), Variable: errvar}
+	stmt := WriteLiteralString{Value: doubleQuoteString(fmt.Sprintf("</%s>", name)), Variable: errvar}
 	ret := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt, ret)
 }

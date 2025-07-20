@@ -121,10 +121,14 @@ func TestRender(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gotHTML := w.String()
+	expected := strings.TrimSpace(expectedHTML)
+	expected = strings.ReplaceAll(expected, "\n", "")
 
-	if diff := cmp.Diff(expectedHTML, gotHTML); diff != "" {
-		println(gotHTML)
+	got := w.String()
+	got = strings.TrimSpace(got)
+
+	if diff := cmp.Diff(expected, got); diff != "" {
+		println(got)
 		t.Error(diff)
 	}
 }

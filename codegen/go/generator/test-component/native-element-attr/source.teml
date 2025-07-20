@@ -1,0 +1,5 @@
+(package p "views")
+
+;;test:instance A{}
+(component A []
+  (p {id: "p1" class: "content"} "Hello, World!"))
