@@ -255,10 +255,10 @@ func (p *parser) parseEntry(entry ast.KeyVal, stmts *[]Stmt) {
 		panic(fmt.Sprintf("unexpected expression type: %v", reflect.TypeOf(entry.Value)))
 	}
 
-	attr := " " + key + "=" + value
+	attr := " " + key + "=" + escapeSurrounding(value)
 
 	errvar := makeErrVar()
-	stmt := WriteLiteralString{Value: attr, Variable: errvar}
+	stmt := WriteLiteralString{Value: doubleQuoteString(attr), Variable: errvar}
 	ret := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt, ret)
 }

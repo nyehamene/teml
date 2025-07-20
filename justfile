@@ -6,6 +6,7 @@
 	just run-src text-element
 	just run-src text-group-element
 	just run-src string-element
+	just run-src string-element-attr
 
 @test TARGET:
 	just run-src {{TARGET}}

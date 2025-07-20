@@ -16,6 +16,15 @@ func doubleQuoteString(s string) string {
 	return quoted
 }
 
+func escapeSurrounding(str string) string {
+	prefix := string(str[0])
+	suffix := string(str[len(str)-1])
+	content := str[1 : len(str)-1]
+	escape := "\\"
+	txt := fmt.Sprintf("%s%s%s%s%s", escape, prefix, content, escape, suffix)
+	return txt
+}
+
 var errvarCount = 0
 
 func makeErrVar() string {
