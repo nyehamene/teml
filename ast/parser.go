@@ -555,6 +555,7 @@ func (p *parser) parseIfElement() (IfElement, bool) {
 func (p *parser) parseElement(skipParenOpen bool) (Element, bool) {
 	var ident Expr
 	var attributes []AttributeSet
+	var parameters []ElementParameter
 	var children []Content
 	var ok bool
 
@@ -573,6 +574,17 @@ loop:
 		switch ch := p.peek(); ch.Kind {
 		case token.ParenClose:
 			break loop
+
+		case token.BracketOpen:
+			if parameters != nil {
+				// TODO add test case
+				p.addError("parameter already defined")
+			}
+			params, ok := p.parseElementParameters()
+			if !ok {
+				return Element{}, false
+			}
+			parameters = params
 
 		case token.Hash, token.BraceOpen:
 			attrs, ok := p.parseAttributes()
@@ -594,8 +606,61 @@ loop:
 		return Element{}, false
 	}
 
-	e := Element{Ident: ident, Attributes: slice.New(attributes), Children: slice.New(children)}
+	e := Element{Ident: ident, Parameter: slice.New(parameters), Attributes: slice.New(attributes), Children: slice.New(children)}
 	return e, true
+}
+
+func (p *parser) parseElementParameters() ([]ElementParameter, bool) {
+	assert.Assert(p.peek().Kind == token.BracketOpen, "expected [")
+
+	offset := p.peek().Pos
+	// consume [
+	p.advance()
+
+	parameters := []ElementParameter{}
+	for !p.eof() {
+		ch := p.peek()
+		if ch.Kind == token.BracketClose {
+			break
+		}
+		if ch.Kind == token.ParenClose {
+			break
+		}
+
+		var name token.Token
+		var value Expr
+		var ok bool
+
+		name, ok = p.expect(token.Ident, "missing parameter name")
+		if !ok {
+			return []ElementParameter{}, false
+		}
+
+		p.expect(token.Colon, "missing parameter value separator")
+
+		value, ok = p.parseExpr()
+		if !ok {
+			return []ElementParameter{}, false
+		}
+
+		param := ElementParameter{Ident: Var(name), Value: value}
+		parameters = append(parameters, param)
+	}
+
+	if ch := p.peek(); ch.Kind != token.BracketClose {
+		cur := p.cur
+		// TODO add a test case to check the the reported offset points to the position of [
+		// in the element definition
+		p.cur = offset
+		p.addError("unterminated element parameters")
+		p.cur = cur
+		return nil, false
+	}
+
+	// consume ]
+	p.advance()
+
+	return parameters, true
 }
 
 func (p *parser) parseAttributes() (AttributeSet, bool) {

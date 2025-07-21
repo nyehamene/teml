@@ -16,12 +16,20 @@ const (
 	Invalid Kind = iota
 
 	// {{ Bracket
-	BracketOpen  // [
-	BracketClose // ]
-	ParenOpen    // (
-	ParenClose   // )
-	BraceOpen    // {
-	BraceClose   // }
+
+	// BracketOpen [
+	BracketOpen
+	// BracketClose ]
+	BracketClose
+	// ParenOpen (
+	ParenOpen
+	// ParenClose )
+	ParenClose
+	// BraceOpen {
+	BraceOpen
+	// BraceClose }
+	BraceClose
+
 	// }} Barcket
 
 	// {{ Delimiter

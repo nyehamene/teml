@@ -8,7 +8,8 @@
 
 (document home [x: i/A, y: B, z: (enum 0 1)])
 
-(component A [x: i/A, y: B, z: (enum "A" "B")])
+(component A [x: i/A, y: B, z: (enum "A" "B")]
+  (B [name: "john"]))
 
 (component C [a-card: card, mode: (enum "open" "close")]
   (div {id: "foo"} "text" (div))

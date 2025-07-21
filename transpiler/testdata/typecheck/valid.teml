@@ -2,9 +2,10 @@
 
 (document H [a: A])
 
-(component A [b: B])
-(component B [c: String])
-(component C [c: Number])
-(component D [c: Bool])
-(component E [c: (enum "one" "two")])
+(component A [p: B])
+(component B [p: String])
+(component C [p: Number])
+(component D [p: Bool])
+(component E [p: (enum "one" "two")])
+(component F [] (B [p: "foo"]))
 

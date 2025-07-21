@@ -90,8 +90,14 @@ type Enum struct {
 
 type Element struct {
 	Ident      Expr
+	Parameter  slice.Slice[ElementParameter]
 	Attributes slice.Slice[AttributeSet]
 	Children   slice.Slice[Content]
+}
+
+type ElementParameter struct {
+	Ident Var
+	Value Expr
 }
 
 type IfElement struct {

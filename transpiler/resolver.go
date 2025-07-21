@@ -59,7 +59,7 @@ func (r *resolver) resolveElement(env Env, expr Element) {
 
 	case genericElement:
 		r.resolveExpr(env, t.Tag)
-		// TODO resolve properties
+		r.resolveParameter(env, t.Parameter)
 		r.resolveAttributes(env, t.Attributes)
 		r.resolveStmts(env, t.Body)
 
@@ -82,19 +82,21 @@ func (r *resolver) resolveElement(env Env, expr Element) {
 	}
 }
 
-func (r *resolver) resolveAttributes(env Env, attrs []Attr) {
-	keyEnv := defaultEnv{
-		env: map[string]Symbol{},
-	}
+func (r *resolver) resolveParameter(env Env, params []KeyVal) {
+	keyEnv := defaultEnv{env: map[string]Symbol{}}
+	r.resolveEntries(env, keyEnv, params)
+}
 
+func (r *resolver) resolveAttributes(env Env, attrs []Attr) {
+	keyEnv := defaultEnv{env: map[string]Symbol{}}
 	for _, attr := range attrs {
-		r.resolveAttribute(env, keyEnv, attr)
+		r.resolveEntries(env, keyEnv, attr.Entries)
 	}
 }
 
-func (r *resolver) resolveAttribute(env, keyEnv Env, attr Attr) {
-	for i := range attr.Entries {
-		entry := attr.Entries[i]
+func (r *resolver) resolveEntries(env, keyEnv Env, attrs []KeyVal) {
+	for i := range attrs {
+		entry := attrs[i]
 		r.bindVar(keyEnv, entry.Key)
 
 		switch t := entry.Value.(type) {

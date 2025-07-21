@@ -12,3 +12,6 @@
 
 (component B []
   (div))
+
+(component C []
+  (A [name: "string"]))

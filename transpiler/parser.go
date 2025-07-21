@@ -188,10 +188,10 @@ func (p *parser) parseExprStmt(c ast.Content) Element {
 
 	case ast.Element:
 		ident := p.parseIdentifier(t.Ident)
-		// TODO parse properties
+		props := p.parseElementProperties(t.Parameter)
 		attrs := p.parseGenericAttributes(t.Attributes)
 		block := p.parseBlock(t.Children)
-		node := genericElement{Tag: ident, Attributes: attrs, Body: block}
+		node := genericElement{Tag: ident, Parameter: props, Attributes: attrs, Body: block}
 		return node
 
 	case ast.IfElement:
@@ -227,6 +227,20 @@ func (p *parser) parseBlock(block slice.Slice[ast.Content]) []Stmt {
 	for _, item := range block.Each() {
 		expr := p.parseExprStmt(item)
 		node := Stmt{Element: expr}
+		nodes = append(nodes, node)
+	}
+	return nodes
+}
+
+func (p *parser) parseElementProperties(props slice.Slice[ast.ElementParameter]) []KeyVal {
+	if props.Size() == 0 {
+		return nil
+	}
+	nodes := make([]KeyVal, 0, props.Size())
+	for _, prop := range props.Each() {
+		name := p.parseVar(prop.Ident)
+		value := p.parseExpr(prop.Value)
+		node := KeyVal{Key: name, Value: value}
 		nodes = append(nodes, node)
 	}
 	return nodes

@@ -87,6 +87,7 @@ var valid = []string{
 	`(package p "path") (component C [] (div {a: (cond f true: "foo")}))`,
 	`(package p "path") (document [] (div {a: (cond f true: "foo" false: 100)}))`,
 	`(package p "path") (document [] (div {a: (cond f true: "foo", false: 100, 0: true, "foo": "bar",)}))`,
+	`(package p "path") (component A[] (B [name: "foo"]))`,
 }
 
 func TestParse_short_valid(t *testing.T) {
@@ -153,6 +154,9 @@ var invalid = []string{
 	`(package p "path") (import i "path") (document []) (using a i) ;desc: unexpected using declaration`,
 	`(package p "path") (document []) (document []) ;desc: duplicate document declaration`,
 	`(package p "path") (component C [a: (enum "A" 10)]) ;desc: mismatch enum constant type`,
+	`(package p "path") (component A[] (B ["name": "foo"])) ;desc: missing parameter name`,
+	`(package p "path") (component A[] (B [name: "foo")) ;desc: unterminated element parameters`,
+	`(package p "path") (component A[] (B [name "foo"])) ;desc: missing parameter value separator`,
 }
 
 func TestParse_short_invalid(t *testing.T) {

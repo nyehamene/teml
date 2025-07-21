@@ -287,6 +287,7 @@ func (t *typechecker) transformElementByTagType(env Env, genElem genericElement,
 				Body:       genElem.Body,
 			}
 		} else {
+			// TODO typecheck parameters
 			element = InstanceElement{
 				Tag:        genElem.Tag,
 				Parameter:  genElem.Parameter,
@@ -326,6 +327,7 @@ func (t *typechecker) typecheckExpr(env Env, expr Expr) {
 	switch tt := expr.(type) {
 	case String, Number, Bool:
 		// no oop
+
 	case IFExpr:
 		t.typecheckExpr(env, tt.Cond)
 		t.typecheckExpr(env, tt.Then)
@@ -339,7 +341,7 @@ func (t *typechecker) typecheckExpr(env Env, expr Expr) {
 		}
 
 	case Var:
-		// TODO handle this
+		// TODO typecheck Var
 
 	case MemberAccess:
 		panic(errors.ErrUnsupported)
