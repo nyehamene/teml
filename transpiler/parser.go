@@ -25,12 +25,12 @@ func (p *parser) parsePackage() Package {
 }
 
 func (p *parser) parseImports() []Import {
-	if p.src.Imports.Size() == 0 {
+	if len(p.src.Imports) == 0 {
 		return nil
 	}
 
-	nodes := make([]Import, 0, p.src.Imports.Size())
-	for _, imp := range p.src.Imports.Each() {
+	nodes := make([]Import, 0, len(p.src.Imports))
+	for _, imp := range p.src.Imports {
 		ident := p.parseVar(imp.Ident)
 		path := p.text(token.Token(imp.Path))
 		node := Import{Ident: ident, Path: path}
@@ -41,12 +41,12 @@ func (p *parser) parseImports() []Import {
 }
 
 func (p *parser) parseUsings() []Using {
-	if p.src.Usings.Size() == 0 {
+	if len(p.src.Usings) == 0 {
 		return nil
 	}
 
-	nodes := make([]Using, 0, p.src.Usings.Size())
-	for _, use := range p.src.Usings.Each() {
+	nodes := make([]Using, 0, len(p.src.Usings))
+	for _, use := range p.src.Usings {
 		node := p.parseUsing(use)
 		nodes = append(nodes, node)
 	}
@@ -68,7 +68,7 @@ func (p *parser) parseUsing(use ast.Using) Using {
 }
 
 func (p *parser) parseDeclarations() []Declaration {
-	size := p.src.Components.Size()
+	size := len(p.src.Components)
 
 	if p.src.HasDocument() {
 		size += 1
@@ -81,7 +81,7 @@ func (p *parser) parseDeclarations() []Declaration {
 		tmpls = append(tmpls, node)
 	}
 
-	for _, cmp := range p.src.Components.Each() {
+	for _, cmp := range p.src.Components {
 		node := p.parseDeclaration(cmp)
 		tmpls = append(tmpls, node)
 	}

@@ -164,7 +164,7 @@ func TestParse_short_invalid(t *testing.T) {
 
 			file := ast.ParseFile(tokens, token.ExitOnError)
 
-			for _, err := range file.Errors.Each() {
+			for _, err := range file.Errors {
 				for e := range getEntriesFromString(err.Message) {
 					goterrmsgs[e.key] = e.value
 				}
@@ -331,7 +331,10 @@ func getFirstProperties(f *ast.File, document bool) ([]ast.Property, bool) {
 }
 
 func getFirstComponent(f *ast.File) (ast.Component, bool) {
-	return f.Components.Item(0)
+	if len(f.Components) == 0 {
+		return ast.Component{}, false
+	}
+	return f.Components[0], true
 }
 
 func getFirstElementChildren(f *ast.File, document bool) ([]ast.Content, bool) {

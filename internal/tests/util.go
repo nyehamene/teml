@@ -100,7 +100,7 @@ func CompileSource(t *testing.T, buf []byte, opts ...CompilationOption) {
 		tok := token.Scan(buf, 0)
 
 		astp := parser.ParseFile(tok, 0)
-		if !ctx.errhandler(t, StageParsed, astp.HasError(), astp.Errors.Each()) {
+		if !ctx.errhandler(t, StageParsed, astp.HasError(), newErrorSeq(astp.Errors)) {
 			return
 		}
 
@@ -186,5 +186,15 @@ func failOnSuccess(t *testing.T, label string, hasError bool, _ ErrorSeq) {
 	t.Helper()
 	if !hasError {
 		t.Fatalf("%s succeeded unexpectedly", label)
+	}
+}
+
+func newErrorSeq(errs []perrors.Error) ErrorSeq {
+	return func(yield func(int, perrors.Error) bool) {
+		for i, err := range errs {
+			if !yield(i, err) {
+				break
+			}
+		}
 	}
 }

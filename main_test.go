@@ -22,7 +22,7 @@ func TestScanParse(t *testing.T) {
 	}
 
 	astp := parser.ParseFile(toks, 0)
-	for _, err := range astp.Errors.Each() {
+	for _, err := range astp.Errors {
 		t.Error(err.Message)
 	}
 

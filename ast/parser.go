@@ -57,14 +57,14 @@ func (p *parser) parse(flag token.Flags) {
 			lastOrder = OrderPackage
 
 		case Import:
-			p.dst.Imports.Add(d)
+			p.dst.Imports = append(p.dst.Imports, d)
 			if lastOrder != OrderPackage && lastOrder != OrderImport {
 				p.addError("missing package declaration")
 			}
 			lastOrder = OrderImport
 
 		case Using:
-			p.dst.Usings.Add(d)
+			p.dst.Usings = append(p.dst.Usings, d)
 			if lastOrder == OrderDeclaration {
 				p.addError("unexpected using declaration")
 			} else if lastOrder != OrderImport {
@@ -81,7 +81,7 @@ func (p *parser) parse(flag token.Flags) {
 			hasDocument = true
 
 		case Component:
-			p.dst.Components.Add(d)
+			p.dst.Components = append(p.dst.Components, d)
 			lastOrder = OrderDeclaration
 
 		default:
@@ -987,7 +987,7 @@ func (p *parser) addError(msg string) {
 	tok := p.peek()
 
 	if tok == eof {
-		p.dst.Errors.Add(errors.Error{Message: errors.Desc(msg)})
+		p.dst.Errors = append(p.dst.Errors, errors.Error{Message: errors.Desc(msg)})
 		return
 	}
 
@@ -1011,5 +1011,5 @@ func (p *parser) addError(msg string) {
 	}
 
 	err := errors.Error{Line: line, Col: col, Message: errors.Desc(msg)}
-	p.dst.Errors.Add(err)
+	p.dst.Errors = append(p.dst.Errors, err)
 }
