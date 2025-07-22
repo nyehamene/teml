@@ -1,11 +1,11 @@
 (package p "views")
 
 (component A [text: String]
-  (text))
+  (text)) ;; Line 1
 
 ;;test:instance B{element: A{text: "Line 1"}, content: "Line 5"}
 (component B [element: A, content: String]
-  (element           ;; Line 1
+  (element
     -- Line 2
     "Line 3"
     (div "Line 4")

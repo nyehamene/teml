@@ -130,29 +130,12 @@ type methodinfo struct {
 func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 	switch elem := node.(type) {
 	case ast.TextElement:
-		const tag = "span"
-		const inheritParentAttr = false
-		attrs := createAttributes(map[string]string{"style": "display: contents"})
-		// open tag
-		p.parseOpenTagWithAttributes(tag, attrs, inheritParentAttr, stmts)
-
-		// content
 		errvar := makeErrVar()
 		stmt1 := StringLiteral{Value: elem.Text, Variable: errvar}
 		ret1 := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt1, ret1)
 
-		// close tag
-		p.parseCloseTag(tag, stmts)
-
 	case ast.TextGroupElement:
-		const tag = "span"
-		const inheritParentAttr = false
-		attrs := createAttributes(map[string]string{"style": "display: contents"})
-		// open tag
-		p.parseOpenTagWithAttributes(tag, attrs, inheritParentAttr, stmts)
-
-		// paragraph lines
 		for _, line := range elem.Lines {
 			errvar := makeErrVar()
 			txt := doubleQuoteString(line)
@@ -161,19 +144,9 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 			*stmts = append(*stmts, stmt2, ret2)
 		}
 
-		// close tag
-		p.parseCloseTag(tag, stmts)
-
 	case ast.NumberElement:
-		// open tag
-		const tag = "data"
-		const inheritParentAttr = true
-		p.parseOpenTagWithAttributes(tag, elem.Attributes, inheritParentAttr, stmts)
-
-		// content
 		member := p.resolveName(elem.Tag)
 		memberAccess := m.receiver + "." + member
-
 		tempvar := makeTempVar()
 		stmt1 := FormatNumber{Value: Var(memberAccess), Variable: tempvar}
 		errvar := makeErrVar()
@@ -181,16 +154,7 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		ret2 := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt1, stmt2, ret2)
 
-		// close tag
-		p.parseCloseTag(tag, stmts)
-
 	case ast.StringElement:
-		// open tag
-		const tag = "span"
-		const inheritParentAttr = true
-		p.parseOpenTagWithAttributes(tag, elem.Attributes, inheritParentAttr, stmts)
-
-		// content
 		member := p.resolveName(elem.Tag)
 		memberAccess := m.receiver + "." + member
 		errvar := makeErrVar()
@@ -198,20 +162,14 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		ret := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt, ret)
 
-		// close tag
-		p.parseCloseTag(tag, stmts)
-
 	case ast.NativeElement:
-		const inheritParentAttr = true
-		// open tag
 		tag := p.resolveName(elem.Tag)
-		p.parseOpenTagWithAttributes(tag, elem.Attributes, inheritParentAttr, stmts)
+		p.parseOpenTagWithAttributes(tag, elem.Attributes, stmts)
 
 		for _, stmt := range elem.Body {
 			p.parseStmt(m, stmt.Element, stmts)
 		}
 
-		// close tag
 		p.parseCloseTag(tag, stmts)
 
 	case ast.ComponentElement:
@@ -376,18 +334,16 @@ func (p *parser) parseMapEntries(mapvar string, attrs []ast.Attr) []SetMapEntry 
 	return entries
 }
 
-func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, inherit bool, stmts *[]Stmt) {
+func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, stmts *[]Stmt) {
 	// begin open tag
 	errvar := makeErrVar()
 	stmt1 := StringLiteral{Value: doubleQuoteString(fmt.Sprintf("<%s", name)), Variable: errvar}
 	ret1 := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt1, ret1)
 
-	if inherit {
-		errvar = makeErrVar()
-		stmti := InheritAttributes{Variable: errvar}
-		*stmts = append(*stmts, stmti)
-	}
+	errvar = makeErrVar()
+	stmti := InheritAttributes{Variable: errvar}
+	*stmts = append(*stmts, stmti)
 
 	// attribues
 	for _, attr := range attrs {
