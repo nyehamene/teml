@@ -6,9 +6,9 @@
 (using card i)
 (using [container, box] ii)
 
-(document home [x: i/A, y: B, z: (enum 0 1)])
+(document home [x: i.A, y: B, z: (enum 0 1)])
 
-(component A [x: i/A, y: B, z: (enum "A" "B")]
+(component A [x: i.A, y: B, z: (enum "A" "B")]
   (B [name: "john"]))
 
 (component C [a-card: card, mode: (enum "open" "close")]
@@ -22,9 +22,7 @@
     "open": (div)
     "close": (span))
   (a-card {id: "card", enabled: true}
-  (i/card)
-    #data{ number: 100
-         , step: (cond mode "open": 10 "close": 20)
-         }
-    #css/grid{display: (if true "grid" "flex")}
+    #data{ number: 100 step: (cond mode "open": 10 "close": 20) }
+    (i.card)
+    #css.grid{ display: (if true "grid" "flex") }
     (div)))

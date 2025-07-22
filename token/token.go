@@ -36,7 +36,7 @@ const (
 	Comma
 	Colon
 	BSlash
-	FSlash
+	Dot
 	Hyphen
 	Hash
 	// }} Delimiter
@@ -134,7 +134,7 @@ var tokenString = map[Kind]string{
 
 	Comma:  ",",
 	Colon:  ":",
-	FSlash: "/",
+	Dot:    ".",
 	Hyphen: "-",
 	Hash:   "#",
 

@@ -28,7 +28,7 @@
 		;; (card (fancy-button "Click Me"))
 		-- namespaced reference
 		-- not a template \\(foo)
-		;; (ui/badge {value: "name"})
+		;; (ui.badge {value: "name"})
 		))
 
 ;; zero or more layouts per file
@@ -46,7 +46,7 @@
 
 (component Foo []
 	(div
-		#css/grid{ gap: "10px"
+		#css.grid{ gap: "10px"
 						 , align-content: "center"
 						 , justify-items: "center"
 						 }

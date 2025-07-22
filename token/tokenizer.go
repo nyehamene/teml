@@ -144,8 +144,8 @@ func (t *tokenizer) singleChars() Kind {
 	case ':':
 		kind = Colon
 		t.advance()
-	case '/':
-		kind = FSlash
+	case '.':
+		kind = Dot
 		t.advance()
 	case '\\':
 		kind = BSlash

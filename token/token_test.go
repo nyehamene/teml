@@ -65,11 +65,11 @@ func TestScan_bracket(t *testing.T) {
 }
 
 func TestScan_delimiter(t *testing.T) {
-	source := ",:/\\"
+	source := ",:.\\"
 	expected := []token.Kind{
 		token.Comma,
 		token.Colon,
-		token.FSlash,
+		token.Dot,
 		token.BSlash,
 	}
 

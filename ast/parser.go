@@ -320,11 +320,11 @@ func (p *parser) parsePropertyType() (PropertyType, bool) {
 	switch ch := p.peek(); ch.Kind {
 	case token.Ident:
 		switch ch := p.peekNext(); ch.Kind {
-		case token.FSlash:
+		case token.Dot:
 			var left Expr
 
 			left, _ = p.parseVar()
-			for p.peek().Kind == token.FSlash {
+			for p.peek().Kind == token.Dot {
 				p.advance() // consume forward slash
 
 				right, ok := p.parseVar()
@@ -837,7 +837,7 @@ func (p *parser) parseExpr() (Expr, bool) {
 		// parse member access
 		for !p.eof() {
 			ch := p.peek()
-			if ch.Kind != token.FSlash {
+			if ch.Kind != token.Dot {
 				break
 			}
 
