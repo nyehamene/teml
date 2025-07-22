@@ -9,18 +9,22 @@ import (
 	ast "github.com/eml-lang/teml/transpiler"
 )
 
+func (p *parser) resolveType(node ast.Var) Type {
+	switch node.Name {
+	case "String":
+		return String("string")
+	case "Number":
+		return Number("int")
+	case "Bool":
+		return Bool("bool")
+	}
+	return Var(node.Name)
+}
+
 func (p *parser) resolveFieldType(structname, field string, expr ast.PropertyType) Type {
 	switch t := expr.(type) {
 	case ast.Var:
-		switch t.Name {
-		case "String":
-			return String("string")
-		case "Number":
-			return Number("int")
-		case "Bool":
-			return Bool("bool")
-		}
-		return Var(t.Name)
+		return p.resolveType(t)
 
 	case ast.Enum:
 		typename := structname + strings.ToUpper(field[0:1]) + field[1:]
@@ -48,7 +52,7 @@ func (p *parser) resolveFieldType(structname, field string, expr ast.PropertyTyp
 func (p *parser) resolveName(expr ast.Expr) string {
 	switch t := expr.(type) {
 	case ast.Var:
-		return t.Name
+		return p.resolveType(t).Name()
 	case ast.MemberAccess:
 		panic(errors.ErrUnsupported)
 	case ast.String:
@@ -69,6 +73,29 @@ func (p *parser) resolveName(expr ast.Expr) string {
 }
 
 func (p *parser) resolveValue(expr ast.Expr) Expr {
+	switch t := expr.(type) {
+	case ast.Var:
+		return Var(t.Name)
+	case ast.String:
+		return String(t.Value())
+	case ast.Number:
+		return Number(t)
+	case ast.Bool:
+		return Bool(t)
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
+	case ast.Enum:
+		panic(errors.ErrUnsupported)
+	default:
+		panic(errors.ErrUnsupported)
+	}
+}
+
+func (p *parser) resolveAttributeValue(expr ast.Expr) Expr {
 	switch t := expr.(type) {
 	case ast.Var:
 		return Var(t.Name)

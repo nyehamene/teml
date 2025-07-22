@@ -53,11 +53,11 @@ func (WriteNumberMemberAccess) stmt()   {}
 func (WriteInheritedAttributes) stmt()  {}
 func (FormatNumber) stmt()              {}
 func (CallRenderFunction) stmt()        {}
-func (MapVar) stmt()                    {}
-func (MapEntry) stmt()                  {}
 func (CopyContextWithAttributes) stmt() {}
 func (If) stmt()                        {}
 func (Cond) stmt()                      {}
+func (MapInstance) stmt()               {}
+func (StructInstance) stmt()            {}
 
 type WriteLiteralString struct {
 	Value    string
@@ -100,15 +100,28 @@ type CallRenderFunction struct {
 
 type BlankVar string
 
-type MapVar struct {
+type MapInstance struct {
 	Variable string
+	Entries  []SetMapEntry
 }
 
-type MapEntry struct {
-	//Name of the map variable
-	Name string
+type StructInstance struct {
+	Variable   string
+	Type       string
+	Parameters []SetStructField
+}
+
+type SetStructField struct {
+	Struct string
+	Name   string
+	Value  Expr
+}
+
+type SetMapEntry struct {
+	//Map of the map variable
+	Map string
 	//Key of the entry
-	Key string
+	Key Var
 	//Value of the entry
 	Value Expr
 }

@@ -105,7 +105,6 @@ func (p *parser) parseMethod(decl ast.Declaration) RenderMethod {
 
 	m := methodinfo{
 		receiver: receiver,
-		typename: typename,
 		name:     methodname,
 	}
 	for _, stmt := range stmts {
@@ -126,7 +125,6 @@ func (p *parser) parseMethod(decl ast.Declaration) RenderMethod {
 
 type methodinfo struct {
 	receiver string
-	typename string
 	name     string
 }
 
@@ -218,24 +216,21 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		p.parseCloseTag(tag, stmts)
 
 	case ast.ComponentElement:
-		// attributes
-		attrvar := p.parseAttribute(elem.Attributes, stmts)
-		ctxvar := makeTempVar()
-		stmt1 := CopyContextWithAttributes{Attrs: attrvar, Variable: ctxvar}
-
 		// TODO render component body
-
-		name := m.name
+		//
 		member := p.resolveName(elem.Tag)
 		memberAccess := m.receiver + "." + member
-		errvar := makeErrVar()
-		stmt2 := CallRenderFunction{Context: ctxvar, Name: name, Receiver: memberAccess, Variable: errvar}
-		ret2 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt1, stmt2, ret2)
+		p.parseCallRenderMethod(methodinfo{name: RenderComponentMethod, receiver: memberAccess}, elem.Attributes, stmts)
 
 	case ast.InstanceElement:
-		// TODO generate html for instance element
-		panic(errors.ErrUnsupported)
+		cmptype := p.resolveName(elem.Tag)
+		cmpvar := makeTempVar()
+		parameters := p.parseInstanceParameters(cmpvar, elem.Parameters)
+		stmt1 := StructInstance{Type: cmptype, Variable: cmpvar, Parameters: parameters}
+		*stmts = append(*stmts, stmt1)
+
+		m := methodinfo{name: RenderComponentMethod, receiver: cmpvar}
+		p.parseCallRenderMethod(m, elem.Attributes, stmts)
 
 	case ast.IFElement:
 		cond := p.resolveIfCond(m, elem.Cond)
@@ -273,20 +268,52 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 	}
 }
 
-func (p *parser) parseAttribute(attrs []ast.Attr, stmts *[]Stmt) string {
+func (p *parser) parseCallRenderMethod(m methodinfo, attrs []ast.Attr, stmts *[]Stmt) {
 	mapvar := makeTempVar()
-	stmt1 := MapVar{Variable: mapvar}
-	*stmts = append(*stmts, stmt1)
+	entries := p.parseAttribute(mapvar, attrs)
+	stmt1 := MapInstance{Variable: mapvar, Entries: entries}
 
+	ctxvar := makeTempVar()
+	stmt2 := CopyContextWithAttributes{Attrs: mapvar, Variable: ctxvar}
+
+	errvar := makeErrVar()
+	stmt3 := CallRenderFunction{Context: ctxvar, Name: m.name, Receiver: m.receiver, Variable: errvar}
+	ret3 := ReturnIfNotNil(errvar)
+	*stmts = append(*stmts, stmt1, stmt2, stmt3, ret3)
+}
+
+func (p *parser) parseInstanceParameters(structvar string, params []ast.KeyVal) []SetStructField {
+	if len(params) == 0 {
+		return nil
+	}
+
+	fields := make([]SetStructField, 0, len(params))
+	for _, param := range params {
+		field := SetStructField{
+			Struct: structvar,
+			Name:   param.Key.Name,
+			Value:  p.resolveValue(param.Value),
+		}
+		fields = append(fields, field)
+	}
+	return fields
+}
+
+func (p *parser) parseAttribute(mapvar string, attrs []ast.Attr) []SetMapEntry {
+	if len(attrs) == 0 {
+		return nil
+	}
+
+	entries := make([]SetMapEntry, 0, len(attrs))
 	for _, attr := range attrs {
 		for _, entry := range attr.Entries {
 			key := entry.Key.Name
-			value := p.resolveValue(entry.Value)
-			stmt2 := MapEntry{Name: mapvar, Key: key, Value: value}
-			*stmts = append(*stmts, stmt2)
+			value := p.resolveAttributeValue(entry.Value)
+			entry := SetMapEntry{Map: mapvar, Key: Var(key), Value: value}
+			entries = append(entries, entry)
 		}
 	}
-	return mapvar
+	return entries
 }
 
 func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, inherit bool, stmts *[]Stmt) {

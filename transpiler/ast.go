@@ -126,9 +126,8 @@ type ComponentElement struct {
 
 type InstanceElement struct {
 	Tag        Expr
-	Parameter  []KeyVal
+	Parameters []KeyVal
 	Attributes []Attr
-	Body       []Stmt
 }
 
 type IFElement struct {
@@ -192,4 +191,9 @@ type EnumConstant Expr
 type Attr struct {
 	Tag     Expr
 	Entries []KeyVal
+}
+
+func (s String) Value() string {
+	// strip double quoted
+	return string(s[1 : len(s)-1])
 }

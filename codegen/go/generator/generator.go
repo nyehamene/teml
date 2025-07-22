@@ -280,13 +280,8 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 	case ast.FormatNumber:
 		err = g.writeln(fmt.Sprintf("%s := fmt.Sprintf(%q, %s)", t.Variable, "%d", t.Value))
 
-	case ast.MapVar:
-		err = g.writeln(fmt.Sprintf("%s := map[string]string{}", t.Variable))
-
-	case ast.MapEntry:
-		// TODO resolve ast.Expr
-		value := g.resolveValue(t.Value)
-		err = g.writeln(fmt.Sprintf("%s[%q] = %s", t.Name, t.Key, value))
+	case ast.MapInstance:
+		err = g.writeMapInstance(t)
 
 	case ast.CopyContextWithAttributes:
 		err = g.writeln(fmt.Sprintf("%s := %s(%s, %s)", t.Variable, RenderCopyMethod, RenderContextVar, t.Attrs))
@@ -314,11 +309,50 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 	case ast.Cond:
 		err = g.writeCond(t)
 
+	case ast.StructInstance:
+		err = g.writeStructInstance(t)
+
 	default:
 		panic(fmt.Sprintf("unexpected stmt type: %v", reflect.TypeOf(stmt)))
 	}
 
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *generator) writeMapInstance(node ast.MapInstance) error {
+	if err := g.writeln(fmt.Sprintf("%s := map[string]string{", node.Variable)); err != nil {
+		return err
+	}
+
+	for _, entry := range node.Entries {
+		if err := g.writeln(fmt.Sprintf("%s: %s,", g.resolveMapKey(entry.Key), g.resolveValue(entry.Value))); err != nil {
+			return err
+		}
+	}
+
+	if err := g.writeln("}"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *generator) writeStructInstance(node ast.StructInstance) error {
+	if err := g.writeln(fmt.Sprintf("%s := %s{", node.Variable, node.Type)); err != nil {
+		return err
+	}
+
+	for _, field := range node.Parameters {
+		if err := g.writeln(fmt.Sprintf("%s: %s,", field.Name, g.resolveValue(field.Value))); err != nil {
+			return err
+		}
+	}
+
+	if err := g.writeln("}"); err != nil {
 		return err
 	}
 

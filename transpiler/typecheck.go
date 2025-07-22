@@ -270,6 +270,7 @@ func (t *typechecker) transformElementByTagType(env Env, genElem genericElement,
 		element = genElem
 
 	case NativeElementType:
+		// TODO fail is parameter is not empty
 		element = NativeElement{
 			Tag:        genElem.Tag,
 			Attributes: genElem.Attributes,
@@ -281,6 +282,7 @@ func (t *typechecker) transformElementByTagType(env Env, genElem genericElement,
 
 	case TypeDeclaration:
 		if component {
+			// TODO fail is parameter is not empty
 			element = ComponentElement{
 				Tag:        genElem.Tag,
 				Attributes: genElem.Attributes,
@@ -288,11 +290,11 @@ func (t *typechecker) transformElementByTagType(env Env, genElem genericElement,
 			}
 		} else {
 			// TODO typecheck parameters
+			// TODO fail if body is not empty
 			element = InstanceElement{
 				Tag:        genElem.Tag,
-				Parameter:  genElem.Parameter,
+				Parameters: genElem.Parameter,
 				Attributes: genElem.Attributes,
-				Body:       genElem.Body,
 			}
 		}
 

@@ -642,6 +642,10 @@ func (p *parser) parseElementParameters() ([]ElementParameter, bool) {
 			return []ElementParameter{}, false
 		}
 
+		if ch := p.peek(); ch.Kind == token.Comma {
+			p.advance()
+		}
+
 		param := ElementParameter{Ident: Var(name), Value: value}
 		parameters = append(parameters, param)
 	}
