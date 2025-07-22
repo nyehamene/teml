@@ -33,6 +33,10 @@ func Generate(stdout io.Writer, fsrc *ast.File) error {
 		return err
 	}
 
+	if err := g.writeComponentInterface(); err != nil {
+		return nil
+	}
+
 	for _, st := range fsrc.Structs {
 		if err := g.writeStruct(st); err != nil {
 			return err
@@ -127,6 +131,25 @@ func (g *generator) writeEnumType(fields []ast.StructField) error {
 
 func (g *generator) writeField(f ast.StructField) error {
 	if err := g.writeln(f.Name + " " + f.Type.Name()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (g *generator) writeComponentInterface() error {
+	src := `
+	type Component interface {
+		%s(%s)
+	}
+
+	type funccomponent func() error
+
+	func (fc funccomponent) %[1]s(ctx %[2]s) error {
+		return fc()
+	}
+	`
+	err := g.writeln(fmt.Sprintf(src, ast.RenderComponentMethod, ast.RenderContext, ast.RenderContextWriterField))
+	if err != nil {
 		return err
 	}
 	return nil

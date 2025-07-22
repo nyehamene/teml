@@ -15,13 +15,14 @@ type File struct {
 }
 
 const (
-	RenderContext             = "RenderContext"
-	RenderContextOption       = "RenderContextOption"
-	RenderContextContructor   = "NewRenderContext"
-	RenderComponentMethod     = "Render"
-	RenderContextContextField = "ctx"
-	RenderContextWriterField  = "writer"
-	RenderContextAttrsField   = "attrs"
+	RenderContext              = "RenderContext"
+	RenderContextOption        = "RenderContextOption"
+	RenderContextContructor    = "NewRenderContext"
+	RenderComponentMethod      = "Render"
+	RenderContextContextField  = "ctx"
+	RenderContextWriterField   = "writer"
+	RenderContextAttrsField    = "attrs"
+	RenderContextChildrenField = "children"
 )
 
 func Parse(fsrc *ast.File) File {
@@ -103,6 +104,10 @@ func createRenderContextStruct() RenderContextStruct {
 				{
 					Name: RenderContextAttrsField,
 					Type: Var("map[string]string"),
+				},
+				{
+					Name: RenderContextChildrenField,
+					Type: Var("[]Component"),
 				},
 			},
 		},

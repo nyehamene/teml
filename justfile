@@ -11,6 +11,7 @@
 	just test number-element-attr
 	just test component-element
 	just test component-element-attr
+	just test component-element-body
 	just test native-element
 	just test native-element-attr
 	just test if-element

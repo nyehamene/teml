@@ -175,7 +175,7 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		memberAccess := m.receiver + "." + member
 
 		tempvar := makeTempVar()
-		stmt1 := FormatNumber{Value: memberAccess, Variable: tempvar}
+		stmt1 := FormatNumber{Value: Var(memberAccess), Variable: tempvar}
 		errvar := makeErrVar()
 		stmt2 := NumberMemberAccessExpr{Value: tempvar, Variable: errvar}
 		ret2 := ReturnIfNotNil(errvar)
@@ -215,11 +215,10 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		p.parseCloseTag(tag, stmts)
 
 	case ast.ComponentElement:
-		// TODO render component body
-		//
 		member := p.resolveName(elem.Tag)
 		memberAccess := m.receiver + "." + member
-		p.parseCallRenderMethod(methodinfo{name: RenderComponentMethod, receiver: memberAccess}, elem.Attributes, stmts)
+		m := methodinfo{name: RenderComponentMethod, receiver: memberAccess}
+		p.parseCallRenderMethod(m, elem.Attributes, elem.Body, stmts)
 
 	case ast.InstanceElement:
 		cmptype := p.resolveName(elem.Tag)
@@ -229,7 +228,7 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		*stmts = append(*stmts, stmt1)
 
 		m := methodinfo{name: RenderComponentMethod, receiver: cmpvar}
-		p.parseCallRenderMethod(m, elem.Attributes, stmts)
+		p.parseCallRenderMethod(m, elem.Attributes, nil, stmts)
 
 	case ast.IFElement:
 		cond := p.resolveIfCond(m, elem.Cond)
@@ -267,18 +266,80 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 	}
 }
 
-func (p *parser) parseCallRenderMethod(m methodinfo, attrs []ast.Attr, stmts *[]Stmt) {
+func (p *parser) parseCallRenderMethod(m methodinfo, attrs []ast.Attr, body []ast.Stmt, stmts *[]Stmt) {
 	mapvar := makeTempVar()
-	entries := p.parseAttribute(mapvar, attrs)
+	entries := p.parseMapEntries(mapvar, attrs)
 	stmt1 := MapInstance{Variable: mapvar, Entries: entries}
 
+	slicevar := makeTempVar()
+	cmps := p.parseChildren(body)
+	stmt2 := SliceInstance{Variable: slicevar, Values: cmps}
+
 	ctxvar := makeTempVar()
-	stmt2 := CopyRenderContext{Attrs: mapvar, Variable: ctxvar}
+	stmt3 := CopyRenderContext{Attrs: mapvar, Variable: ctxvar, Children: slicevar}
 
 	errvar := makeErrVar()
-	stmt3 := CallRenderMethod{Context: ctxvar, Name: m.name, Receiver: m.receiver, Variable: errvar}
-	ret3 := ReturnIfNotNil(errvar)
-	*stmts = append(*stmts, stmt1, stmt2, stmt3, ret3)
+	stmt4 := CallRenderMethod{Context: ctxvar, Name: m.name, Receiver: m.receiver, Variable: errvar}
+	ret4 := ReturnIfNotNil(errvar)
+	*stmts = append(*stmts, stmt1, stmt2, stmt3, stmt4, ret4)
+}
+
+func (p *parser) parseChildren(stmts []ast.Stmt) []ComponentInstance {
+	if len(stmts) == 0 {
+		return nil
+	}
+
+	cmps := make([]ComponentInstance, 0, len(stmts))
+	for _, stmt := range stmts {
+		cmp := p.parseComponentInstance(stmt.Element)
+		cmps = append(cmps, cmp)
+	}
+	return cmps
+}
+
+func (p *parser) parseComponentInstance(elem ast.Element) ComponentInstance {
+	werr := makeErrVar()
+	switch elemtype := elem.(type) {
+	case ast.TextElement:
+		stmt := StringLiteral{Variable: werr, Value: elemtype.Text}
+		ret := ReturnIfNotNil(werr)
+		body := []Stmt{stmt, ret}
+		return ComponentInstance{Stmts: body}
+
+	case ast.TextGroupElement:
+		body := make([]Stmt, 0, len(elemtype.Lines))
+		for _, line := range elemtype.Lines {
+			stmt := StringLiteral{Variable: werr, Value: line}
+			ret := ReturnIfNotNil(werr)
+			body = append(body, stmt, ret)
+		}
+		return ComponentInstance{Stmts: body}
+
+	case ast.NumberElement:
+		stmt := FormatNumber{Variable: werr, Value: p.resolveValue(elemtype.Tag)}
+		ret := ReturnIfNotNil(werr)
+		body := []Stmt{stmt, ret}
+		return ComponentInstance{Stmts: body}
+
+	case ast.StringElement:
+		stmt := FormatNumber{Variable: werr, Value: p.resolveValue(elemtype.Tag)}
+		ret := ReturnIfNotNil(werr)
+		body := []Stmt{stmt, ret}
+		return ComponentInstance{Stmts: body}
+
+	case ast.ComponentElement:
+		panic(errors.ErrUnsupported)
+	case ast.InstanceElement:
+		panic(errors.ErrUnsupported)
+	case ast.NativeElement:
+		panic(errors.ErrUnsupported)
+	case ast.IFElement:
+		panic(errors.ErrUnsupported)
+	case ast.CondElement:
+		panic(errors.ErrUnsupported)
+	default:
+		panic(fmt.Sprintf("unexpected element type: %v", reflect.TypeOf(elem)))
+	}
 }
 
 func (p *parser) parseInstanceParameters(structvar string, params []ast.KeyVal) []SetStructField {
@@ -298,7 +359,7 @@ func (p *parser) parseInstanceParameters(structvar string, params []ast.KeyVal) 
 	return fields
 }
 
-func (p *parser) parseAttribute(mapvar string, attrs []ast.Attr) []SetMapEntry {
+func (p *parser) parseMapEntries(mapvar string, attrs []ast.Attr) []SetMapEntry {
 	if len(attrs) == 0 {
 		return nil
 	}

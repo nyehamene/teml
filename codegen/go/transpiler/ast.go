@@ -58,6 +58,7 @@ func (If) stmt()                     {}
 func (Cond) stmt()                   {}
 func (MapInstance) stmt()            {}
 func (StructInstance) stmt()         {}
+func (SliceInstance) stmt()          {}
 
 type StringLiteral struct {
 	Value    string
@@ -79,8 +80,9 @@ type InheritAttributes struct {
 	Variable string
 }
 
+// TODO rename
 type FormatNumber struct {
-	Value    string
+	Value    Expr
 	Variable string
 }
 
@@ -111,6 +113,16 @@ type StructInstance struct {
 	Parameters []SetStructField
 }
 
+type SliceInstance struct {
+	Variable string
+	Type     string
+	Values   []ComponentInstance
+}
+
+type ComponentInstance struct {
+	Stmts []Stmt
+}
+
 type SetStructField struct {
 	Struct string
 	Name   string
@@ -129,6 +141,7 @@ type SetMapEntry struct {
 type CopyRenderContext struct {
 	Attrs    string
 	Variable string
+	Children string
 }
 
 type If struct {
