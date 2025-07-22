@@ -45,36 +45,36 @@ type Stmt interface {
 	stmt()
 }
 
-func (ReturnNil) stmt()                 {}
-func (ReturnIfNotNil) stmt()            {}
-func (WriteLiteralString) stmt()        {}
-func (WriteStringMemberAccess) stmt()   {}
-func (WriteNumberMemberAccess) stmt()   {}
-func (WriteInheritedAttributes) stmt()  {}
-func (FormatNumber) stmt()              {}
-func (CallRenderFunction) stmt()        {}
-func (CopyContextWithAttributes) stmt() {}
-func (If) stmt()                        {}
-func (Cond) stmt()                      {}
-func (MapInstance) stmt()               {}
-func (StructInstance) stmt()            {}
+func (ReturnNil) stmt()              {}
+func (ReturnIfNotNil) stmt()         {}
+func (StringLiteral) stmt()          {}
+func (StringMemberAccessExpr) stmt() {}
+func (NumberMemberAccessExpr) stmt() {}
+func (InheritAttributes) stmt()      {}
+func (FormatNumber) stmt()           {}
+func (CallRenderMethod) stmt()       {}
+func (CopyRenderContext) stmt()      {}
+func (If) stmt()                     {}
+func (Cond) stmt()                   {}
+func (MapInstance) stmt()            {}
+func (StructInstance) stmt()         {}
 
-type WriteLiteralString struct {
+type StringLiteral struct {
 	Value    string
 	Variable string
 }
 
-type WriteStringMemberAccess struct {
+type StringMemberAccessExpr struct {
 	Value    string
 	Variable string
 }
 
-type WriteNumberMemberAccess struct {
+type NumberMemberAccessExpr struct {
 	Value    string
 	Variable string
 }
 
-type WriteInheritedAttributes struct {
+type InheritAttributes struct {
 	//Variable for the error returned from the attributes
 	Variable string
 }
@@ -87,7 +87,7 @@ type FormatNumber struct {
 type ReturnNil struct{}
 type ReturnIfNotNil string
 
-type CallRenderFunction struct {
+type CallRenderMethod struct {
 	//Name of method to call
 	Name string
 	//Receiver variable name
@@ -126,7 +126,7 @@ type SetMapEntry struct {
 	Value Expr
 }
 
-type CopyContextWithAttributes struct {
+type CopyRenderContext struct {
 	Attrs    string
 	Variable string
 }

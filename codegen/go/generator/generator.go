@@ -283,24 +283,24 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 	case ast.MapInstance:
 		err = g.writeMapInstance(t)
 
-	case ast.CopyContextWithAttributes:
+	case ast.CopyRenderContext:
 		err = g.writeln(fmt.Sprintf("%s := %s(%s, %s)", t.Variable, RenderCopyMethod, RenderContextVar, t.Attrs))
 
-	case ast.WriteLiteralString:
+	case ast.StringLiteral:
 		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Variable, t.Value))
 
-	case ast.WriteStringMemberAccess:
+	case ast.StringMemberAccessExpr:
 		// TODO sanitize user input (t.Value)
 		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Variable, t.Value))
 
-	case ast.WriteNumberMemberAccess:
+	case ast.NumberMemberAccessExpr:
 		// TODO sanitize user input (t.Value)
 		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Variable, t.Value))
 
-	case ast.WriteInheritedAttributes:
+	case ast.InheritAttributes:
 		err = g.writeInherittedAttributes(t)
 
-	case ast.CallRenderFunction:
+	case ast.CallRenderMethod:
 		err = g.writeln(fmt.Sprintf("%s := %s.%s(%s)", t.Variable, t.Receiver, t.Name, t.Context))
 
 	case ast.If:
@@ -428,7 +428,7 @@ func (g *generator) writeIfStmt(ifsmt ast.If) error {
 	return nil
 }
 
-func (g *generator) writeInherittedAttributes(node ast.WriteInheritedAttributes) error {
+func (g *generator) writeInherittedAttributes(node ast.InheritAttributes) error {
 	err := g.writeln(fmt.Sprintf("for key, val := range %s.%s {", RenderContextVar, ast.RenderContextAttrsField))
 	if err != nil {
 		return err

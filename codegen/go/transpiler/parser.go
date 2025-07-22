@@ -71,7 +71,6 @@ func (p *parser) parseStruct(decl ast.Declaration) Struct {
 
 func (p *parser) parseStructField(structname string, prop ast.Property) StructField {
 	name := prop.Ident.Name
-	// TODO resolve property type
 	type0 := p.resolveFieldType(structname, name, prop.Type)
 	node := StructField{
 		Name: name,
@@ -139,7 +138,7 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 
 		// content
 		errvar := makeErrVar()
-		stmt1 := WriteLiteralString{Value: elem.Text, Variable: errvar}
+		stmt1 := StringLiteral{Value: elem.Text, Variable: errvar}
 		ret1 := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt1, ret1)
 
@@ -157,7 +156,7 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		for _, line := range elem.Lines {
 			errvar := makeErrVar()
 			txt := doubleQuoteString(line)
-			stmt2 := WriteLiteralString{Value: txt, Variable: errvar}
+			stmt2 := StringLiteral{Value: txt, Variable: errvar}
 			ret2 := ReturnIfNotNil(errvar)
 			*stmts = append(*stmts, stmt2, ret2)
 		}
@@ -178,7 +177,7 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		tempvar := makeTempVar()
 		stmt1 := FormatNumber{Value: memberAccess, Variable: tempvar}
 		errvar := makeErrVar()
-		stmt2 := WriteNumberMemberAccess{Value: tempvar, Variable: errvar}
+		stmt2 := NumberMemberAccessExpr{Value: tempvar, Variable: errvar}
 		ret2 := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt1, stmt2, ret2)
 
@@ -195,7 +194,7 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		member := p.resolveName(elem.Tag)
 		memberAccess := m.receiver + "." + member
 		errvar := makeErrVar()
-		stmt := WriteStringMemberAccess{Value: memberAccess, Variable: errvar}
+		stmt := StringMemberAccessExpr{Value: memberAccess, Variable: errvar}
 		ret := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt, ret)
 
@@ -274,10 +273,10 @@ func (p *parser) parseCallRenderMethod(m methodinfo, attrs []ast.Attr, stmts *[]
 	stmt1 := MapInstance{Variable: mapvar, Entries: entries}
 
 	ctxvar := makeTempVar()
-	stmt2 := CopyContextWithAttributes{Attrs: mapvar, Variable: ctxvar}
+	stmt2 := CopyRenderContext{Attrs: mapvar, Variable: ctxvar}
 
 	errvar := makeErrVar()
-	stmt3 := CallRenderFunction{Context: ctxvar, Name: m.name, Receiver: m.receiver, Variable: errvar}
+	stmt3 := CallRenderMethod{Context: ctxvar, Name: m.name, Receiver: m.receiver, Variable: errvar}
 	ret3 := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt1, stmt2, stmt3, ret3)
 }
@@ -319,13 +318,13 @@ func (p *parser) parseAttribute(mapvar string, attrs []ast.Attr) []SetMapEntry {
 func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, inherit bool, stmts *[]Stmt) {
 	// begin open tag
 	errvar := makeErrVar()
-	stmt1 := WriteLiteralString{Value: doubleQuoteString(fmt.Sprintf("<%s", name)), Variable: errvar}
+	stmt1 := StringLiteral{Value: doubleQuoteString(fmt.Sprintf("<%s", name)), Variable: errvar}
 	ret1 := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt1, ret1)
 
 	if inherit {
 		errvar = makeErrVar()
-		stmti := WriteInheritedAttributes{Variable: errvar}
+		stmti := InheritAttributes{Variable: errvar}
 		*stmts = append(*stmts, stmti)
 	}
 
@@ -336,14 +335,14 @@ func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, inher
 
 	// end open tag
 	errvar = makeErrVar()
-	stmt2 := WriteLiteralString{Value: doubleQuoteString(">"), Variable: errvar}
+	stmt2 := StringLiteral{Value: doubleQuoteString(">"), Variable: errvar}
 	ret2 := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt2, ret2)
 }
 
 func (p *parser) parseCloseTag(name string, stmts *[]Stmt) {
 	errvar := makeErrVar()
-	stmt := WriteLiteralString{Value: doubleQuoteString(fmt.Sprintf("</%s>", name)), Variable: errvar}
+	stmt := StringLiteral{Value: doubleQuoteString(fmt.Sprintf("</%s>", name)), Variable: errvar}
 	ret := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt, ret)
 }
@@ -390,7 +389,7 @@ func (p *parser) parseEntry(entry ast.KeyVal, stmts *[]Stmt) {
 	attr := " " + key + "=" + escapeSurrounding(value)
 
 	errvar := makeErrVar()
-	stmt := WriteLiteralString{Value: doubleQuoteString(attr), Variable: errvar}
+	stmt := StringLiteral{Value: doubleQuoteString(attr), Variable: errvar}
 	ret := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt, ret)
 }
