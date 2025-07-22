@@ -18,5 +18,5 @@ func (p *File) HasError() bool {
 }
 
 func (p *File) HasDocument() bool {
-	return p.Document.IsNamed() || p.Document.Properties.Size() > 0 || p.Document.Children.Size() > 0
+	return p.Document.IsNamed() || len(p.Document.Properties) > 0 || len(p.Document.Children) > 0
 }

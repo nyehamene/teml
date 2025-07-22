@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/eml-lang/teml/ast"
-	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 )
 
@@ -36,14 +35,14 @@ var valid = []string{
 	`(package p "a") (document Foo [a: a/A, b: b/B])`,
 	`(package p "a") (document Foo [] (div) (div))`,
 	`(package p "a") (document Foo [] (div))`,
-	`(package p "a") (document Foo [] (div) (div))`,
-	`(package p "a") (document Foo [] (div #a{}))`,
-	`(package p "a") (document Foo [] (div #a/b{}))`,
-	`(package p "a") (document Foo [] (div #a/b/c{}))`,
-	`(package p "a") (document Foo [] (foo/div {}))`,
-	`(package p "a") (document Foo [] (foo/bar/div {}))`,
-	`(package p "a") (document Foo [] (div {a: "b", b: true, c: false, d: 100, e: 10.1}))`,
-	`(package p "a") (document Foo [] (div {a: "b" b: true c: false d: 100 e: 10.1}))`,
+	`(package p "a") (document Foo [] (div) (div))`, 
+	`(package p "a") (document Foo [] (div #a{}))`, 
+	`(package p "a") (document Foo [] (div #a/b{}))`, 
+	`(package p "a") (document Foo [] (div #a/b/c{}))`, 
+	`(package p "a") (document Foo [] (foo/div {}))`, 
+	`(package p "a") (document Foo [] (foo/bar/div {}))`, 
+	`(package p "a") (document Foo [] (div {a: "b", b: true, c: false, d: 100, e: 10.1}))`, 
+	`(package p "a") (document Foo [] (div {a: "b" b: true c: false d: 100 e: 10.1}))`, 
 	`(package p "a") (document Foo [] "foo")`,
 	"(package p \"a\") (document Foo [] -- foo\n)",
 	"(package p \"a\") (document Foo [] (div) \"foo\" -- foo\n)",
@@ -71,9 +70,9 @@ var valid = []string{
 	"(package p \"a\") (component Foo [] (div (div) \"foo\" -- foo\n))",
 	`(package p "a") (component Foo [] (div {} #a{} "foo"))`,
 	`(package p "a") (component Foo [] (div {} "foo" {} (div)))`,
-	`(package p "a") (component Foo [] (div {} "foo \(foo)"))`,
-	"(package p \"a\") (component Foo [] (div {} -- foo \\(foo)\n))",
-	"(package p \"a\") (component Foo [] (div {a: \"foo\\(b)\"} -- foo \\(foo)\n))",
+	`(package p "a") (component Foo [] (div {} "foo \\(foo)"))`,
+	"(package p \"a\") (component Foo [] (div {} -- foo \\\\(foo)\n))",
+	"(package p \"a\") (component Foo [] (div {a: \"foo\\\\(b)\"} -- foo \\\\(foo)\n))",
 	`(package p "path") (component C [a: (enum "A" "B")])`,
 	`(package p "path") (component C [a: (enum "A", "B")])`,
 	`(package p "path") (component C [a: (enum 0 1)])`,
@@ -102,7 +101,7 @@ func TestParse_short_valid(t *testing.T) {
 				t.Error("Parser failed unexpectedly")
 			}
 
-			for _, tok := range tokens.Tokens.Each() {
+			for _, tok := range tokens.Tokens {
 				if tok.Kind == token.Invalid {
 					t.Error("Parser emitted an invalid token without failing")
 				}
@@ -114,9 +113,9 @@ func TestParse_short_valid(t *testing.T) {
 var invalid = []string{
 	"(package) ;desc: missing identifier",
 	"(package p) ;desc: missing package path",
-	`(package p "" ;desc: missing closing parenthesis`,
-	`(import) ;desc: missing identifier`,
-	`(import i) ;desc: missing import path`,
+		`(package p "" ;desc: missing closing parenthesis`,
+		`(import) ;desc: missing identifier`,
+		`(import i) ;desc: missing import path`,
 	"(using) ;desc: missing identifier",
 	"(using i) ;desc: missing identifier",
 	"(using []) ;desc: empty import alias list",
@@ -149,14 +148,14 @@ var invalid = []string{
 	"(component F [] (div a)) ;desc: identifier is not a valid template content",
 	"(div) ;desc: unexpected element declaration",
 	"foo ;desc: missing opening parenthesis",
-	`(import i "path") ;desc: missing package declaration`,
-	`(package p "path") (using a i) ;desc: missing import declaration`,
-	`(package p "path") (import i "path") (document []) (using a i) ;desc: unexpected using declaration`,
-	`(package p "path") (document []) (document []) ;desc: duplicate document declaration`,
-	`(package p "path") (component C [a: (enum "A" 10)]) ;desc: mismatch enum constant type`,
-	`(package p "path") (component A[] (B ["name": "foo"])) ;desc: missing parameter name`,
-	`(package p "path") (component A[] (B [name: "foo")) ;desc: unterminated element parameters`,
-	`(package p "path") (component A[] (B [name "foo"])) ;desc: missing parameter value separator`,
+		`(import i "path") ;desc: missing package declaration`,
+		`(package p "path") (using a i) ;desc: missing import declaration`,
+		`(package p "path") (import i "path") (document []) (using a i) ;desc: unexpected using declaration`,
+		`(package p "path") (document []) (document []) ;desc: duplicate document declaration`,
+		`(package p "path") (component C [a: (enum "A" 10)]) ;desc: mismatch enum constant type`,
+		`(package p "path") (component A[] (B ["name": "foo"])) ;desc: missing parameter name`,
+		`(package p "path") (component A[] (B [name: "foo")) ;desc: unterminated element parameters`,
+		`(package p "path") (component A[] (B [name "foo"])) ;desc: missing parameter value separator`,
 }
 
 func TestParse_short_invalid(t *testing.T) {
@@ -195,21 +194,21 @@ func TestParse_short_invalid(t *testing.T) {
 }
 
 var valid_count = []string{
-	`(document [a: A, b: B, c: C]) ;document_property: 3`,
-	`(document [] (div {a: true, b: false, c: 100})) ;document_attribute: 3`,
-	`(document [] (one) (two) (three)) ;document_content: 3`,
-	`(document [] (div (one (one)))) ;document_content: 1`,
-	`(document [] (div (one) (two) (three))) ;document_nested: 3`,
-	`(document [] (div "one" "two")) ;document_nested: 2`,
+		`(document [a: A, b: B, c: C]) ;document_property: 3`,
+		`(document [] (div {a: true, b: false, c: 100})) ;document_attribute: 3`,
+		`(document [] (one) (two) (three)) ;document_content: 3`,
+		`(document [] (div (one (one)))) ;document_content: 1`,
+		`(document [] (div (one) (two) (three))) ;document_nested: 3`,
+		`(document [] (div "one" "two")) ;document_nested: 2`,
 	"(document [] (div --one\n --two\n --three\n --four\n)) ;document_nested: 1",
 	"(document [] (div \"one\" --one\n (one))) ;document_nested: 3",
 
-	`(component F [a: A, b: B]) ;property: 2`,
-	`(component F [] (div {a: true, b: false})) ;attribute: 2`,
-	`(component F [] (one) (two)) ;content: 2`,
-	`(component F [] (div (one (one)))) ;content: 1`,
-	`(component F [] (div (one) (two) (three))) ;nested: 3`,
-	`(component F [] (div "one" "two")) ;nested: 2`,
+		`(component F [a: A, b: B]) ;property: 2`,
+		`(component F [] (div {a: true, b: false})) ;attribute: 2`,
+		`(component F [] (one) (two)) ;content: 2`,
+		`(component F [] (div (one (one)))) ;content: 1`,
+		`(component F [] (div (one) (two) (three))) ;nested: 3`,
+		`(component F [] (div "one" "two")) ;nested: 2`,
 	"(component F [] (div --one\n --two\n --three\n --four\n)) ;nested: 1",
 	"(component F [] (div \"one\" --one\n (one))) ;nested: 3",
 }
@@ -298,12 +297,12 @@ func getFirstAttributesAttributes(f *ast.File, document bool) ([]ast.Attribute, 
 	if !ok {
 		return nil, false
 	}
-	for _, c := range e.Attributes.Each() {
+	for _, c := range e.Attributes {
 		switch t := c.(type) {
 		case ast.TaggedAttributeSet:
-			return t.Attributes.ItemsCopy(), true
+			return t.Attributes, true
 		case ast.UntaggedAttributeSet:
-			return t.Attributes.ItemsCopy(), true
+			return t.Attributes, true
 		}
 	}
 	return nil, false
@@ -311,7 +310,7 @@ func getFirstAttributesAttributes(f *ast.File, document bool) ([]ast.Attribute, 
 
 func getChildren(f *ast.File, document bool) ([]ast.Content, bool) {
 	if document {
-		return f.Document.Children.ItemsCopy(), true
+		return f.Document.Children, true
 	}
 
 	c, ok := getFirstComponent(f)
@@ -319,19 +318,19 @@ func getChildren(f *ast.File, document bool) ([]ast.Content, bool) {
 		return nil, false
 	}
 
-	return c.Children.ItemsCopy(), true
+	return c.Children, true
 }
 
 func getFirstProperties(f *ast.File, document bool) ([]ast.Property, bool) {
 	if document {
-		return f.Document.Properties.ItemsCopy(), true
+		return f.Document.Properties, true
 	}
 
 	c, ok := getFirstComponent(f)
 	if !ok {
 		return nil, false
 	}
-	return c.Properties.ItemsCopy(), true
+	return c.Properties, true
 }
 
 func getFirstComponent(f *ast.File) (ast.Component, bool) {
@@ -346,12 +345,12 @@ func getFirstElementChildren(f *ast.File, document bool) ([]ast.Content, bool) {
 	if !ok {
 		return nil, false
 	}
-	return e.Children.ItemsCopy(), true
+	return e.Children, true
 }
 
 func getFirstElement(f *ast.File, document bool) (ast.Element, bool) {
-	getfirst := func(children slice.Slice[ast.Content]) (ast.Element, bool) {
-		for _, c := range children.Each() {
+	getfirst := func(children []ast.Content) (ast.Element, bool) {
+		for _, c := range children {
 			switch t := c.(type) {
 			case ast.Element:
 				return t, true
@@ -422,7 +421,7 @@ func getErrorMessagesFromComment(f *token.File) iter.Seq[entry[string]] {
 
 func getKinds(f *token.File, kind token.Kind) iter.Seq[token.Token] {
 	return func(yield func(token.Token) bool) {
-		for _, tok := range f.Tokens.Each() {
+		for _, tok := range f.Tokens {
 			if tok.Kind != kind {
 				continue
 			}

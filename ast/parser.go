@@ -3,7 +3,6 @@ package ast
 import (
 	"github.com/eml-lang/teml/internal/assert"
 	"github.com/eml-lang/teml/internal/errors"
-	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 )
 
@@ -157,7 +156,7 @@ func (p *parser) parseUsing() (Using, bool) {
 				return Using{}, false
 			}
 
-			u.Idents.Add(ident)
+			u.Idents = append(u.Idents, ident)
 
 			if ch := p.peek(); ch.Kind == token.Comma {
 				p.advance()
@@ -168,7 +167,7 @@ func (p *parser) parseUsing() (Using, bool) {
 			return Using{}, false
 		}
 
-		if u.Idents.Size() == 0 {
+		if len(u.Idents) == 0 {
 			p.addError("empty import alias list")
 			return Using{}, false
 		}
@@ -178,7 +177,7 @@ func (p *parser) parseUsing() (Using, bool) {
 		if !ok {
 			return Using{}, false
 		}
-		u.Idents.Add(ident)
+		u.Idents = append(u.Idents, ident)
 	}
 
 	var ok bool
@@ -223,7 +222,7 @@ func (p *parser) parseComponent() (Component, bool) {
 		children = append(children, templ)
 	}
 
-	c := Component{Ident: ident, Properties: slice.New(properties), Children: slice.New(children)}
+	c := Component{Ident: ident, Properties: properties, Children: children}
 
 	return c, true
 }
@@ -259,7 +258,7 @@ func (p *parser) parseDocument() (Document, bool) {
 		children = append(children, templ)
 	}
 
-	d := Document{Ident: ident, Properties: slice.New(properties), Children: slice.New(children)}
+	d := Document{Ident: ident, Properties: properties, Children: children}
 	return d, true
 }
 
@@ -369,7 +368,7 @@ func (p *parser) parsePropertyType() (PropertyType, bool) {
 				constantKind = &constant.Kind
 			}
 
-			enumtype.Constants.Add(Constant(constant))
+			enumtype.Constants = append(enumtype.Constants, Constant(constant))
 		}
 
 		// TODO fail if enum constants is empty
@@ -508,7 +507,7 @@ func (p *parser) parseCondElement() (CondElement, bool) {
 
 	e := CondElement{
 		Target: cond,
-		Cases:  slice.New(options),
+		Cases:  options,
 	}
 
 	return e, true
@@ -606,7 +605,7 @@ loop:
 		return Element{}, false
 	}
 
-	e := Element{Ident: ident, Parameter: slice.New(parameters), Attributes: slice.New(attributes), Children: slice.New(children)}
+	e := Element{Ident: ident, Parameter: parameters, Attributes: attributes, Children: children}
 	return e, true
 }
 
@@ -703,9 +702,9 @@ func (p *parser) parseAttributes() (AttributeSet, bool) {
 
 	var attrset AttributeSet
 	if tag != nil {
-		attrset = TaggedAttributeSet{Tag: tag, Attributes: slice.New(attrs)}
+		attrset = TaggedAttributeSet{Tag: tag, Attributes: attrs}
 	} else {
-		attrset = UntaggedAttributeSet{Attributes: slice.New(attrs)}
+		attrset = UntaggedAttributeSet{Attributes: attrs}
 	}
 
 	return attrset, true
@@ -924,7 +923,7 @@ func (p *parser) parseCondExpression() (Expr, bool) {
 		return nil, false
 	}
 
-	e := CondExpression{Target: cond, Cases: slice.New(options)}
+	e := CondExpression{Target: cond, Cases: options}
 	return e, true
 }
 
@@ -1004,10 +1003,10 @@ func (p *parser) advance() {
 func (p *parser) skipComments() {
 	for !p.eof() {
 		next := p.cur
-		ch, ok := p.src.Tokens.Item(next)
-		if !ok {
+		if next >= len(p.src.Tokens) {
 			break
 		}
+		ch := p.src.Tokens[next]
 		if ch.Kind != token.Comment {
 			break
 		}
@@ -1021,10 +1020,10 @@ func (p *parser) peekNext() token.Token {
 		return eof
 	}
 
-	tok, ok := p.src.Tokens.Item(next)
-	if !ok {
+	if next >= len(p.src.Tokens) {
 		return eof
 	}
+	tok := p.src.Tokens[next]
 
 	return tok
 }
@@ -1035,10 +1034,10 @@ func (p *parser) peek() token.Token {
 	}
 
 	next := p.cur
-	node, ok := p.src.Tokens.Item(next)
-	if !ok {
+	if next >= len(p.src.Tokens) {
 		return eof
 	}
+	node := p.src.Tokens[next]
 
 	return node
 }
@@ -1056,16 +1055,16 @@ func (p *parser) addError(msg string) {
 		return
 	}
 
-	position, ok := p.src.Pos.Item(tok.Pos)
-	if !ok {
+	if int(tok.Pos) >= len(p.src.Pos) {
 		panic("Invalid token postion")
 	}
+	position := p.src.Pos[tok.Pos]
 
 	line := -1
 	col := -1
 	{
 		lst := -1
-		for i, l := range p.src.Lines.Each() {
+		for i, l := range p.src.Lines {
 			if l > position.Start {
 				break
 			}

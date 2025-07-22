@@ -4,7 +4,6 @@ import (
 	"iter"
 	"testing"
 
-	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 	"github.com/google/go-cmp/cmp"
 )
@@ -83,7 +82,7 @@ func TestScan_delimiter(t *testing.T) {
 }
 
 func TestScan_quoted_string(t *testing.T) {
-	source := `"foo"`
+	source := "\"foo\""
 	expected := token.String
 
 	f := token.Scan([]byte(source), 0)
@@ -111,7 +110,7 @@ func TestScan_line_string(t *testing.T) {
 }
 
 func TestScan_quoted_string_template_string(t *testing.T) {
-	source := `"foo \(bar)"`
+	source := "\"foo \\(bar)\""
 	expected := token.StringTempl
 
 	f := token.Scan([]byte(source), 0)
@@ -125,7 +124,7 @@ func TestScan_quoted_string_template_string(t *testing.T) {
 }
 
 func TestScan_line_string_template_string(t *testing.T) {
-	source := `-- foo \(bar)`
+	source := "-- foo \\(bar)"
 	expected := token.StringLineTempl
 
 	f := token.Scan([]byte(source), 0)
@@ -209,9 +208,9 @@ func TestScan_position(t *testing.T) {
 	}
 }
 
-func getPosses(s slice.Slice[token.Pos]) []token.Pos {
+func getPosses(s []token.Pos) []token.Pos {
 	pos := []token.Pos{}
-	for _, p := range s.Each() {
+	for _, p := range s {
 		pos = append(pos, p)
 	}
 	return pos
@@ -296,9 +295,9 @@ func TestScan_newline_after_comment(t *testing.T) {
 	}
 }
 
-func getNewlines(s slice.Slice[token.Token]) []token.Kind {
+func getNewlines(s []token.Token) []token.Kind {
 	kinds := []token.Kind{}
-	for _, tok := range s.Each() {
+	for _, tok := range s {
 		if tok.Kind != token.Newline {
 			continue
 		}
@@ -307,9 +306,9 @@ func getNewlines(s slice.Slice[token.Token]) []token.Kind {
 	return kinds
 }
 
-func getLines(s slice.Slice[int]) []int {
+func getLines(s []int) []int {
 	lines := []int{}
-	for _, line := range s.Each() {
+	for _, line := range s {
 		lines = append(lines, line)
 	}
 	return lines
@@ -323,9 +322,9 @@ func getTexts(s iter.Seq[string]) []string {
 	return texts
 }
 
-func getKinds(s slice.Slice[token.Token]) []token.Kind {
+func getKinds(s []token.Token) []token.Kind {
 	kinds := []token.Kind{}
-	for _, tok := range s.Each() {
+	for _, tok := range s {
 		kinds = append(kinds, tok.Kind)
 	}
 	return kinds

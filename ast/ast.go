@@ -1,7 +1,6 @@
 package ast
 
 import (
-	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 )
 
@@ -63,20 +62,20 @@ type Import struct {
 }
 
 type Using struct {
-	Idents slice.Slice[Var]
+	Idents []Var
 	From   Var
 }
 
 type Document struct {
 	Ident      Var
-	Properties slice.Slice[Property]
-	Children   slice.Slice[Content]
+	Properties []Property
+	Children   []Content
 }
 
 type Component struct {
 	Ident      Var
-	Properties slice.Slice[Property]
-	Children   slice.Slice[Content]
+	Properties []Property
+	Children   []Content
 }
 
 type Property struct {
@@ -85,14 +84,14 @@ type Property struct {
 }
 
 type Enum struct {
-	Constants slice.Slice[Constant]
+	Constants []Constant
 }
 
 type Element struct {
 	Ident      Expr
-	Parameter  slice.Slice[ElementParameter]
-	Attributes slice.Slice[AttributeSet]
-	Children   slice.Slice[Content]
+	Parameter  []ElementParameter
+	Attributes []AttributeSet
+	Children   []Content
 }
 
 type ElementParameter struct {
@@ -108,7 +107,7 @@ type IfElement struct {
 
 type CondElement struct {
 	Target Expr
-	Cases  slice.Slice[CaseElement]
+	Cases  []CaseElement
 }
 
 type CaseElement struct {
@@ -118,11 +117,11 @@ type CaseElement struct {
 
 type TaggedAttributeSet struct {
 	Tag        Expr
-	Attributes slice.Slice[Attribute]
+	Attributes []Attribute
 }
 
 type UntaggedAttributeSet struct {
-	Attributes slice.Slice[Attribute]
+	Attributes []Attribute
 }
 
 type Attribute struct {
@@ -148,7 +147,7 @@ type IfExpression struct {
 
 type CondExpression struct {
 	Target Expr
-	Cases  slice.Slice[Case]
+	Cases  []Case
 }
 
 type Case struct {

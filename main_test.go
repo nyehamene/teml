@@ -15,7 +15,7 @@ var examplefile []byte
 
 func TestScanParse(t *testing.T) {
 	toks := token.Scan(examplefile, 0)
-	for _, tok := range toks.Tokens.Each() {
+	for _, tok := range toks.Tokens {
 		if tok.Kind == token.Invalid {
 			t.Fatal()
 		}

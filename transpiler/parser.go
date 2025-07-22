@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	"github.com/eml-lang/teml/ast"
-	"github.com/eml-lang/teml/internal/slice"
 	"github.com/eml-lang/teml/token"
 )
 
@@ -56,9 +55,9 @@ func (p *parser) parseUsings() []Using {
 
 func (p *parser) parseUsing(use ast.Using) Using {
 	from := p.parseVar(use.From)
-	idents := make([]Var, 0, use.Idents.Size())
+	idents := make([]Var, 0, len(use.Idents))
 
-	for _, id := range use.Idents.Each() {
+	for _, id := range use.Idents {
 		ident := p.parseVar(id)
 		idents = append(idents, ident)
 	}
@@ -124,13 +123,13 @@ func (p *parser) parseComponent(cmp ast.Component) Declaration {
 	return node
 }
 
-func (p *parser) parseProperties(params slice.Slice[ast.Property]) []Property {
-	if params.Size() == 0 {
+func (p *parser) parseProperties(params []ast.Property) []Property {
+	if len(params) == 0 {
 		return nil
 	}
 
-	nodes := make([]Property, 0, params.Size())
-	for _, param := range params.Each() {
+	nodes := make([]Property, 0, len(params))
+	for _, param := range params {
 		ident := p.parseVar(param.Ident)
 		typevar := p.parsePropertyType(param.Type)
 		node := Property{Ident: ident, Type: typevar}
@@ -151,14 +150,14 @@ func (p *parser) parsePropertyType(t ast.PropertyType) PropertyType {
 	panic(fmt.Sprintf("unexpected property type: %v", reflect.TypeOf(t)))
 }
 
-func (p *parser) parseStmts(ch slice.Slice[ast.Content]) []Stmt {
-	if ch.Size() == 0 {
+func (p *parser) parseStmts(ch []ast.Content) []Stmt {
+	if len(ch) == 0 {
 		return nil
 	}
 
-	stmts := make([]Stmt, 0, ch.Size())
+	stmts := make([]Stmt, 0, len(ch))
 
-	for _, c := range ch.Each() {
+	for _, c := range ch {
 		expr := p.parseExprStmt(c)
 		node := Stmt{expr}
 		stmts = append(stmts, node)
@@ -205,8 +204,8 @@ func (p *parser) parseExprStmt(c ast.Content) Element {
 
 	case ast.CondElement:
 		target := p.parseExpr(t.Target)
-		cases := make([]CaseStmt, 0, t.Cases.Size())
-		for _, c := range t.Cases.Each() {
+		cases := make([]CaseStmt, 0, len(t.Cases))
+		for _, c := range t.Cases {
 			cond := p.parseExpr(c.Cond)
 			stmt := p.parseExprStmt(c.Branch)
 			branch := Stmt{Element: stmt}
@@ -219,12 +218,12 @@ func (p *parser) parseExprStmt(c ast.Content) Element {
 	panic(fmt.Sprintf("unexpected content: %v", reflect.TypeOf(c)))
 }
 
-func (p *parser) parseBlock(block slice.Slice[ast.Content]) []Stmt {
-	if block.Size() == 0 {
+func (p *parser) parseBlock(block []ast.Content) []Stmt {
+	if len(block) == 0 {
 		return nil
 	}
-	nodes := make([]Stmt, 0, block.Size())
-	for _, item := range block.Each() {
+	nodes := make([]Stmt, 0, len(block))
+	for _, item := range block {
 		expr := p.parseExprStmt(item)
 		node := Stmt{Element: expr}
 		nodes = append(nodes, node)
@@ -232,12 +231,12 @@ func (p *parser) parseBlock(block slice.Slice[ast.Content]) []Stmt {
 	return nodes
 }
 
-func (p *parser) parseElementProperties(props slice.Slice[ast.ElementParameter]) []KeyVal {
-	if props.Size() == 0 {
+func (p *parser) parseElementProperties(props []ast.ElementParameter) []KeyVal {
+	if len(props) == 0 {
 		return nil
 	}
-	nodes := make([]KeyVal, 0, props.Size())
-	for _, prop := range props.Each() {
+	nodes := make([]KeyVal, 0, len(props))
+	for _, prop := range props {
 		name := p.parseVar(prop.Ident)
 		value := p.parseExpr(prop.Value)
 		node := KeyVal{Key: name, Value: value}
@@ -246,12 +245,12 @@ func (p *parser) parseElementProperties(props slice.Slice[ast.ElementParameter])
 	return nodes
 }
 
-func (p *parser) parseGenericAttributes(attrs slice.Slice[ast.AttributeSet]) []Attr {
-	if attrs.Size() == 0 {
+func (p *parser) parseGenericAttributes(attrs []ast.AttributeSet) []Attr {
+	if len(attrs) == 0 {
 		return nil
 	}
-	nodes := make([]Attr, 0, attrs.Size())
-	for _, attr := range attrs.Each() {
+	nodes := make([]Attr, 0, len(attrs))
+	for _, attr := range attrs {
 		switch attrtype := attr.(type) {
 		case ast.TaggedAttributeSet:
 			tag := p.parseExpr(attrtype.Tag)
@@ -271,12 +270,12 @@ func (p *parser) parseGenericAttributes(attrs slice.Slice[ast.AttributeSet]) []A
 	return nodes
 }
 
-func (p *parser) parseAttributes(attrs slice.Slice[ast.Attribute]) []KeyVal {
-	if attrs.Size() == 0 {
+func (p *parser) parseAttributes(attrs []ast.Attribute) []KeyVal {
+	if len(attrs) == 0 {
 		return nil
 	}
-	nodes := make([]KeyVal, 0, attrs.Size())
-	for _, attr := range attrs.Each() {
+	nodes := make([]KeyVal, 0, len(attrs))
+	for _, attr := range attrs {
 		key := p.parseVar(attr.Key)
 		val := p.parseExpr(attr.Value)
 		node := KeyVal{Key: key, Value: val}
@@ -327,8 +326,8 @@ func (p *parser) parseExpr(e ast.Expr) Expr {
 
 	case ast.CondExpression:
 		target := p.parseExpr(t.Target)
-		cases := make([]CaseExpr, 0, t.Cases.Size())
-		for _, c := range t.Cases.Each() {
+		cases := make([]CaseExpr, 0, len(t.Cases))
+		for _, c := range t.Cases {
 			cond := p.parseExpr(c.Cond)
 			branch := p.parseExpr(c.Branch)
 			node := CaseExpr{Cond: cond, Branch: branch}
@@ -367,12 +366,12 @@ func (p *parser) parseIdentifier(e ast.Expr) Expr {
 }
 
 func (p *parser) parseEnum(e ast.Enum) Enum {
-	if e.Constants.Size() == 0 {
+	if len(e.Constants) == 0 {
 		return Enum{}
 	}
 
-	constants := make([]EnumConstant, 0, e.Constants.Size())
-	for _, c := range e.Constants.Each() {
+	constants := make([]EnumConstant, 0, len(e.Constants))
+	for _, c := range e.Constants {
 		constant := EnumConstant(p.parseExpr(c))
 		constants = append(constants, constant)
 	}
@@ -389,12 +388,12 @@ func (p *parser) parseVarFrom(e token.Token) Var {
 
 func (p *parser) parseVar(tok ast.Var) Var {
 	var pos token.Pos
-	var ok bool
 
 	txt := p.text(token.Token(tok))
-	if pos, ok = p.toks.Pos.Item(tok.Pos); !ok {
+	if int(tok.Pos) >= len(p.toks.Pos) || int(tok.Pos) < 0 {
 		panic(fmt.Sprintf("could not find tok position in source file: %v", tok))
 	}
+	pos = p.toks.Pos[tok.Pos]
 
 	// TODO find a better way to store line & col number
 	line, col := p.toks.Line(token.Token(tok))

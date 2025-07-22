@@ -5,25 +5,24 @@ import (
 	"iter"
 
 	"github.com/eml-lang/teml/internal/assert"
-	"github.com/eml-lang/teml/internal/slice"
 )
 
 func NewFile(src []byte, size int, lines int) *File {
 	f := File{src: src}
-	f.Tokens = slice.Sized[Token](size)
-	f.Pos = slice.Sized[Pos](size)
-	f.Lines = slice.Sized[int](lines)
+	f.Tokens = make([]Token, 0, size)
+	f.Pos = make([]Pos, 0, size)
+	f.Lines = make([]int, 0, lines)
 	// NOTE for better line and column numbering
 	if len(src) > 0 {
-		f.Lines.Add(-1)
+		f.Lines = append(f.Lines, -1)
 	}
 	return &f
 }
 
 type File struct {
-	Tokens slice.Slice[Token]
-	Pos    slice.Slice[Pos]
-	Lines  slice.Slice[int]
+	Tokens []Token
+	Pos    []Pos
+	Lines  []int
 	src    []byte
 }
 
@@ -33,13 +32,13 @@ type Pos struct {
 }
 
 func (f *File) Size() int {
-	s := f.Tokens.Size()
+	s := len(f.Tokens)
 	return s
 }
 
 func (f *File) Texts() iter.Seq[string] {
 	return func(yield func(string) bool) {
-		for _, tok := range f.Tokens.Each() {
+		for _, tok := range f.Tokens {
 			if txt, ok := f.Text(tok); ok {
 				if !yield(txt) {
 					return
@@ -51,19 +50,19 @@ func (f *File) Texts() iter.Seq[string] {
 
 func (f File) Text(target Token) (string, bool) {
 	assert.Assert(
-		f.Tokens.Size() == f.Pos.Size(),
+		len(f.Tokens) == len(f.Pos),
 		"len of tokens and text are do not match",
 	)
 
-	for i, tok := range f.Tokens.Each() {
+	for i, tok := range f.Tokens {
 		if target != tok {
 			continue
 		}
 
-		pos, ok := f.Pos.Item(i)
-		if !ok {
+		if i >= len(f.Pos) || i < 0 {
 			return "", false
 		}
+		pos := f.Pos[i]
 
 		txt := f.src[pos.Start:pos.End]
 		return string(txt), true
@@ -72,15 +71,15 @@ func (f File) Text(target Token) (string, bool) {
 }
 
 func (f *File) Line(tok Token) (line int, col int) {
-	pos, okpos := f.Pos.Item(tok.Pos)
-	if !okpos {
+	if int(tok.Pos) >= len(f.Pos) || int(tok.Pos) < 0 {
 		panic(fmt.Sprintf("could not get positon of token: %v", tok))
 	}
+	pos := f.Pos[tok.Pos]
 
 	lst := 0
 	offset := 0
 
-	for _, ln := range f.Lines.Each() {
+	for _, ln := range f.Lines {
 		if ln > pos.Start {
 			break
 		}
@@ -93,19 +92,19 @@ func (f *File) Line(tok Token) (line int, col int) {
 
 func (f *File) add(kind Kind, pos Pos) Position {
 	assert.Assert(
-		f.Tokens.Size() == f.Pos.Size(),
+		len(f.Tokens) == len(f.Pos),
 		"expect tokens, pos, and text to have the same len",
 	)
 
-	position := f.Tokens.Size()
+	position := len(f.Tokens)
 	p := Position(position)
 	tok := newToken(kind, p)
 
-	f.Tokens.Add(tok)
-	f.Pos.Add(pos)
+	f.Tokens = append(f.Tokens, tok)
+	f.Pos = append(f.Pos, pos)
 	return p
 }
 
 func (f *File) addLine(line int) {
-	f.Lines.Add(line)
+	f.Lines = append(f.Lines, line)
 }

@@ -148,7 +148,7 @@ func TestRender(t *testing.T) {
 }
 
 func getTestDataFromComment(toks *token.File) string {
-	for _, tok := range toks.Tokens.Each() {
+	for _, tok := range toks.Tokens {
 		if tok.Kind != token.Comment {
 			continue
 		}
