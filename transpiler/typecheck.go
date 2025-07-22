@@ -54,36 +54,36 @@ func (t *typechecker) typecheckFile(env Env) Env {
 	return env
 }
 
-func (t *typechecker) typecheckPackage(env Env) string {
+func (t *typechecker) typecheckPackage(env Env) Var {
 	f := t.src
 	ident := f.Package.Ident.Name
-	name := f.Package.Path
+	namestr := f.Package.Path
 
 	// remove double quote
-	name = name[1 : len(name)-1]
+	name := Var{Name: namestr.Value()}
 
-	pkgtype := TypePackage{Path: name}
+	pkgtype := TypePackage{Path: namestr}
 	t.bind(env, pkgtype, ident)
 	return name
 }
 
-func (t *typechecker) typecheckDeclaration(env Env, ns string) {
+func (t *typechecker) typecheckDeclaration(env Env, ns Var) {
 	for _, decl := range t.src.Declarations {
-		var name string
+		var name Var
 		var sym Symbol
 
 		switch tt := decl.(type) {
 		case Document:
-			name = tt.Ident.Name
-			typename := ns + "/" + name
+			name = tt.Ident
+			typename := ns.Join(name, ".")
 			sym = TypeDeclaration{
 				Kind: DocumentDeclaration,
 				Name: typename,
 			}
 
 		case Component:
-			name = tt.Ident.Name
-			typename := ns + "/" + name
+			name = tt.Ident
+			typename := ns.Join(name, ".")
 			sym = TypeDeclaration{
 				Kind: ComponentDeclaration,
 				Name: typename,
@@ -93,7 +93,7 @@ func (t *typechecker) typecheckDeclaration(env Env, ns string) {
 			panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(t)))
 		}
 
-		t.bind(env, sym, name)
+		t.bind(env, sym, name.Name)
 	}
 }
 

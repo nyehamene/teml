@@ -12,16 +12,15 @@ import (
 type parser struct{}
 
 func (p *parser) parsePackage(pkg ast.Package) Package {
-	name := pkg.Path
-	name = stripDoubleQuote(name)
-	node := Package{name}
+	name := pkg.Path.Value()
+	node := Package{Var(name)}
 	return node
 }
 
 func (p *parser) parseImport(i ast.Import) Import {
 	name := i.Ident.Name
 	path := i.Path
-	node := Import{Name: name, Path: path}
+	node := Import{Name: Var(name), Path: String(path)}
 	return node
 }
 
@@ -30,10 +29,12 @@ func (p *parser) parseUsing(u ast.Using) func(func(TypeAlias) bool) {
 	return func(yield func(TypeAlias) bool) {
 		pkgname := u.From.Name
 		for _, ident := range u.Idents {
-			typename := ident.Name
+			aliasname := ident.Name
+			typename := pkgname + "." + aliasname
+
 			alias := TypeAlias{
-				Name: typename,
-				Type: fmt.Sprintf("%s.%s", pkgname, typename),
+				Name: Var(aliasname),
+				Type: Var(typename),
 			}
 			if !yield(alias) {
 				break
@@ -62,7 +63,7 @@ func (p *parser) parseStruct(decl ast.Declaration) Struct {
 		fields = append(fields, field)
 	}
 	node := Struct{
-		Name:   name,
+		Name:   Var(name),
 		Fields: fields,
 	}
 
@@ -71,16 +72,29 @@ func (p *parser) parseStruct(decl ast.Declaration) Struct {
 
 func (p *parser) parseStructField(structname string, prop ast.Property) StructField {
 	name := prop.Ident.Name
-	type0 := p.resolveFieldType(structname, name, prop.Type)
+	type0 := p.parseFieldType(structname, name, prop.Type)
 	node := StructField{
-		Name: name,
+		Name: Var(name),
 		Type: type0,
 	}
 	return node
 }
 
+type typeinfo struct {
+	name string
+}
+
+func (m typeinfo) Receiver() Var {
+	rcv := strings.ToLower(m.name[0:1])
+	return Var(rcv)
+}
+
+func (m typeinfo) getMember(name Var) Var {
+	member := m.Receiver() + "." + name
+	return member
+}
+
 func (p *parser) parseMethod(decl ast.Declaration) RenderMethod {
-	var methodname = RenderComponentMethod
 	var typename string
 	var stmts []ast.Stmt
 
@@ -96,74 +110,63 @@ func (p *parser) parseMethod(decl ast.Declaration) RenderMethod {
 		panic(fmt.Sprintf("unexpected declaration type: %v", reflect.TypeOf(decl)))
 	}
 
-	// method receiver variable name
-	receiver := strings.ToLower(typename[0:1])
-
 	// + the return statement at the end of the function
 	body := make([]Stmt, 0, len(stmts)+1)
 
-	m := methodinfo{
-		receiver: receiver,
-		name:     methodname,
+	t := typeinfo{
+		name: typename,
 	}
 	for _, stmt := range stmts {
-		p.parseStmt(m, stmt.Element, &body)
+		p.parseStmt(t, stmt.Element, &body)
 	}
+
+	childContentVar := makeTempVar()
+	body = append(body, InheritChildren{Context: childContentVar})
 
 	// add return statement
 	body = append(body, ReturnNil{})
 
 	node := RenderMethod{
-		Name:     methodname,
-		Type:     typename,
-		Receiver: receiver,
+		Name:     NameComponentRenderMethod,
+		Type:     Var(typename),
+		Receiver: t.Receiver(),
 		Body:     body,
 	}
 	return node
 }
 
-type methodinfo struct {
-	receiver string
-	name     string
-}
+func (p *parser) parseStmt(m typeinfo, node ast.Element, stmts *[]Stmt) {
+	errvar := makeErrVar()
 
-func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 	switch elem := node.(type) {
 	case ast.TextElement:
-		errvar := makeErrVar()
-		stmt1 := StringLiteral{Value: elem.Text, Variable: errvar}
+		stmt1 := StringLiteral{Value: String(elem.Text), Error: errvar}
 		ret1 := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt1, ret1)
 
 	case ast.TextGroupElement:
-		for _, line := range elem.Lines {
-			errvar := makeErrVar()
-			txt := doubleQuoteString(line)
-			stmt2 := StringLiteral{Value: txt, Variable: errvar}
-			ret2 := ReturnIfNotNil(errvar)
-			*stmts = append(*stmts, stmt2, ret2)
-		}
+		text := ast.Join(elem.Lines, "")
+		stmt2 := StringLiteral{Value: String(doubleQuoteString(string(text))), Error: errvar}
+		ret2 := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt2, ret2)
 
 	case ast.NumberElement:
-		member := p.resolveName(elem.Tag)
-		memberAccess := m.receiver + "." + member
+		member := p.parseName(elem.Tag)
+		memberAccess := m.getMember(member)
 		tempvar := makeTempVar()
-		stmt1 := FormatNumber{Value: Var(memberAccess), Variable: tempvar}
-		errvar := makeErrVar()
-		stmt2 := NumberMemberAccessExpr{Value: tempvar, Variable: errvar}
-		ret2 := ReturnIfNotNil(errvar)
-		*stmts = append(*stmts, stmt1, stmt2, ret2)
+		stmt := NumberMemberAccessExpr{Value: memberAccess, Variable: tempvar, Error: errvar}
+		ret := ReturnIfNotNil(errvar)
+		*stmts = append(*stmts, stmt, ret)
 
 	case ast.StringElement:
-		member := p.resolveName(elem.Tag)
-		memberAccess := m.receiver + "." + member
-		errvar := makeErrVar()
-		stmt := StringMemberAccessExpr{Value: memberAccess, Variable: errvar}
+		member := p.parseName(elem.Tag)
+		memberAccess := m.getMember(member)
+		stmt := StringMemberAccessExpr{Value: memberAccess, Error: errvar}
 		ret := ReturnIfNotNil(errvar)
 		*stmts = append(*stmts, stmt, ret)
 
 	case ast.NativeElement:
-		tag := p.resolveName(elem.Tag)
+		tag := p.parseName(elem.Tag)
 		p.parseOpenTagWithAttributes(tag, elem.Attributes, stmts)
 
 		for _, stmt := range elem.Body {
@@ -173,23 +176,19 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		p.parseCloseTag(tag, stmts)
 
 	case ast.ComponentElement:
-		member := p.resolveName(elem.Tag)
-		memberAccess := m.receiver + "." + member
-		m := methodinfo{name: RenderComponentMethod, receiver: memberAccess}
-		p.parseCallRenderMethod(m, elem.Attributes, elem.Body, stmts)
+		member := p.parseName(elem.Tag)
+		p.parseCallRenderMethod(m, m.getMember(member), elem.Attributes, elem.Body, stmts)
 
 	case ast.InstanceElement:
-		cmptype := p.resolveName(elem.Tag)
+		cmptype := p.parseName(elem.Tag)
 		cmpvar := makeTempVar()
 		parameters := p.parseInstanceParameters(cmpvar, elem.Parameters)
 		stmt1 := StructInstance{Type: cmptype, Variable: cmpvar, Parameters: parameters}
 		*stmts = append(*stmts, stmt1)
-
-		m := methodinfo{name: RenderComponentMethod, receiver: cmpvar}
-		p.parseCallRenderMethod(m, elem.Attributes, nil, stmts)
+		p.parseCallRenderMethod(m, cmpvar, elem.Attributes, nil, stmts)
 
 	case ast.IFElement:
-		cond := p.resolveIfCond(m, elem.Cond)
+		cond := p.parseIfCond(m, elem.Cond)
 
 		// then branch
 		thenBranch := []Stmt{}
@@ -205,13 +204,13 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 		*stmts = append(*stmts, stmt1)
 
 	case ast.CondElement:
-		target := p.resolveCondTarget(m, elem.Target)
+		target := p.parseCondTarget(m, elem.Target)
 
 		// cases
 		cases := []Case{}
 		for _, c := range elem.Cases {
 			branch := []Stmt{}
-			cond := p.resolveCondCase(c.Cond)
+			cond := p.parseCondCase(c.Cond)
 			p.parseStmt(m, c.Branch.Element, &branch)
 			cases = append(cases, Case{Match: cond, Branch: branch})
 		}
@@ -224,83 +223,44 @@ func (p *parser) parseStmt(m methodinfo, node ast.Element, stmts *[]Stmt) {
 	}
 }
 
-func (p *parser) parseCallRenderMethod(m methodinfo, attrs []ast.Attr, body []ast.Stmt, stmts *[]Stmt) {
+func (p *parser) parseCallRenderMethod(m typeinfo, receiver Var, attrs []ast.Attr, body []ast.Stmt, stmts *[]Stmt) {
 	mapvar := makeTempVar()
 	entries := p.parseMapEntries(mapvar, attrs)
 	stmt1 := MapInstance{Variable: mapvar, Entries: entries}
 
 	slicevar := makeTempVar()
-	cmps := p.parseChildren(body)
-	stmt2 := SliceInstance{Variable: slicevar, Values: cmps}
+	cmpvars := p.parseChildren(m, body, stmts)
+	stmt2 := SliceInstance{Variable: slicevar, Values: cmpvars, Type: NameComponentInterface}
 
 	ctxvar := makeTempVar()
-	stmt3 := CopyRenderContext{Attrs: mapvar, Variable: ctxvar, Children: slicevar}
+	stmt3 := CopyRenderContext{Variable: ctxvar, Attrs: mapvar, Children: slicevar}
 
 	errvar := makeErrVar()
-	stmt4 := CallRenderMethod{Context: ctxvar, Name: m.name, Receiver: m.receiver, Variable: errvar}
+	stmt4 := CallRenderMethod{Context: ctxvar, Name: NameComponentRenderMethod, Receiver: receiver, Error: errvar}
 	ret4 := ReturnIfNotNil(errvar)
-	*stmts = append(*stmts, stmt1, stmt2, stmt3, stmt4, ret4)
+	*stmts = append(*stmts, stmt1, stmt2, stmt3, stmt4, ret4, BlankVar(slicevar), BlankVar(mapvar))
 }
 
-func (p *parser) parseChildren(stmts []ast.Stmt) []ComponentInstance {
-	if len(stmts) == 0 {
+func (p *parser) parseChildren(m typeinfo, body []ast.Stmt, stmts *[]Stmt) []Var {
+	if len(body) == 0 {
 		return nil
 	}
 
-	cmps := make([]ComponentInstance, 0, len(stmts))
-	for _, stmt := range stmts {
-		cmp := p.parseComponentInstance(stmt.Element)
-		cmps = append(cmps, cmp)
+	cmpvars := make([]Var, 0, len(body))
+	for _, stmt := range body {
+		cmpvar := makeTempVar()
+		cmpvars = append(cmpvars, cmpvar)
+
+		body := []Stmt{}
+		p.parseStmt(m, stmt.Element, &body)
+		body = append(body, ReturnNil{})
+		stmt := ComponentInstance{Variable: cmpvar, Stmts: body}
+		*stmts = append(*stmts, stmt)
 	}
-	return cmps
+	return cmpvars
 }
 
-func (p *parser) parseComponentInstance(elem ast.Element) ComponentInstance {
-	werr := makeErrVar()
-	switch elemtype := elem.(type) {
-	case ast.TextElement:
-		stmt := StringLiteral{Variable: werr, Value: elemtype.Text}
-		ret := ReturnIfNotNil(werr)
-		body := []Stmt{stmt, ret}
-		return ComponentInstance{Stmts: body}
-
-	case ast.TextGroupElement:
-		body := make([]Stmt, 0, len(elemtype.Lines))
-		for _, line := range elemtype.Lines {
-			stmt := StringLiteral{Variable: werr, Value: line}
-			ret := ReturnIfNotNil(werr)
-			body = append(body, stmt, ret)
-		}
-		return ComponentInstance{Stmts: body}
-
-	case ast.NumberElement:
-		stmt := FormatNumber{Variable: werr, Value: p.resolveValue(elemtype.Tag)}
-		ret := ReturnIfNotNil(werr)
-		body := []Stmt{stmt, ret}
-		return ComponentInstance{Stmts: body}
-
-	case ast.StringElement:
-		stmt := FormatNumber{Variable: werr, Value: p.resolveValue(elemtype.Tag)}
-		ret := ReturnIfNotNil(werr)
-		body := []Stmt{stmt, ret}
-		return ComponentInstance{Stmts: body}
-
-	case ast.ComponentElement:
-		panic(errors.ErrUnsupported)
-	case ast.InstanceElement:
-		panic(errors.ErrUnsupported)
-	case ast.NativeElement:
-		panic(errors.ErrUnsupported)
-	case ast.IFElement:
-		panic(errors.ErrUnsupported)
-	case ast.CondElement:
-		panic(errors.ErrUnsupported)
-	default:
-		panic(fmt.Sprintf("unexpected element type: %v", reflect.TypeOf(elem)))
-	}
-}
-
-func (p *parser) parseInstanceParameters(structvar string, params []ast.KeyVal) []SetStructField {
+func (p *parser) parseInstanceParameters(structvar Var, params []ast.KeyVal) []SetStructField {
 	if len(params) == 0 {
 		return nil
 	}
@@ -309,15 +269,15 @@ func (p *parser) parseInstanceParameters(structvar string, params []ast.KeyVal) 
 	for _, param := range params {
 		field := SetStructField{
 			Struct: structvar,
-			Name:   param.Key.Name,
-			Value:  p.resolveValue(param.Value),
+			Name:   Var(param.Key.Name),
+			Value:  p.parseValue(param.Value),
 		}
 		fields = append(fields, field)
 	}
 	return fields
 }
 
-func (p *parser) parseMapEntries(mapvar string, attrs []ast.Attr) []SetMapEntry {
+func (p *parser) parseMapEntries(mapvar Var, attrs []ast.Attr) []SetMapEntry {
 	if len(attrs) == 0 {
 		return nil
 	}
@@ -325,8 +285,9 @@ func (p *parser) parseMapEntries(mapvar string, attrs []ast.Attr) []SetMapEntry 
 	entries := make([]SetMapEntry, 0, len(attrs))
 	for _, attr := range attrs {
 		for _, entry := range attr.Entries {
-			key := entry.Key.Name
-			value := p.resolveAttributeValue(entry.Value)
+			key := doubleQuoteString(entry.Key.Name)
+			value := p.parseAttributeValue(entry.Value)
+			value = doubleQuoteString(ResolveValue(value))
 			entry := SetMapEntry{Map: mapvar, Key: Var(key), Value: value}
 			entries = append(entries, entry)
 		}
@@ -334,79 +295,229 @@ func (p *parser) parseMapEntries(mapvar string, attrs []ast.Attr) []SetMapEntry 
 	return entries
 }
 
-func (p *parser) parseOpenTagWithAttributes(name string, attrs []ast.Attr, stmts *[]Stmt) {
+func (p *parser) parseOpenTagWithAttributes(name Var, attrs []ast.Attr, stmts *[]Stmt) {
 	// begin open tag
 	errvar := makeErrVar()
-	stmt1 := StringLiteral{Value: doubleQuoteString(fmt.Sprintf("<%s", name)), Variable: errvar}
+	stmt1 := StringLiteral{Value: doubleQuoteString(fmt.Sprintf("<%s", name)), Error: errvar}
 	ret1 := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt1, ret1)
 
 	errvar = makeErrVar()
-	stmti := InheritAttributes{Variable: errvar}
+	stmti := InheritAttributes{Error: errvar}
 	*stmts = append(*stmts, stmti)
 
 	// attribues
 	for _, attr := range attrs {
-		p.parseAttr(attr, stmts)
+		p.parseAttrs(attr.Entries, stmts)
 	}
 
 	// end open tag
 	errvar = makeErrVar()
-	stmt2 := StringLiteral{Value: doubleQuoteString(">"), Variable: errvar}
+	stmt2 := StringLiteral{Value: doubleQuoteString(">"), Error: errvar}
 	ret2 := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt2, ret2)
 }
 
-func (p *parser) parseCloseTag(name string, stmts *[]Stmt) {
+func (p *parser) parseCloseTag(name Var, stmts *[]Stmt) {
 	errvar := makeErrVar()
-	stmt := StringLiteral{Value: doubleQuoteString(fmt.Sprintf("</%s>", name)), Variable: errvar}
+	stmt := StringLiteral{Value: doubleQuoteString(fmt.Sprintf("</%s>", name)), Error: errvar}
 	ret := ReturnIfNotNil(errvar)
 	*stmts = append(*stmts, stmt, ret)
 }
 
-func (p *parser) parseAttr(attr ast.Attr, stmts *[]Stmt) {
-	for _, entry := range attr.Entries {
-		p.parseEntry(entry, stmts)
+func (p *parser) parseAttrs(entries []ast.KeyVal, stmts *[]Stmt) {
+	for _, entry := range entries {
+		p.parseAttr(entry, stmts)
 	}
 }
 
-func (p *parser) parseEntry(entry ast.KeyVal, stmts *[]Stmt) {
-	key := entry.Key.Name
-	var value string
+func (p *parser) parseAttr(node ast.KeyVal, stmts *[]Stmt) {
+	key := Var(node.Key.Name)
+	value := p.parseAttributeValue(node.Value)
 
-	switch t := entry.Value.(type) {
-	case ast.String:
-		value = string(t)
+	attr := " " + ResolveValue(key) + "=" + ResolveValue(value)
+	attrstr := doubleQuoteString(attr)
 
-	case ast.Number:
-		value = string(t)
+	errvar := makeErrVar()
+	stmt := StringLiteral{Value: attrstr, Error: errvar}
+	ret := ReturnIfNotNil(errvar)
+	*stmts = append(*stmts, stmt, ret)
+}
 
-	case ast.Bool:
-		value = string(t)
+func (p *parser) parseType(node ast.Var) Type {
+	switch node.Name {
+	case "String":
+		return Var("string")
+	case "Number":
+		return Var("int")
+	case "Bool":
+		return Var("bool")
+	}
+	return Var(node.Name)
+}
 
+func (p *parser) parseFieldType(structname, field string, expr ast.PropertyType) Type {
+	switch t := expr.(type) {
 	case ast.Var:
-		value = t.Name
+		return p.parseType(t)
 
-	case ast.IFExpr:
-		panic(errors.ErrUnsupported)
+	case ast.Enum:
+		typename := structname + strings.ToUpper(field[0:1]) + field[1:]
 
-	case ast.CondExpr:
-		panic(errors.ErrUnsupported)
+		constants := []Expr{}
+		for _, c := range t.Constants {
+			constant := p.parseValue(c)
+			constants = append(constants, constant)
+		}
+
+		e := Enum{
+			TypeName:  Var(typename),
+			Constants: []Expr{},
+		}
+		return e
 
 	case ast.MemberAccess:
 		panic(errors.ErrUnsupported)
 
+	default:
+		panic(fmt.Sprintf("unexpected propety type: %v", reflect.TypeOf(expr)))
+	}
+}
+
+func (p *parser) parseName(expr ast.Expr) Var {
+	switch t := expr.(type) {
+	case ast.Var:
+		return p.parseType(t).Name()
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.String:
+		panic(fmt.Sprintf("expected to match a name but got string %v", t))
+	case ast.Number:
+		panic(fmt.Sprintf("expected to match a name but got number %v", t))
+	case ast.Bool:
+		panic(fmt.Sprintf("expected to match a name but got bool %v", t))
+	case ast.IFExpr:
+		panic(fmt.Sprintf("expected to match a name but got if expression %v", t))
+	case ast.CondExpr:
+		panic(fmt.Sprintf("expected to match a name but got cond expression %v", t))
+	case ast.Enum:
+		panic(fmt.Sprintf("expected to match a name but got enum expression %v", t))
+	default:
+		panic(fmt.Sprintf("expected expression type: %v", reflect.TypeOf(expr)))
+	}
+}
+
+func (p *parser) parseValue(expr ast.Expr) Expr {
+	switch t := expr.(type) {
+	case ast.Var:
+		return Var(t.Name)
+	case ast.String:
+		return String(t)
+	case ast.Number:
+		return Number(t)
+	case ast.Bool:
+		return Bool(t)
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
 	case ast.Enum:
 		panic(errors.ErrUnsupported)
-
 	default:
-		panic(fmt.Sprintf("unexpected expression type: %v", reflect.TypeOf(entry.Value)))
+		panic(errors.ErrUnsupported)
 	}
+}
 
-	attr := " " + key + "=" + escapeSurrounding(value)
+func (p *parser) parseAttributeValue(expr ast.Expr) Expr {
+	switch t := expr.(type) {
+	case ast.Var:
+		return Var(t.Name)
+	case ast.String:
+		return escapeSurrounding(t)
+	case ast.Number:
+		return Number(t)
+	case ast.Bool:
+		return Bool(t)
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
+	case ast.Enum:
+		panic(errors.ErrUnsupported)
+	default:
+		panic(errors.ErrUnsupported)
+	}
+}
 
-	errvar := makeErrVar()
-	stmt := StringLiteral{Value: doubleQuoteString(attr), Variable: errvar}
-	ret := ReturnIfNotNil(errvar)
-	*stmts = append(*stmts, stmt, ret)
+func (p *parser) parseIfCond(m typeinfo, expr ast.Expr) Expr {
+	switch t := expr.(type) {
+	case ast.Var:
+		return m.getMember(Var(t.Name))
+	case ast.Bool:
+		return Bool(t)
+	case ast.String:
+		panic(errors.ErrUnsupported)
+	case ast.Number:
+		panic(errors.ErrUnsupported)
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
+	case ast.Enum:
+		panic(errors.ErrUnsupported)
+	default:
+		panic(errors.ErrUnsupported)
+	}
+}
+
+func (p *parser) parseCondTarget(m typeinfo, expr ast.Expr) Expr {
+	switch t := expr.(type) {
+	case ast.Var:
+		return Var(m.getMember(Var(t.Name)))
+	case ast.Bool:
+		return Bool(t)
+	case ast.String:
+		return String(t)
+	case ast.Number:
+		return Number(t)
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
+	case ast.Enum:
+		panic(errors.ErrUnsupported)
+	default:
+		panic(errors.ErrUnsupported)
+	}
+}
+
+func (p *parser) parseCondCase(expr ast.Expr) Expr {
+	switch t := expr.(type) {
+	case ast.Bool:
+		return Bool(t)
+	case ast.String:
+		return String(t)
+	case ast.Number:
+		return Number(t)
+	case ast.Var:
+		panic(errors.ErrUnsupported)
+	case ast.MemberAccess:
+		panic(errors.ErrUnsupported)
+	case ast.IFExpr:
+		panic(errors.ErrUnsupported)
+	case ast.CondExpr:
+		panic(errors.ErrUnsupported)
+	case ast.Enum:
+		panic(errors.ErrUnsupported)
+	default:
+		panic(errors.ErrUnsupported)
+	}
 }

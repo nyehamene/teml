@@ -19,7 +19,7 @@ func (p *parser) parsePackage() Package {
 	ident := p.parseVar(pkg.Ident)
 	path := p.text(pkg.Path)
 
-	node := Package{Ident: ident, Path: path}
+	node := Package{Ident: ident, Path: String(path)}
 	return node
 }
 
@@ -32,7 +32,7 @@ func (p *parser) parseImports() []Import {
 	for _, imp := range p.src.Imports {
 		ident := p.parseVar(imp.Ident)
 		path := p.text(token.Token(imp.Path))
-		node := Import{Ident: ident, Path: path}
+		node := Import{Ident: ident, Path: String(path)}
 		nodes = append(nodes, node)
 	}
 
@@ -170,17 +170,17 @@ func (p *parser) parseExprStmt(c ast.Content) Element {
 	switch t := c.(type) {
 	case ast.Text:
 		txt := p.text(token.Token(t))
-		return TextElement{txt}
+		return TextElement{String(txt)}
 
 	case ast.TextGroup:
 		var tg ast.TextGroup = t
 
-		lines := make([]string, 0, len(tg))
+		lines := make([]String, 0, len(tg))
 		for _, t := range tg {
 			line := p.text(token.Token(t))
 			// strip line string marker: --
 			line = line[2:]
-			lines = append(lines, line)
+			lines = append(lines, String(line))
 		}
 		node := TextGroupElement{lines}
 		return node

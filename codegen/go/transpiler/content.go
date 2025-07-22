@@ -6,52 +6,43 @@ import (
 	ast "github.com/eml-lang/teml/transpiler"
 )
 
-func createAttributes(kvs map[string]string) []ast.Attr {
-	entries := []ast.KeyVal{}
-	for k, v := range kvs {
-		entry := ast.KeyVal{Key: ast.Var{Name: k}, Value: ast.String(doubleQuoteString(v))}
-		entries = append(entries, entry)
-	}
-	attrs := []ast.Attr{
-		{
-			Tag:     nil,
-			Entries: entries,
-		},
-	}
-	return attrs
-}
-
-func stripDoubleQuote(quotedstr string) string {
-	striped := quotedstr[1 : len(quotedstr)-1]
-	return striped
-}
-
-func doubleQuoteString(s string) string {
+func doubleQuoteString(s string) String {
 	quoted := fmt.Sprintf("\"%s\"", s)
-	return quoted
+	return String(quoted)
 }
 
-func escapeSurrounding(str string) string {
+func escapeSurrounding0(str ast.String) String {
 	prefix := string(str[0])
 	suffix := string(str[len(str)-1])
 	content := str[1 : len(str)-1]
 	escape := "\\"
-	txt := fmt.Sprintf("%s%s%s%s%s", escape, prefix, content, escape, suffix)
-	return txt
+	txt := fmt.Sprintf("%s%s%[1]s%[3]s%[2]s%[4]s%[4]s", prefix, escape, content, suffix)
+	return String(txt)
+}
+
+func escapeSurrounding(str ast.String) String {
+	prefix := string(str[0])
+	suffix := string(str[len(str)-1])
+	content := str[1 : len(str)-1]
+	escape := "\\"
+	txt := fmt.Sprintf("%s%s%s%[1]s%[4]s", escape, prefix, content, suffix)
+	return String(txt)
 }
 
 var errvarCount = 0
 
-func makeErrVar() string {
+func makeErrVar() Var {
+	// TODO return Var
 	name := fmt.Sprintf("err%d", errvarCount)
 	errvarCount += 1
-	return name
+	return Var(name)
 }
 
 var tempvarCount = 0
 
-func makeTempVar() string {
+func makeTempVar() Var {
+	// TODO return Var
 	name := fmt.Sprintf("temp%d", tempvarCount)
 	tempvarCount += 1
-	return name
+	return Var(name)
 }

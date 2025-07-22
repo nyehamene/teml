@@ -138,7 +138,7 @@ func TestRender(t *testing.T) {
 
 	_, errwrt := io.WriteString(
 		stdout,
-		fmt.Sprintf(source, data, gotranspiler.RenderContext, gotranspiler.RenderComponentMethod),
+		fmt.Sprintf(source, data, gotranspiler.NameContextStruct, gotranspiler.NameComponentRenderMethod),
 	)
 	if errwrt != nil {
 		return errwrt

@@ -3,7 +3,7 @@ package ast
 import "fmt"
 
 func (t TypeDeclaration) String() string {
-	return fmt.Sprintf("<%s %s>", t.Kind, t.Name)
+	return fmt.Sprintf("<%s %s>", t.Kind, t.Name.Name)
 }
 
 func (k DeclarationKind) String() string {

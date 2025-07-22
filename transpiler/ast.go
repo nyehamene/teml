@@ -56,12 +56,12 @@ func (Enum) typeExpr()         {}
 // ast
 type Package struct {
 	Ident Var
-	Path  string
+	Path  String
 }
 
 type Import struct {
 	Ident Var
-	Path  string
+	Path  String
 }
 
 type Using struct {
@@ -88,11 +88,11 @@ type Stmt struct {
 }
 
 type TextElement struct {
-	Text string
+	Text String
 }
 
 type TextGroupElement struct {
-	Lines []string
+	Lines []String
 }
 
 type NumberElement struct {
@@ -196,4 +196,20 @@ type Attr struct {
 func (s String) Value() string {
 	// strip double quoted
 	return string(s[1 : len(s)-1])
+}
+
+func Join(xs []String, sep string) String {
+	var result String
+	for _, s := range xs {
+		if result != "" {
+			result += String(sep)
+		}
+		result += s
+	}
+	return result
+}
+
+func (v Var) Join(other Var, sep string) Var {
+	name := v.Name + sep + other.Name
+	return Var{Name: name, Pos: other.Pos}
 }

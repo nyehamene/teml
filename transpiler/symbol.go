@@ -16,7 +16,7 @@ type TypeVar struct {
 }
 
 type TypePackage struct {
-	Path string
+	Path String
 }
 
 type TypeEnum struct {
@@ -25,7 +25,7 @@ type TypeEnum struct {
 
 type TypeDeclaration struct {
 	Kind DeclarationKind
-	Name string
+	Name Var
 }
 
 type DeclarationKind int

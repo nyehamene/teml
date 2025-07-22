@@ -2,8 +2,7 @@
 
 (component A [header: String footer: Number]
   (header)
-  "Hello!"
-  -- How are you?
+  (div "this div should inherit the attribute")
   (footer))
 
 ;;test:instance B{element: A{header: "Header", footer: 100}}

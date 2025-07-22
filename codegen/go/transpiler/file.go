@@ -15,14 +15,16 @@ type File struct {
 }
 
 const (
-	RenderContext              = "RenderContext"
-	RenderContextOption        = "RenderContextOption"
-	RenderContextContructor    = "NewRenderContext"
-	RenderComponentMethod      = "Render"
-	RenderContextContextField  = "ctx"
-	RenderContextWriterField   = "writer"
-	RenderContextAttrsField    = "attrs"
-	RenderContextChildrenField = "children"
+	NameContextStruct         = "RenderContext"
+	NameContextOptionStruct   = "RenderContextOption"
+	NameContextContructor     = "NewRenderContext"
+	NameComponentRenderMethod = "Render"
+	NameContextField          = "ctx"
+	NameWriterField           = "writer"
+	NameAttributeField        = "attrs"
+	NameChildrenField         = "children"
+	NameComponentInterface    = "Component"
+	NameFuncComponentStruct   = "funccomponent"
 )
 
 func Parse(fsrc *ast.File) File {
@@ -91,28 +93,28 @@ func addDefaultImports(imports *[]Import) {
 
 func createRenderContextStruct() RenderContextStruct {
 	context := RenderContextStruct{
-		Struct: Struct{Name: RenderContext,
+		Struct: Struct{Name: NameContextStruct,
 			Fields: []StructField{
 				{
-					Name: RenderContextContextField,
+					Name: NameContextField,
 					Type: Var("context.Context"),
 				},
 				{
-					Name: RenderContextWriterField,
+					Name: NameWriterField,
 					Type: Var("io.Writer"),
 				},
 				{
-					Name: RenderContextAttrsField,
+					Name: NameAttributeField,
 					Type: Var("map[string]string"),
 				},
 				{
-					Name: RenderContextChildrenField,
+					Name: NameChildrenField,
 					Type: Var("[]Component"),
 				},
 			},
 		},
-		Constructor: RenderContextContructor,
-		OptionType:  RenderContextOption,
+		Constructor: NameContextContructor,
+		OptionType:  NameContextOptionStruct,
 	}
 	return context
 }

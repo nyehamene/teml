@@ -1,42 +1,46 @@
 package ast
 
+//
+// TODO replace string type with Var when the field denotes a variable identifier
+//
+
 type TypeAlias struct {
-	Name string
-	Type string
+	Name Var
+	Type Var
 }
 
 type Package struct {
-	Name string
+	Name Var
 }
 
 type Import struct {
-	Name string
-	Path string
+	Name Var
+	Path String
 }
 
 type RenderContextStruct struct {
 	Struct
-	Constructor string
-	OptionType  string
+	Constructor Var
+	OptionType  Var
 }
 
 type Struct struct {
-	Name   string
+	Name   Var
 	Fields []StructField
 }
 
 type StructField struct {
-	Name string
+	Name Var
 	Type Type
 }
 
 type RenderMethod struct {
 	//Name of the method
-	Name string
+	Name Var
 	//Type the method is defined for
-	Type string
+	Type Var
 	//Receiver variable name for the method
-	Receiver string
+	Receiver Var
 	//Body
 	Body []Stmt
 }
@@ -51,7 +55,7 @@ func (StringLiteral) stmt()          {}
 func (StringMemberAccessExpr) stmt() {}
 func (NumberMemberAccessExpr) stmt() {}
 func (InheritAttributes) stmt()      {}
-func (FormatNumber) stmt()           {}
+func (InheritChildren) stmt()        {}
 func (CallRenderMethod) stmt()       {}
 func (CopyRenderContext) stmt()      {}
 func (If) stmt()                     {}
@@ -59,79 +63,83 @@ func (Cond) stmt()                   {}
 func (MapInstance) stmt()            {}
 func (StructInstance) stmt()         {}
 func (SliceInstance) stmt()          {}
+func (ComponentInstance) stmt()      {}
+func (BlankVar) stmt()               {}
 
 type StringLiteral struct {
-	Value    string
-	Variable string
+	Value String
+	Error Var
 }
 
 type StringMemberAccessExpr struct {
-	Value    string
-	Variable string
+	Value Var
+	Error Var
 }
 
 type NumberMemberAccessExpr struct {
-	Value    string
-	Variable string
+	Value    Var
+	Error    Var
+	Variable Var
 }
 
 type InheritAttributes struct {
-	//Variable for the error returned from the attributes
-	Variable string
+	//Error for the error returned from the attributes
+	Error Var
 }
 
-// TODO rename
-type FormatNumber struct {
-	Value    Expr
-	Variable string
+type InheritChildren struct {
+	Context Var
 }
+
+type Children struct{}
 
 type ReturnNil struct{}
 type ReturnIfNotNil string
 
 type CallRenderMethod struct {
 	//Name of method to call
-	Name string
+	Name Var
 	//Receiver variable name
-	Receiver string
-	//Variable stores the error return from the function call
-	Variable string
+	Receiver Var
+	//Error stores the error return from the function call
+	Error Var
 	//Context variable name
-	Context string
+	Context Var
 }
 
 type BlankVar string
 
 type MapInstance struct {
-	Variable string
+	Variable Var
 	Entries  []SetMapEntry
 }
 
 type StructInstance struct {
-	Variable   string
-	Type       string
+	Variable   Var
+	Type       Var
 	Parameters []SetStructField
 }
 
 type SliceInstance struct {
-	Variable string
-	Type     string
-	Values   []ComponentInstance
+	Variable Var
+	Type     Var
+	Values   []Var
 }
 
 type ComponentInstance struct {
-	Stmts []Stmt
+	Variable Var
+	Stmts    []Stmt
 }
 
 type SetStructField struct {
-	Struct string
-	Name   string
+	Struct Var
+	Name   Var
 	Value  Expr
 }
 
 type SetMapEntry struct {
 	//Map of the map variable
-	Map string
+	Map Var
 	//Key of the entry
 	Key Var
 	//Value of the entry
@@ -139,14 +147,14 @@ type SetMapEntry struct {
 }
 
 type CopyRenderContext struct {
-	Attrs    string
-	Variable string
-	Children string
+	Attrs    Var
+	Variable Var
+	Children Var
 }
 
 type If struct {
 	//Cond expression
-	Cond string
+	Cond Expr
 	Then []Stmt
 	Else []Stmt
 }
@@ -177,24 +185,18 @@ type Var string
 
 type Type interface {
 	kind()
-	Name() string
+	Name() Var
 }
 
-func (String) kind() {}
-func (Number) kind() {}
-func (Bool) kind()   {}
-func (Var) kind()    {}
-func (Enum) kind()   {}
+func (Var) kind()  {}
+func (Enum) kind() {}
 
-func (s String) Name() string { return string(s) }
-func (n Number) Name() string { return string(n) }
-func (b Bool) Name() string   { return string(b) }
-func (v Var) Name() string    { return string(v) }
-func (e Enum) Name() string   { return e.TypeName }
+func (v Var) Name() Var  { return v }
+func (e Enum) Name() Var { return e.TypeName }
 
 type Enum struct {
 	//TypeName
-	TypeName string
+	TypeName Var
 	// TODO add the constant value type. accept only number and string (maybe accept bool)
 	Constants []Expr
 }
