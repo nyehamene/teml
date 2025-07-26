@@ -7,13 +7,20 @@ import (
 )
 
 type errmessage = string
+type templateKind int
 
 type parser struct {
-	src  *token.File
-	dst  *File
-	cur  int
-	flag token.Flags
+	src          *token.File
+	dst          *File
+	cur          int
+	flag         token.Flags
+	templateKind templateKind
 }
+
+const (
+	tkDocument templateKind = iota
+	tkComponent
+)
 
 var (
 	eof token.Token = token.Token{Kind: -1, Pos: -1}
@@ -199,6 +206,8 @@ func (p *parser) parseComponent() (Component, bool) {
 	var children []Content
 	var ok bool
 
+	p.templateKind = tkComponent
+
 	// consume component keyword
 	p.advance()
 
@@ -234,6 +243,8 @@ func (p *parser) parseDocument() (Document, bool) {
 	var properties []Property
 	var children []Content
 	var ok bool
+
+	p.templateKind = tkDocument
 
 	// consume document keyword
 	p.advance()
@@ -585,8 +596,15 @@ loop:
 			}
 			parameters = params
 
-		case token.Hash, token.BraceOpen:
+		case token.BraceOpen:
 			attrs, ok := p.parseAttributes()
+			if !ok {
+				return Element{}, false
+			}
+			attributes = append(attributes, attrs)
+
+		case token.Hash:
+			attrs, ok := p.parseTaggedAttributes()
 			if !ok {
 				return Element{}, false
 			}
@@ -603,6 +621,19 @@ loop:
 
 	if _, ok = p.expect(token.ParenClose, "missing closing parenthesis"); !ok {
 		return Element{}, false
+	}
+
+	if p.templateKind == tkComponent {
+		for _, attr := range attributes {
+			switch attr := attr.(type) {
+			case TaggedAttributeSet:
+				switch attr.Tag.(type) {
+				case MemberAccess:
+					p.addError("qualified tagged attributes not allowed in a component")
+					return Element{}, false
+				}
+			}
+		}
 	}
 
 	e := Element{Ident: ident, Parameter: parameters, Attributes: attributes, Children: children}
@@ -666,24 +697,40 @@ func (p *parser) parseElementParameters() ([]ElementParameter, bool) {
 	return parameters, true
 }
 
-func (p *parser) parseAttributes() (AttributeSet, bool) {
+func (p *parser) parseTaggedAttributes() (TaggedAttributeSet, bool) {
 	var tag Expr
-	var ok bool
 
 	if ch := p.peek(); ch.Kind == token.Hash {
 		p.advance()
 		if ch := p.peek(); ch.Kind == token.BraceOpen {
 			p.addError("missing identifier")
-			return nil, false
+			return TaggedAttributeSet{}, false
 		}
 
+		var ok bool
 		if tag, ok = p.parseExpr(); !ok {
-			return nil, false
+			return TaggedAttributeSet{}, false
 		}
 	}
 
+	attr, ok := p.parseAttributes()
+	if !ok {
+		return TaggedAttributeSet{}, false
+	}
+
+	attrset := TaggedAttributeSet{
+		Tag:        tag,
+		Attributes: attr.Attributes,
+	}
+
+	return attrset, true
+}
+
+func (p *parser) parseAttributes() (UntaggedAttributeSet, bool) {
+	var ok bool
+
 	if _, ok = p.expect(token.BraceOpen, "missing opening brace"); !ok {
-		return nil, false
+		return UntaggedAttributeSet{}, false
 	}
 
 	var attrs []Attribute
@@ -694,23 +741,17 @@ func (p *parser) parseAttributes() (AttributeSet, bool) {
 
 		attr, ok := p.parseAttribute()
 		if !ok {
-			return nil, false
+			return UntaggedAttributeSet{}, false
 		}
 
 		attrs = append(attrs, attr)
 	}
 
 	if _, ok = p.expect(token.BraceClose, "missing closing brace"); !ok {
-		return nil, false
+		return UntaggedAttributeSet{}, false
 	}
 
-	var attrset AttributeSet
-	if tag != nil {
-		attrset = TaggedAttributeSet{Tag: tag, Attributes: attrs}
-	} else {
-		attrset = UntaggedAttributeSet{Attributes: attrs}
-	}
-
+	attrset := UntaggedAttributeSet{Attributes: attrs}
 	return attrset, true
 }
 
@@ -1065,7 +1106,7 @@ func (p *parser) addError(msg string) {
 	position := p.src.Pos[tok.Pos]
 
 	line := -1
-	col := -1
+	col := 0
 	{
 		lst := -1
 		for i, l := range p.src.Lines {

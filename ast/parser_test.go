@@ -58,8 +58,6 @@ var valid = []string{
 	`(package p "a") (component Foo [] (foo.div {}))`,
 	`(package p "a") (component Foo [] (foo.bar.div {}))`,
 	`(package p "a") (component Foo [] (div #a{}))`,
-	`(package p "a") (component Foo [] (div #a.b{}))`,
-	`(package p "a") (component Foo [] (div #a.b.c{}))`,
 	`(package p "a") (component Foo [] (div {a: "b", b: true, c: false, d: 100, e: 10.1}))`,
 	`(package p "a") (component Foo [] (div {a: "b" b: true c: false d: 100 e: 10.1}))`,
 	`(package p "a") (component Foo [] (div (div (div))))`,
@@ -141,6 +139,7 @@ var invalid = []string{
 	"(component F [] (div {)) ;desc: missing closing brace",
 	"(component F [] (div #{})) ;desc: missing identifier",
 	"(component F [] (div #a.{})) ;desc: missing identifier",
+	"(component F [] (div #a.b{})) ;desc: qualified tagged attributes not allowed in a component",
 	"(component F [] (div {a})) ;desc: missing attribute value separator",
 	"(component F [] (div {a:})) ;desc: missing expression",
 	"(component F [] (div {a: -- foo\n})) ;desc: line string literal is not a valid expression",
@@ -156,6 +155,8 @@ var invalid = []string{
 	`(package p "path") (component A[] (B ["name": "foo"])) ;desc: missing parameter name`,
 	`(package p "path") (component A[] (B [name: "foo")) ;desc: unterminated element parameters`,
 	`(package p "path") (component A[] (B [name "foo"])) ;desc: missing parameter value separator`,
+	`(package p "a") (component Foo [] (div #a.b{})) ;desc: qualified tagged attributes not allowed in a component`,
+	`(package p "a") (component Foo [] (div #a.b.c{})) ;desc: qualified tagged attributes not allowed in a component`,
 }
 
 func TestParse_short_invalid(t *testing.T) {
