@@ -111,13 +111,13 @@ func (g *generator) writeEnumType(fields []ast.StructField) error {
 	}
 
 	for _, enum := range enums {
-		if err := g.writeln(fmt.Sprintf("type %s string", enum.Name())); err != nil {
+		if err := g.writefn("type %s string", enum.Name()); err != nil {
 			return err
 		}
 		for _, c := range enum.Constants {
 			value := ast.ResolveValue(c)
 			name := ast.ResolveValue(enum.TypeName) + value
-			if err := g.writeln(fmt.Sprintf("const %s = %s", name, value)); err != nil {
+			if err := g.writefn("const %s = %s", name, value); err != nil {
 				return err
 			}
 		}
@@ -145,7 +145,7 @@ func (g *generator) writeComponentInterface() error {
 		return fc()
 	}
 	`
-	err := g.writeln(fmt.Sprintf(src, ast.NameComponentInterface, ast.NameComponentRenderMethod, ast.NameContextStruct, ast.NameFuncComponentStruct))
+	err := g.writefn(src, ast.NameComponentInterface, ast.NameComponentRenderMethod, ast.NameContextStruct, ast.NameFuncComponentStruct)
 	if err != nil {
 		return err
 	}
@@ -158,15 +158,15 @@ func (g *generator) writeRenderContextStruct(rc ast.RenderContextStruct) error {
 	}
 
 	// write option type
-	if err := g.writeln(fmt.Sprintf("type %s func(ctx *%s)", rc.OptionType, rc.Name)); err != nil {
+	if err := g.writefn("type %s func(ctx *%s)", rc.OptionType, rc.Name); err != nil {
 		return err
 	}
 
 	// write consturctor
-	if err := g.writeln(fmt.Sprintf("func %s(opts ...%s) %s {", rc.Constructor, rc.OptionType, rc.Name)); err != nil {
+	if err := g.writefn("func %s(opts ...%s) %s {", rc.Constructor, rc.OptionType, rc.Name); err != nil {
 		return err
 	}
-	if err := g.writeln(fmt.Sprintf("ctx := %s{}", rc.Name)); err != nil {
+	if err := g.writefn("ctx := %s{}", rc.Name); err != nil {
 		return err
 	}
 	if err := g.writeln("for _, opt := range opts {"); err != nil {
@@ -191,13 +191,13 @@ func (g *generator) writeRenderContextStruct(rc ast.RenderContextStruct) error {
 		funcname := strings.ToUpper(name[0:1]) + name[1:]
 		argname := "val"
 
-		if err := g.writeln(fmt.Sprintf("func Set%s(%s %s) %s {", funcname, argname, opt.Type, rc.OptionType)); err != nil {
+		if err := g.writefn("func Set%s(%s %s) %s {", funcname, argname, opt.Type, rc.OptionType); err != nil {
 			return err
 		}
-		if err := g.writeln(fmt.Sprintf("return func(ctx *%s) {", rc.Name)); err != nil {
+		if err := g.writefn("return func(ctx *%s) {", rc.Name); err != nil {
 			return err
 		}
-		if err := g.writeln(fmt.Sprintf("ctx.%s = %s", opt.Name, argname)); err != nil {
+		if err := g.writefn("ctx.%s = %s", opt.Name, argname); err != nil {
 			return err
 		}
 		if err := g.writeln("}"); err != nil {
@@ -217,10 +217,10 @@ func (g *generator) writeRenderMethod(rc ast.RenderContextStruct, m ast.RenderMe
 		return err
 	}
 
-	if err := g.writeln(fmt.Sprintf("ctx := %s.ctx", NameRenderContextVar)); err != nil {
+	if err := g.writefn("ctx := %s.ctx", NameRenderContextVar); err != nil {
 		return err
 	}
-	if err := g.writeln(fmt.Sprintf("w := %s.writer", NameRenderContextVar)); err != nil {
+	if err := g.writefn("w := %s.writer", NameRenderContextVar); err != nil {
 		return err
 	}
 
@@ -242,22 +242,22 @@ func (g *generator) writeRenderMethod(rc ast.RenderContextStruct, m ast.RenderMe
 }
 
 func (g *generator) writeInherittedChildren(ctxVar ast.Var) error {
-	if err := g.writeln(fmt.Sprintf("%s := %s{", ctxVar, ast.NameContextStruct)); err != nil {
+	if err := g.writefn("%s := %s{", ctxVar, ast.NameContextStruct); err != nil {
 		return err
 	}
-	if err := g.writeln(fmt.Sprintf("%s: %s.%[1]s,", ast.NameContextField, NameRenderContextVar)); err != nil {
+	if err := g.writefn("%s: %s.%[1]s,", ast.NameContextField, NameRenderContextVar); err != nil {
 		return err
 	}
-	if err := g.writeln(fmt.Sprintf("%s: %s.%[1]s,", ast.NameWriterField, NameRenderContextVar)); err != nil {
+	if err := g.writefn("%s: %s.%[1]s,", ast.NameWriterField, NameRenderContextVar); err != nil {
 		return err
 	}
 	if err := g.writeln("}"); err != nil {
 		return err
 	}
-	if err := g.writeln(fmt.Sprintf("for _, child := range %s.%s {", NameRenderContextVar, ast.NameChildrenField)); err != nil {
+	if err := g.writefn("for _, child := range %s.%s {", NameRenderContextVar, ast.NameChildrenField); err != nil {
 		return err
 	}
-	if err := g.writeln(fmt.Sprintf("err := child.%s(%s)", ast.NameComponentRenderMethod, ctxVar)); err != nil {
+	if err := g.writefn("err := child.%s(%s)", ast.NameComponentRenderMethod, ctxVar); err != nil {
 		return err
 	}
 	if err := g.writeln("if err != nil {\nreturn err\n}"); err != nil {
@@ -274,7 +274,7 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 
 	switch t := stmt.(type) {
 	case ast.BlankVar:
-		err = g.writeln(fmt.Sprintf("_ = %s", t))
+		err = g.writefn("_ = %s", t)
 
 	case ast.ReturnNil:
 		err = g.writeln("return nil")
@@ -294,20 +294,19 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 		err = g.writeMapInstance(t)
 
 	case ast.CopyRenderContext:
-		// err = g.writeln(fmt.Sprintf("%s := %s(%s, %s)", t.Variable, RenderCopyMethod, RenderContextVar, t.Attrs))
 		err = g.writeCopyRenderContext(t)
 
 	case ast.StringLiteral:
-		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Error, t.Value))
+		err = g.writefn("_, %s := io.WriteString(w, %s)", t.Error, t.Value)
 
 	case ast.StringMemberAccessExpr:
 		// TODO sanitize user input (t.Value)
-		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Error, t.Value))
+		err = g.writefn("_, %s := io.WriteString(w, %s)", t.Error, t.Value)
 
 	case ast.NumberMemberAccessExpr:
 		// TODO sanitize user input (t.Value)
-		err = g.writeln(fmt.Sprintf("%s := fmt.Sprintf(%q, %s)", t.Variable, "%d", t.Value))
-		err = g.writeln(fmt.Sprintf("_, %s := io.WriteString(w, %s)", t.Error, t.Variable))
+		err = g.writefn("%s := fmt.Sprintf(%q, %s)", t.Variable, "%d", t.Value)
+		err = g.writefn("_, %s := io.WriteString(w, %s)", t.Error, t.Variable)
 
 	case ast.InheritAttributes:
 		err = g.writeInherittedAttributes(t)
@@ -316,7 +315,7 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 		err = g.writeInherittedChildren(t.Context)
 
 	case ast.CallRenderMethod:
-		err = g.writeln(fmt.Sprintf("%s := %s.%s(%s)", t.Error, t.Receiver, t.Name, t.Context))
+		err = g.writefn("%s := %s.%s(%s)", t.Error, t.Receiver, t.Name, t.Context)
 
 	case ast.If:
 		err = g.writeIfStmt(t)
@@ -345,19 +344,19 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 }
 
 func (g *generator) writeCopyRenderContext(node ast.CopyRenderContext) error {
-	if err := g.writeln(fmt.Sprintf("%s := %s{", node.Variable, ast.NameContextStruct)); err != nil {
+	if err := g.writefn("%s := %s{", node.Variable, ast.NameContextStruct); err != nil {
 		return err
 	}
-	if err := g.writeln(fmt.Sprintf("%s: %s.%[1]s,", ast.NameWriterField, NameRenderContextVar)); err != nil {
+	if err := g.writefn("%s: %s.%[1]s,", ast.NameWriterField, NameRenderContextVar); err != nil {
 		return err
 	}
-	if err := g.writeln(fmt.Sprintf("%s: %s.%[1]s,", ast.NameContextField, NameRenderContextVar)); err != nil {
+	if err := g.writefn("%s: %s.%[1]s,", ast.NameContextField, NameRenderContextVar); err != nil {
 		return err
 	}
-	if err := g.writeln(fmt.Sprintf("%s: %s,", ast.NameAttributeField, node.Attrs)); err != nil {
+	if err := g.writefn("%s: %s,", ast.NameAttributeField, node.Attrs); err != nil {
 		return err
 	}
-	if err := g.writeln(fmt.Sprintf("%s: %s,", ast.NameChildrenField, node.Children)); err != nil {
+	if err := g.writefn("%s: %s,", ast.NameChildrenField, node.Children); err != nil {
 		return err
 	}
 	if err := g.writeln("}"); err != nil {
@@ -367,11 +366,11 @@ func (g *generator) writeCopyRenderContext(node ast.CopyRenderContext) error {
 }
 
 func (g *generator) writeMapInstance(node ast.MapInstance) error {
-	if err := g.writeln(fmt.Sprintf("%s := map[string]string{", node.Variable)); err != nil {
+	if err := g.writefn("%s := map[string]string{", node.Variable); err != nil {
 		return err
 	}
 	for _, entry := range node.Entries {
-		if err := g.writeln(fmt.Sprintf("%s: %s,", ast.ResolveMapKey(entry.Key), ast.ResolveValue(entry.Value))); err != nil {
+		if err := g.writefn("%s: %s,", ast.ResolveMapKey(entry.Key), ast.ResolveValue(entry.Value)); err != nil {
 			return err
 		}
 	}
@@ -383,7 +382,7 @@ func (g *generator) writeMapInstance(node ast.MapInstance) error {
 }
 
 func (g *generator) writeFuncComponent(node ast.ComponentInstance) error {
-	if err := g.writeln(fmt.Sprintf("var %s %s = func() error {", node.Variable, ast.NameFuncComponentStruct)); err != nil {
+	if err := g.writefn("var %s %s = func() error {", node.Variable, ast.NameFuncComponentStruct); err != nil {
 		return err
 	}
 
@@ -400,11 +399,11 @@ func (g *generator) writeFuncComponent(node ast.ComponentInstance) error {
 }
 
 func (g *generator) writeSliceInstance(node ast.SliceInstance) error {
-	if err := g.writeln(fmt.Sprintf("%s := []%s{", node.Variable, node.Type)); err != nil {
+	if err := g.writefn("%s := []%s{", node.Variable, node.Type); err != nil {
 		return err
 	}
 	for _, value := range node.Values {
-		if err := g.writeln(fmt.Sprintf("%s,", value)); err != nil {
+		if err := g.writefn("%s,", value); err != nil {
 			return err
 		}
 	}
@@ -415,12 +414,12 @@ func (g *generator) writeSliceInstance(node ast.SliceInstance) error {
 }
 
 func (g *generator) writeStructInstance(node ast.StructInstance) error {
-	if err := g.writeln(fmt.Sprintf("%s := %s{", node.Variable, node.Type)); err != nil {
+	if err := g.writefn("%s := %s{", node.Variable, node.Type); err != nil {
 		return err
 	}
 
 	for _, field := range node.Parameters {
-		if err := g.writeln(fmt.Sprintf("%s: %s,", field.Name, ast.ResolveValue(field.Value))); err != nil {
+		if err := g.writefn("%s: %s,", field.Name, ast.ResolveValue(field.Value)); err != nil {
 			return err
 		}
 	}
@@ -435,14 +434,14 @@ func (g *generator) writeStructInstance(node ast.StructInstance) error {
 func (g *generator) writeCond(condsmt ast.Cond) error {
 	target := ast.ResolveValue(condsmt.Target)
 
-	if err := g.writeln(fmt.Sprintf("switch %s {", target)); err != nil {
+	if err := g.writefn("switch %s {", target); err != nil {
 		return err
 	}
 
 	for _, c := range condsmt.Cases {
 		match := ast.ResolveSwitchTarget(c.Match)
 
-		if err := g.writeln(fmt.Sprintf("case %s:", match)); err != nil {
+		if err := g.writefn("case %s:", match); err != nil {
 			return err
 		}
 		for _, stmt := range c.Branch {
@@ -456,7 +455,7 @@ func (g *generator) writeCond(condsmt ast.Cond) error {
 		return err
 	}
 
-	if err := g.writeln(fmt.Sprintf("panic(%s)", fmt.Sprintf("fmt.Sprintf(%q, %s)", "unexpected enum value: %s", target))); err != nil {
+	if err := g.writefn("panic(%s)", fmt.Sprintf("fmt.Sprintf(%q, %s)", "unexpected enum value: %s", target)); err != nil {
 		return err
 	}
 
@@ -468,7 +467,7 @@ func (g *generator) writeCond(condsmt ast.Cond) error {
 }
 
 func (g *generator) writeIfStmt(ifsmt ast.If) error {
-	if err := g.writeln(fmt.Sprintf("if %s {", ifsmt.Cond)); err != nil {
+	if err := g.writefn("if %s {", ifsmt.Cond); err != nil {
 		return err
 	}
 
@@ -502,11 +501,11 @@ func (g *generator) writeIfStmt(ifsmt ast.If) error {
 }
 
 func (g *generator) writeInherittedAttributes(node ast.InheritAttributes) error {
-	err := g.writeln(fmt.Sprintf("for key, val := range %s.%s {", NameRenderContextVar, ast.NameAttributeField))
+	err := g.writefn("for key, val := range %s.%s {", NameRenderContextVar, ast.NameAttributeField)
 	if err != nil {
 		return err
 	}
-	err = g.writeln(fmt.Sprintf("var %s error", node.Error))
+	err = g.writefn("var %s error", node.Error)
 	if err != nil {
 		return err
 	}
@@ -514,15 +513,15 @@ func (g *generator) writeInherittedAttributes(node ast.InheritAttributes) error 
 	if err != nil {
 		return err
 	}
-	err = g.writeln(fmt.Sprintf("_, %s = io.WriteString(w, attr)", node.Error))
+	err = g.writefn("_, %s = io.WriteString(w, attr)", node.Error)
 	if err != nil {
 		return err
 	}
-	err = g.writeln(fmt.Sprintf("if %s != nil {", node.Error))
+	err = g.writefn("if %s != nil {", node.Error)
 	if err != nil {
 		return err
 	}
-	err = g.writeln(fmt.Sprintf("return %s", node.Error))
+	err = g.writefn("return %s", node.Error)
 	if err != nil {
 		return err
 	}
@@ -551,6 +550,14 @@ func (g *generator) write(s string) error {
 
 func (g *generator) writeln(s string) error {
 	if err := g.write(s + "\n"); err != nil {
+		return err
+	}
+	return nil
+}
+
+//go:format writefn printf 1 2
+func (g *generator) writefn(format string, args ...any) error {
+	if err := g.writeln(fmt.Sprintf(format, args...)); err != nil {
 		return err
 	}
 	return nil
