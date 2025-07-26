@@ -1,0 +1,19 @@
+(package p "views")
+
+(component A [text: String]
+  (text))
+
+(component B [header: A, footer: A, sidebar: A]
+  (header)
+  (sidebar)
+  (footer))
+
+; the syntax ^name defines a boolean compiler directive
+; the directive ^single-root instructs the compiler to
+; wrap the children of every component render in the document in
+; a root element (the root element is div by default)
+
+; test:instance B{header: A{"Header"}, footer: A{"Footer"}, sidebar: A{"Sidebar"}}
+(document Home [content: B] ^single-root
+  #content.footer{ class: "footer" }
+  (content #header{ class: "header" }))

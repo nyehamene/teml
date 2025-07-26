@@ -18,4 +18,5 @@
 	just test cond-element
 	just test instance-element
 	just test document-element
+	just test document-tagged-attr
 

@@ -282,7 +282,7 @@ func (t *typechecker) transformElementByTagType(env Env, genElem genericElement,
 
 	case TypeDeclaration:
 		if component {
-			// TODO fail is parameter is not empty
+			// TODO fail if parameter is not empty
 			element = ComponentElement{
 				Tag:        genElem.Tag,
 				Attributes: genElem.Attributes,
