@@ -52,7 +52,9 @@ func (p *parser) parseStruct(decl ast.Declaration) Struct {
 		name = t.Ident.Name
 		props = t.Properties
 	case ast.Document:
-		panic(errors.ErrUnsupported)
+		name = t.Ident.Name
+		props = t.Properties
+
 	default:
 		panic(fmt.Sprintf("unexpected declaration type: %v", reflect.TypeOf(decl)))
 	}
@@ -104,7 +106,8 @@ func (p *parser) parseMethod(decl ast.Declaration) RenderMethod {
 		stmts = t.Stmts
 
 	case ast.Document:
-		panic(errors.ErrUnsupported)
+		typename = t.Ident.Name
+		stmts = t.Stmts
 
 	default:
 		panic(fmt.Sprintf("unexpected declaration type: %v", reflect.TypeOf(decl)))
@@ -372,7 +375,7 @@ func (p *parser) parseFieldType(structname, field string, expr ast.PropertyType)
 
 		e := Enum{
 			TypeName:  Var(typename),
-			Constants: []Expr{},
+			Constants: constants,
 		}
 		return e
 

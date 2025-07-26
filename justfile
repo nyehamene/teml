@@ -1,6 +1,6 @@
 @test TARGET:
-	go run ./cmd/eml/main.go generate -f ./codegen/go/generator/test-component/{{TARGET}}/source.teml
-	go test -cover -timeout 3s ./codegen/go/generator/test-component/{{TARGET}}
+	go run ./cmd/eml/main.go generate -f ./codegen/go/generator/test-template/{{TARGET}}/source.teml
+	go test -cover -timeout 3s ./codegen/go/generator/test-template/{{TARGET}}
 
 @test-all:
 	just test text-element
@@ -17,4 +17,5 @@
 	just test if-element
 	just test cond-element
 	just test instance-element
+	just test document-element
 

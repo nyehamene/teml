@@ -12,7 +12,7 @@ import (
 	tast "github.com/eml-lang/teml/transpiler"
 )
 
-//go:embed test-component/native-element-attr/source.teml
+//go:embed test-template/native-element-attr/source.teml
 var source []byte
 
 func TestDebug(t *testing.T) {

@@ -1,0 +1,9 @@
+(package p "views")
+
+;;test:instance Home{}
+(document Home []
+  (html
+    (head
+      (title "Example"))
+    (body
+      (div "Hello, World!"))))
