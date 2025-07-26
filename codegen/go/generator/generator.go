@@ -116,7 +116,8 @@ func (g *generator) writeEnumType(fields []ast.StructField) error {
 		}
 		for _, c := range enum.Constants {
 			value := ast.ResolveValue(c)
-			name := ast.ResolveValue(enum.TypeName) + value
+			name := ast.ResolveEnumContantAsName(c)
+			name = ast.ResolveValue(enum.TypeName) + name
 			if err := g.writefn("const %s = %s", name, value); err != nil {
 				return err
 			}

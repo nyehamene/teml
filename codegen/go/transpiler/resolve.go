@@ -20,6 +20,17 @@ func ResolveValue(expr Expr) string {
 	}
 }
 
+func ResolveEnumContantAsName(expr Expr) string {
+	switch t := expr.(type) {
+	case String:
+		// strip double quoted
+		name := t[1 : len(t)-1]
+		return string(name)
+	default:
+		return ResolveValue(expr)
+	}
+}
+
 func ResolveType(t Type) string {
 	switch tt := t.(type) {
 	case Var:

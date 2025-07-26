@@ -22,7 +22,7 @@
     "open": (div)
     "close": (span))
   (a-card {id: "card", enabled: true}
-    #data{ number: 100 step: (cond mode "open": 10 "close": 20) }
+    ; #data{ number: 100 step: (cond mode "open": 10 "close": 20) }
     (i.card)
-    #css.grid{ display: (if true "grid" "flex") }
+    ; #css.grid{ display: (if true "grid" "flex") }
     (div)))
