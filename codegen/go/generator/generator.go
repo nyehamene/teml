@@ -307,6 +307,9 @@ func (g *generator) writeStmt(stmt ast.Stmt) error {
 	case ast.NumberMemberAccessExpr:
 		// TODO sanitize user input (t.Value)
 		err = g.writefn("%s := fmt.Sprintf(%q, %s)", t.Variable, "%d", t.Value)
+		if err != nil {
+			return err
+		}
 		err = g.writefn("_, %s := io.WriteString(w, %s)", t.Error, t.Variable)
 
 	case ast.InheritAttributes:
@@ -538,7 +541,9 @@ func (g *generator) writeInherittedAttributes(node ast.InheritAttributes) error 
 }
 
 func (g *generator) writeGlobalVar(gvar ast.BlankVar) error {
-	g.writeln("var _ = " + string(gvar))
+	if err := g.writeln("var _ = " + string(gvar)); err != nil {
+		return err
+	}
 	return nil
 }
 

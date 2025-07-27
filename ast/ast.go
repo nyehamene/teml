@@ -1,9 +1,5 @@
 package ast
 
-import (
-	"github.com/eml-lang/teml/token"
-)
-
 type Node interface {
 	node()
 }
@@ -37,7 +33,10 @@ type Expr interface {
 }
 
 func (Var) expr()            {}
-func (Constant) expr()       {}
+func (Number) expr()         {}
+func (Bool) expr()           {}
+func (String) expr()         {}
+func (StringTemplate) expr() {}
 func (MemberAccess) expr()   {}
 func (IfExpression) expr()   {}
 func (CondExpression) expr() {}
@@ -53,12 +52,12 @@ func (MemberAccess) typeExpr() {}
 
 type Package struct {
 	Ident Var
-	Path  token.Token
+	Path  String
 }
 
 type Import struct {
 	Ident Var
-	Path  Constant
+	Path  String
 }
 
 type Using struct {
@@ -84,7 +83,7 @@ type Property struct {
 }
 
 type Enum struct {
-	Constants []Constant
+	Constants []Expr
 }
 
 type Element struct {
@@ -129,15 +128,27 @@ type Attribute struct {
 	Value Expr
 }
 
-type Var token.Token
+type Var struct {
+	Name string
+	Line int
+	Col  int
+}
 
-type Text token.Token
+type TextKind uint8
+
+const (
+	QuotedText TextKind = iota
+	LineText
+	QuotedTemplateText
+	LineTemplateText
+)
+
+type Text struct {
+	Kind  TextKind
+	Value string
+}
 
 type TextGroup []Text
-
-type IntErrorNode int
-
-type Constant token.Token
 
 type IfExpression struct {
 	Cond Expr
@@ -160,10 +171,18 @@ type MemberAccess struct {
 	Member Var
 }
 
+type String string
+type StringTemplate string
+type Number int
+type Bool uint8
+
+const (
+	False Bool = iota
+	True
+)
+
+type IntErrorNode int
+
 const (
 	badNode IntErrorNode = iota
 )
-
-func (d Document) IsNamed() bool {
-	return d.Ident.Kind != token.Invalid
-}

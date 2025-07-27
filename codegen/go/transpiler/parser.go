@@ -148,6 +148,7 @@ func (p *parser) parseStmt(m typeinfo, node ast.Element, stmts *[]Stmt) {
 		*stmts = append(*stmts, stmt1, ret1)
 
 	case ast.TextGroupElement:
+		// TODO join lines separated by a space " "
 		text := ast.Join(elem.Lines, "")
 		stmt2 := StringLiteral{Value: String(doubleQuoteString(string(text))), Error: errvar}
 		ret2 := ReturnIfNotNil(errvar)

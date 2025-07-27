@@ -1,8 +1,6 @@
 package ast
 
-//
-// TODO replace string type with Var when the field denotes a variable identifier
-//
+import ast "github.com/eml-lang/teml/transpiler"
 
 type TypeAlias struct {
 	Name Var
@@ -179,8 +177,8 @@ func (Var) expr()    {}
 func (Bool) expr()   {}
 
 type String string
-type Number string
-type Bool string
+type Number int
+type Bool ast.Bool
 type Var string
 
 type Type interface {

@@ -13,10 +13,10 @@ import (
 )
 
 //go:embed test-template/native-element-attr/source.teml
-var source []byte
+var content []byte
 
 func TestDebug(t *testing.T) {
-	tfile := token.Scan(source, "test.teml", token.PreserveComment|token.ReduceAlloc)
+	tfile := token.Scan(content, "test.teml", token.PreserveComment|token.ReduceAlloc)
 	pfile := past.ParseFile(tfile)
 
 	for _, err := range pfile.Errors {
@@ -26,7 +26,7 @@ func TestDebug(t *testing.T) {
 		t.Fatal()
 	}
 
-	afile := tast.ParseFile(pfile, tfile)
+	afile := tast.ParseFile(pfile)
 	for _, err := range afile.Errors() {
 		t.Error(err)
 	}

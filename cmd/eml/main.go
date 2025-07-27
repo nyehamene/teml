@@ -44,7 +44,11 @@ func main() {
 	if errroot != nil {
 		panic(errroot)
 	}
-	defer root.Close()
+	defer func() {
+		if err := root.Close(); err != nil {
+			panic(err)
+		}
+	}()
 
 	result := run(root, &srcout, &testout, os.Stderr, os.Args)
 
@@ -59,7 +63,10 @@ func main() {
 		println("source code written to:", t.File)
 
 		testFile := filepath.Join(filepath.Dir(t.File), defaultTestFileName)
-		writeFile(root, cmd.NewFile(testFile), &testout)
+		err = writeFile(root, cmd.NewFile(testFile), &testout)
+		if err != nil {
+			panic(err)
+		}
 		println("test code written to:", testFile)
 	default:
 		panic(fmt.Sprintf("unexpected cmd result type: %s", reflect.TypeOf(result)))
@@ -74,7 +81,11 @@ func writeFile(root *os.Root, f cmd.File, r io.Reader) error {
 	if ferr != nil {
 		return ferr
 	}
-	defer nf.Close()
+	defer func() {
+		if err := nf.Close(); err != nil {
+			panic(err)
+		}
+	}()
 
 	buf, errbuf := io.ReadAll(r)
 	if errbuf != nil {
@@ -103,7 +114,10 @@ func writeFile(root *os.Root, f cmd.File, r io.Reader) error {
 
 func run(root *os.Root, stdout, testout, stderr io.Writer, args []string) cmd.Result {
 	if len(args) < 2 {
-		io.WriteString(stderr, usageText)
+		_, err := io.WriteString(stderr, usageText)
+		if err != nil {
+			panic(err)
+		}
 		os.Exit(64)
 	}
 
@@ -112,7 +126,7 @@ func run(root *os.Root, stdout, testout, stderr io.Writer, args []string) cmd.Re
 		return generateCmd(root, stdout, testout, args[2:])
 
 	default:
-		err := fmt.Errorf("Unexpected command: %s", cmdarg)
+		err := fmt.Errorf("unexpected command: %s", cmdarg)
 		return cmd.NewError(err)
 	}
 }

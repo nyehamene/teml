@@ -84,7 +84,7 @@ func parseSource(t *testing.T, source []byte, decls int, targetDecl int) Stmt {
 		t.Fatal("source parser failed unexpected")
 	}
 
-	astt := ParseFile(astp, toks)
+	astt := ParseFile(astp)
 	if astt.HasError() {
 		t.Fatal("source transpiler failed unexpected")
 	}

@@ -31,6 +31,6 @@ func parse(src []byte) *transpiler.File {
 	if asts.HasError() {
 		return nil
 	}
-	f := transpiler.ParseFile(asts, toks)
+	f := transpiler.ParseFile(asts)
 	return f
 }

@@ -104,7 +104,7 @@ func CompileSource(t *testing.T, buf []byte, opts ...CompilationOption) {
 			return
 		}
 
-		nodes := transpiler.ParseFile(astp, tok)
+		nodes := transpiler.ParseFile(astp)
 		if !ctx.errhandler(t, StageTransformed, nodes.HasError(), nodes.Errors()) {
 			return
 		}

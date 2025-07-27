@@ -1,6 +1,9 @@
 package ast
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/eml-lang/teml/internal/assert"
 	"github.com/eml-lang/teml/internal/errors"
 	"github.com/eml-lang/teml/token"
@@ -106,7 +109,8 @@ func (p *parser) parsePackage() (Package, bool) {
 		return Package{}, false
 	}
 
-	return Package{Ident: ident, Path: path}, true
+	pathStr := String(p.mustExtractSourceText(path))
+	return Package{Ident: ident, Path: pathStr}, true
 }
 
 func (p *parser) parseImport() (Import, bool) {
@@ -127,7 +131,8 @@ func (p *parser) parseImport() (Import, bool) {
 		return Import{}, false
 	}
 
-	return Import{Ident: ident, Path: Constant(path)}, true
+	pathStr := String(p.mustExtractSourceText(path))
+	return Import{Ident: ident, Path: pathStr}, true
 }
 
 func (p *parser) parseUsing() (Using, bool) {
@@ -352,24 +357,24 @@ func (p *parser) parsePropertyType() (PropertyType, bool) {
 		var constantKind *token.Kind
 
 		for !p.eof() {
-			var constant token.Token
+			var constant Expr
 			var ok bool
 
 			if ch := p.peek(); ch.Kind == token.ParenClose {
 				break
 			}
 
+			cur := p.peek()
 			if constant, ok = p.parseEnumConstant(); !ok {
 				return nil, false
 			}
 
-			if constantKind != nil && constant.Kind != *constantKind {
+			if constantKind != nil && cur.Kind != *constantKind {
 				p.addError("mismatch enum constant type")
-			} else {
-				constantKind = &constant.Kind
 			}
 
-			enumtype.Constants = append(enumtype.Constants, Constant(constant))
+			constantKind = &cur.Kind
+			enumtype.Constants = append(enumtype.Constants, constant)
 		}
 
 		// TODO fail if enum constants is empty
@@ -386,21 +391,18 @@ func (p *parser) parsePropertyType() (PropertyType, bool) {
 	}
 }
 
-func (p *parser) parseEnumConstant() (token.Token, bool) {
-	switch ch := p.peek(); ch.Kind {
-	case token.String,
-		token.Number:
-
-		p.advance()
-		// consume semicolon
-		if ch := p.peek(); ch.Kind == token.Comma {
-			p.advance()
-		}
-		return ch, true
-	default:
+func (p *parser) parseEnumConstant() (Expr, bool) {
+	if ch := p.peek(); !token.IsConstant(ch.Kind) {
 		p.addError("invalid enum constant")
-		return token.Token{}, false
+		return nil, false
 	}
+	constant, ok := p.parseLiteral()
+
+	if ch := p.peek(); ch.Kind == token.Comma {
+		p.advance()
+	}
+
+	return constant, ok
 }
 
 func (p *parser) parseDeclaration() (Node, bool) {
@@ -647,11 +649,11 @@ func (p *parser) parseElementParameters() ([]ElementParameter, bool) {
 			break
 		}
 
-		var name token.Token
+		var name Var
 		var value Expr
 		var ok bool
 
-		name, ok = p.expect(token.Ident, "missing parameter name")
+		name, ok = p.parseVar()
 		if !ok {
 			return []ElementParameter{}, false
 		}
@@ -797,15 +799,29 @@ func (p *parser) parseTemplate() (Content, bool) {
 
 	case token.String, token.StringTempl:
 		p.advance()
-		text := Text(ch)
+		var kind TextKind
+		if ch.Kind == token.String {
+			kind = QuotedText
+		} else {
+			kind = QuotedTemplateText
+		}
+		text := Text{Kind: kind, Value: p.mustExtractSourceText(ch)}
 		return Text(text), true
 
 	case token.StringLine,
 		token.StringLineTempl:
-
 		p.advance()
+
+		var kind TextKind
+		if ch.Kind == token.StringLine {
+			kind = LineText
+		} else {
+			kind = LineTemplateText
+		}
+
+		text := Text{Kind: kind, Value: p.mustExtractSourceText(ch)}
 		textGroup := TextGroup{}
-		textGroup = append(textGroup, Text(ch))
+		textGroup = append(textGroup, text)
 
 		for !p.eof() {
 			ch := p.peek()
@@ -813,7 +829,8 @@ func (p *parser) parseTemplate() (Content, bool) {
 				break
 			}
 
-			textGroup = append(textGroup, Text(ch))
+			text := Text{Kind: kind, Value: p.mustExtractSourceText(ch)}
+			textGroup = append(textGroup, text)
 			p.advance()
 		}
 
@@ -834,17 +851,27 @@ func (p *parser) parseLiteral() (Expr, bool) {
 	var ok bool
 
 	switch ch := p.peek(); ch.Kind {
-	case token.True,
-		token.False,
-		token.Number,
-		token.String,
-		token.StringTempl:
+	case token.True:
+		expr, ok = True, true
 
-		expr, ok = Constant(ch), true
+	case token.False:
+		expr, ok = False, true
+
+	case token.Number:
+		text := p.mustExtractSourceText(ch)
+		// TODO support decimal numbers
+		num, err := strconv.Atoi(text)
+		if err != nil {
+			p.addError(fmt.Sprintf("invalid number: %v", text))
+		}
+		expr, ok = Number(num), true
+
+	case token.String, token.StringTempl:
+		text := p.mustExtractSourceText(ch)
+		expr, ok = String(text), true
 
 	case token.StringLine,
 		token.StringLineTempl:
-
 		p.addError("line string literal is not a valid expression")
 
 	default:
@@ -908,8 +935,12 @@ func (p *parser) parseVar() (Var, bool) {
 		p.addError("missing identifier")
 		return Var{}, false
 	}
+
 	p.advance()
-	return Var(tok), true
+	text := p.mustExtractSourceText(tok)
+	line, col := p.src.Line(tok)
+	v := Var{Name: text, Line: line, Col: col}
+	return v, true
 }
 
 func (p *parser) parseCondExpression() (Expr, bool) {
@@ -1080,6 +1111,14 @@ func (p *parser) peek() token.Token {
 func (p *parser) eof() bool {
 	e := p.cur >= p.src.Size()
 	return e
+}
+
+func (p *parser) mustExtractSourceText(tok token.Token) string {
+	text, ok := p.src.Text(tok)
+	if !ok {
+		panic(fmt.Sprintf("unable to extract text for: %v", tok))
+	}
+	return text
 }
 
 func (p *parser) addError(msg string) {

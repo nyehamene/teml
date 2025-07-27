@@ -209,10 +209,7 @@ func TestScan_position(t *testing.T) {
 }
 
 func getPosses(s []token.Pos) []token.Pos {
-	pos := []token.Pos{}
-	for _, p := range s {
-		pos = append(pos, p)
-	}
+	pos := append([]token.Pos{}, s...)
 	return pos
 }
 
@@ -307,10 +304,7 @@ func getNewlines(s []token.Token) []token.Kind {
 }
 
 func getLines(s []int) []int {
-	lines := []int{}
-	for _, line := range s {
-		lines = append(lines, line)
-	}
+	lines := append([]int{}, s...)
 	return lines
 }
 

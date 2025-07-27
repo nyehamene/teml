@@ -423,8 +423,8 @@ func (t *typechecker) lookup(env Env, node Var) Symbol {
 func (t *typechecker) addError(errkind SymbolError, n Var) {
 	var err perrors.Error
 	name := n.Name
-	line := n.Pos.Line
-	col := n.Pos.Col
+	line := n.Line
+	col := n.Col
 
 	switch errkind {
 	case ErrUndeclared:

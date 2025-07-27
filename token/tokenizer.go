@@ -1,7 +1,10 @@
 package token
 
 import (
+	"path"
+
 	"github.com/eml-lang/teml/internal/assert"
+	"github.com/eml-lang/teml/internal/source"
 )
 
 type tokenizer struct {
@@ -19,23 +22,36 @@ const (
 	ReduceAlloc
 )
 
-func Scan(src []byte, name string, flags ...Flag) *File {
-	var file File
+// TODO remove
+// @deprecate
+func Scan(buf []byte, name string, flags ...Flag) *File {
+	input := source.File{
+		Path:    name,
+		Name:    path.Base(name),
+		Content: buf,
+	}
+	return ScanInput(input, flags...)
+}
+
+func ScanInput(src source.File, flags ...Flag) *File {
+	var file *File
 	var flag Flag
 
 	for _, f := range flags {
 		flag |= f
 	}
 
+	buf := src.Content
+
 	if flag&ReduceAlloc != 0 {
-		lines, size := count(src)
-		file = *NewFile(src, name, size, lines)
+		lines, size := count(buf)
+		file = newFile(buf, src, size, lines)
 	} else {
-		file = *NewFile(src, name, 0, 0)
+		file = newFile(buf, src, 0, 0)
 	}
 
-	scan(&file, flag)
-	return &file
+	scan(file, flag)
+	return file
 }
 
 func count(src []byte) (lines int, size int) {
@@ -98,9 +114,10 @@ func scan(f *File, flags Flag) {
 }
 
 func (t *tokenizer) next() Kind {
+	var kind Kind
+
 	ch := t.peek()
 	startOffset := t.cur
-	kind := Invalid
 
 	if isAlpha(ch) {
 		k := t.ident()
@@ -121,8 +138,9 @@ func (t *tokenizer) next() Kind {
 }
 
 func (t *tokenizer) singleChars() Kind {
+	var kind Kind
+
 	ch := t.peek()
-	kind := Invalid
 
 	switch ch {
 	case '[':

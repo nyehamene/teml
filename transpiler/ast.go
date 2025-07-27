@@ -1,5 +1,7 @@
 package ast
 
+import "github.com/eml-lang/teml/ast"
+
 type Node interface {
 	code()
 }
@@ -148,8 +150,8 @@ type CaseStmt struct {
 
 // expressions
 type String string
-type Number string
-type Bool string
+type Number int
+type Bool ast.Bool
 
 type MemberAccess struct {
 	Object Expr
@@ -172,10 +174,7 @@ type CaseExpr struct {
 	Branch Expr
 }
 
-type Var struct {
-	Name string
-	Pos  Pos
-}
+type Var ast.Var
 
 type Enum struct {
 	Constants []EnumConstant
@@ -209,7 +208,7 @@ func Join(xs []String, sep string) String {
 	return result
 }
 
-func (v Var) Join(other Var, sep string) Var {
+func (v Var) Join(other Var, sep string) string {
 	name := v.Name + sep + other.Name
-	return Var{Name: name, Pos: other.Pos}
+	return name
 }

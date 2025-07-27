@@ -41,8 +41,8 @@ var valid = []string{
 	`(package p "a") (document Foo [] (div #a.b.c{}))`,
 	`(package p "a") (document Foo [] (foo.div {}))`,
 	`(package p "a") (document Foo [] (foo.bar.div {}))`,
-	`(package p "a") (document Foo [] (div {a: "b", b: true, c: false, d: 100, e: 10.1}))`,
-	`(package p "a") (document Foo [] (div {a: "b" b: true c: false d: 100 e: 10.1}))`,
+	`(package p "a") (document Foo [] (div {a: "b", b: true, c: false, d: 100, e: 10}))`,
+	`(package p "a") (document Foo [] (div {a: "b" b: true c: false d: 100 e: 10}))`,
 	`(package p "a") (document Foo [] "foo")`,
 	"(package p \"a\") (document Foo [] -- foo\n)",
 	"(package p \"a\") (document Foo [] (div) \"foo\" -- foo\n)",
@@ -58,8 +58,8 @@ var valid = []string{
 	`(package p "a") (component Foo [] (foo.div {}))`,
 	`(package p "a") (component Foo [] (foo.bar.div {}))`,
 	`(package p "a") (component Foo [] (div #a{}))`,
-	`(package p "a") (component Foo [] (div {a: "b", b: true, c: false, d: 100, e: 10.1}))`,
-	`(package p "a") (component Foo [] (div {a: "b" b: true c: false d: 100 e: 10.1}))`,
+	`(package p "a") (component Foo [] (div {a: "b", b: true, c: false, d: 100, e: 10}))`,
+	`(package p "a") (component Foo [] (div {a: "b" b: true c: false d: 100 e: 10}))`,
 	`(package p "a") (component Foo [] (div (div (div))))`,
 	`(package p "a") (component Foo [] (div "foo"))`,
 	"(package p \"a\") (component Foo [] (div -- foo\n))",
@@ -88,21 +88,26 @@ var valid = []string{
 }
 
 func TestParse_short_valid(t *testing.T) {
-	for i, source := range valid {
-		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
+	for i, src := range valid {
+		t.Logf("(%d) %s", i, src)
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 
-			tokens := token.Scan([]byte(source), "test.teml")
-
-			file := ast.ParseFile(tokens)
-
-			if file.HasError() {
-				t.Error("Parser failed unexpectedly")
-			}
+			tokens := token.Scan([]byte(src), "test.teml")
 
 			for _, tok := range tokens.Tokens {
 				if tok.Kind == token.Invalid {
 					t.Error("Parser emitted an invalid token without failing")
 				}
+			}
+
+			file := ast.ParseFile(tokens)
+
+			for _, err := range file.Errors {
+				t.Error(err)
+			}
+
+			if file.HasError() {
+				t.Error("Parser failed unexpectedly")
 			}
 		})
 	}
@@ -152,7 +157,7 @@ var invalid = []string{
 	`(package p "path") (import i "path") (document []) (using a i) ;desc: unexpected using declaration`,
 	`(package p "path") (document []) (document []) ;desc: duplicate document declaration`,
 	`(package p "path") (component C [a: (enum "A" 10)]) ;desc: mismatch enum constant type`,
-	`(package p "path") (component A[] (B ["name": "foo"])) ;desc: missing parameter name`,
+	`(package p "path") (component A[] (B ["name": "foo"])) ;desc: missing identifier`,
 	`(package p "path") (component A[] (B [name: "foo")) ;desc: unterminated element parameters`,
 	`(package p "path") (component A[] (B [name "foo"])) ;desc: missing parameter value separator`,
 	`(package p "a") (component Foo [] (div #a.b{})) ;desc: qualified tagged attributes not allowed in a component`,
@@ -160,25 +165,28 @@ var invalid = []string{
 }
 
 func TestParse_short_invalid(t *testing.T) {
-	for i, source := range invalid {
-		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
+	for i, src := range invalid {
+		t.Logf("(%d) %s", i, src)
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 
-			tokens := token.Scan([]byte(source), "test.teml", token.PreserveComment)
+			tokens := token.Scan([]byte(src), "test.teml", token.PreserveComment)
 			goterrmsgs := map[string]string{}
 
 			file := ast.ParseFile(tokens, token.ExitOnError)
 
+			if !file.HasError() {
+				t.Error("Parser succeeded unexpectedly")
+			}
+
+			// collect error messages
 			for _, err := range file.Errors {
 				for e := range getEntriesFromString(err.Message) {
 					goterrmsgs[e.key] = e.value
 				}
 			}
 
-			if !file.HasError() {
-				t.Error("Parser succeeded unexpectedly")
-			}
-
 			checkedAtLeastOneError := false
+
 			for e := range getErrorMessagesFromComment(tokens) {
 				got := goterrmsgs[e.key]
 				if expected := e.value; expected != got {
@@ -215,10 +223,11 @@ var valid_count = []string{
 }
 
 func TestValidCounting(t *testing.T) {
-	for i, source := range valid_count {
-		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
+	for i, src := range valid_count {
+		t.Log(src)
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 
-			tokens := token.Scan([]byte(source), "test.teml", token.PreserveComment)
+			tokens := token.Scan([]byte(src), "test.teml", token.PreserveComment)
 			file := ast.ParseFile(tokens)
 
 			if file.HasError() {

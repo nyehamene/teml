@@ -6,7 +6,6 @@ import (
 
 	"github.com/eml-lang/teml/ast"
 	"github.com/eml-lang/teml/internal/errors"
-	"github.com/eml-lang/teml/token"
 )
 
 type Pos struct {
@@ -48,13 +47,13 @@ func (f *File) Errors() func(func(int, errors.Error) bool) {
 	}
 }
 
-func ParseFile(src *ast.File, toks *token.File) *File {
-	f := parseFile(src, toks)
+func ParseFile(src *ast.File) *File {
+	f := parseFile(src)
 	return f
 }
 
-func parseFile(src *ast.File, toks *token.File) *File {
-	p := &parser{src: src, toks: toks}
+func parseFile(src *ast.File) *File {
+	p := &parser{src: src}
 
 	f := &File{
 		errs: []errors.Error{},

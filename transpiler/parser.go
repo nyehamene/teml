@@ -5,20 +5,16 @@ import (
 	"reflect"
 
 	"github.com/eml-lang/teml/ast"
-	"github.com/eml-lang/teml/token"
 )
 
 type parser struct {
-	src  *ast.File
-	toks *token.File
+	src *ast.File
 }
 
 func (p *parser) parsePackage() Package {
 	pkg := p.src.Package
-
 	ident := p.parseVar(pkg.Ident)
-	path := p.text(pkg.Path)
-
+	path := pkg.Path
 	node := Package{Ident: ident, Path: String(path)}
 	return node
 }
@@ -31,7 +27,7 @@ func (p *parser) parseImports() []Import {
 	nodes := make([]Import, 0, len(p.src.Imports))
 	for _, imp := range p.src.Imports {
 		ident := p.parseVar(imp.Ident)
-		path := p.text(token.Token(imp.Path))
+		path := String(imp.Path)
 		node := Import{Ident: ident, Path: String(path)}
 		nodes = append(nodes, node)
 	}
@@ -169,17 +165,12 @@ func (p *parser) parseStmts(ch []ast.Content) []Stmt {
 func (p *parser) parseExprStmt(c ast.Content) Element {
 	switch t := c.(type) {
 	case ast.Text:
-		txt := p.text(token.Token(t))
-		return TextElement{String(txt)}
+		return TextElement{String(t.Value)}
 
 	case ast.TextGroup:
-		var tg ast.TextGroup = t
-
-		lines := make([]String, 0, len(tg))
-		for _, t := range tg {
-			line := p.text(token.Token(t))
-			// strip line string marker: --
-			line = line[2:]
+		lines := make([]String, 0, len(t))
+		for _, t := range t {
+			line := t.StripDelimiter()
 			lines = append(lines, String(line))
 		}
 		node := TextGroupElement{lines}
@@ -290,27 +281,17 @@ func (p *parser) parseExpr(e ast.Expr) Expr {
 		ident := p.parseVar(t)
 		return ident
 
-	case ast.Constant:
-		switch t.Kind {
-		case token.Ident:
-			ident := p.parseVarFrom(token.Token(t))
-			return ident
+	case ast.Bool:
+		expr := Bool(t)
+		return expr
 
-		case token.True, token.False:
-			txt := p.text(token.Token(t))
-			expr := Bool(txt)
-			return expr
+	case ast.Number:
+		expr := Number(t)
+		return expr
 
-		case token.Number:
-			num := p.text(token.Token(t))
-			expr := Number(num)
-			return expr
-
-		case token.String:
-			txt := p.text(token.Token(t))
-			expr := String(txt)
-			return expr
-		}
+	case ast.String:
+		expr := String(t)
+		return expr
 
 	case ast.MemberAccess:
 		expr := p.parseMemberAccess(t)
@@ -353,11 +334,7 @@ func (p *parser) parseMemberAccess(m ast.MemberAccess) MemberAccess {
 func (p *parser) parseIdentifier(e ast.Expr) Expr {
 	switch t := e.(type) {
 	case ast.Var:
-		switch t.Kind {
-		case token.Ident:
-			ident := p.parseVarFrom(token.Token(t))
-			return ident
-		}
+		return p.parseVar(t)
 	case ast.MemberAccess:
 		ident := p.parseMemberAccess(t)
 		return ident
@@ -380,31 +357,12 @@ func (p *parser) parseEnum(e ast.Enum) Enum {
 	return node
 }
 
-func (p *parser) parseVarFrom(e token.Token) Var {
-	// hack
-	v := ast.Var(e)
-	return p.parseVar(v)
-}
+// func (p *parser) parseVarFrom(e token.Token) Var {
+// 	// hack
+// 	v := ast.Var(e)
+// 	return p.parseVar(v)
+// }
 
-func (p *parser) parseVar(tok ast.Var) Var {
-	var pos token.Pos
-
-	txt := p.text(token.Token(tok))
-	if int(tok.Pos) >= len(p.toks.Pos) || int(tok.Pos) < 0 {
-		panic(fmt.Sprintf("could not find tok position in source file: %v", tok))
-	}
-	pos = p.toks.Pos[tok.Pos]
-
-	// TODO find a better way to store line & col number
-	line, col := p.toks.Line(token.Token(tok))
-
-	return Var{Name: txt, Pos: Pos{Start: pos.Start, End: pos.End, Line: line, Col: col}}
-}
-
-func (p *parser) text(tok token.Token) string {
-	txt, ok := p.toks.Text(tok)
-	if !ok {
-		panic(fmt.Sprintf("text not found for: token %v", tok))
-	}
-	return txt
+func (p *parser) parseVar(node ast.Var) Var {
+	return Var(node)
 }

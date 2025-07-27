@@ -34,7 +34,11 @@ func Generate(args Arguments) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			panic(err)
+		}
+	}()
 
 	buf, err = io.ReadAll(f)
 	if err != nil {
@@ -50,7 +54,7 @@ func Generate(args Arguments) error {
 		return err
 	}
 
-	astf := transpiler.ParseFile(astp, toks)
+	astf := transpiler.ParseFile(astp)
 	for _, errast := range astf.Errors() {
 		err = errors.Join(errast)
 	}

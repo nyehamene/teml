@@ -25,7 +25,7 @@ type TypeEnum struct {
 
 type TypeDeclaration struct {
 	Kind DeclarationKind
-	Name Var
+	Name string
 }
 
 type DeclarationKind int

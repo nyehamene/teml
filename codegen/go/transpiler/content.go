@@ -11,15 +11,6 @@ func doubleQuoteString(s string) String {
 	return String(quoted)
 }
 
-func escapeSurrounding0(str ast.String) String {
-	prefix := string(str[0])
-	suffix := string(str[len(str)-1])
-	content := str[1 : len(str)-1]
-	escape := "\\"
-	txt := fmt.Sprintf("%s%s%[1]s%[3]s%[2]s%[4]s%[4]s", prefix, escape, content, suffix)
-	return String(txt)
-}
-
 func escapeSurrounding(str ast.String) String {
 	prefix := string(str[0])
 	suffix := string(str[len(str)-1])

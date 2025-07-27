@@ -6,6 +6,7 @@ import (
 )
 
 type File struct {
+	Name       string
 	Package    Package
 	Document   Document
 	Imports    []Import
@@ -29,10 +30,12 @@ func ParseFile(toks *token.File, flags ...token.Flag) *File {
 		flag |= f
 	}
 
+	file := &File{Name: toks.Name}
+
 	p := parser{
 		src:  toks,
 		flag: flag,
-		dst:  &File{},
+		dst:  file,
 	}
 	p.parse(flag)
 	return p.dst

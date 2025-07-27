@@ -10,11 +10,11 @@ func ResolveValue(expr Expr) string {
 	case String:
 		return string(t)
 	case Number:
-		return string(t)
+		return fmt.Sprintf("%d", t)
 	case Var:
 		return string(t)
 	case Bool:
-		return string(t)
+		return t.String()
 	default:
 		panic(fmt.Sprintf("unexpected expression type: %v", reflect.TypeOf(expr)))
 	}
@@ -49,15 +49,14 @@ func ResolveMapKey(expr Expr) string {
 func ResolveSwitchTarget(expr Expr) string {
 	switch t := expr.(type) {
 	case String:
-		return fmt.Sprintf("%s", t)
+		return string(t)
 	case Number:
-		return fmt.Sprintf("%s", t)
+		return fmt.Sprintf("%d", t)
 	case Var:
-		return fmt.Sprintf("%s", t)
+		return string(t)
 	case Bool:
-		return fmt.Sprintf("%s", t)
+		return t.String()
 	default:
 		panic(fmt.Sprintf("unexpected expression type: %v", reflect.TypeOf(expr)))
-
 	}
 }

@@ -40,20 +40,24 @@ const (
 	Using
 	Component
 	Document
-	True
-	False
 	If
 	Cond
 	Enum
 
 	Ident
 
+	_literalBegin
+	_constantBegin
+	True
+	False
 	String
+	Number
+	_constantEnd
+
 	StringLine
 	StringTempl
 	StringLineTempl
-
-	Number
+	_literalEnd
 
 	Newline
 	Comment
@@ -62,6 +66,14 @@ const (
 func newToken(kind Kind, pos Position) Token {
 	t := Token{Kind: kind, Pos: pos}
 	return t
+}
+
+func IsLiteral(k Kind) bool {
+	return k > _literalBegin && k < _literalEnd
+}
+
+func IsConstant(k Kind) bool {
+	return k > _constantBegin && k < _constantEnd
 }
 
 func isAlphaNumeric(c byte) bool {

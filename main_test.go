@@ -26,7 +26,7 @@ func TestScanParse(t *testing.T) {
 		t.Error(err.Message)
 	}
 
-	astn := transpiler.ParseFile(astp, toks)
+	astn := transpiler.ParseFile(astp)
 	for _, err := range astn.Errors() {
 		t.Error(err.Message)
 	}
@@ -52,6 +52,6 @@ func BenchmarkScanReduceAlloc(b *testing.B) {
 func parseFile() {
 	ft := token.Scan(examplefile, "test.teml")
 	fa := parser.ParseFile(ft)
-	fn := transpiler.ParseFile(fa, ft)
+	fn := transpiler.ParseFile(fa)
 	transpiler.ResolveFile(fn)
 }
