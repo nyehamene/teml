@@ -15,8 +15,6 @@ type Kind int
 const (
 	Invalid Kind = iota
 
-	// {{ Bracket
-
 	// BracketOpen [
 	BracketOpen
 	// BracketClose ]
@@ -30,18 +28,13 @@ const (
 	// BraceClose }
 	BraceClose
 
-	// }} Barcket
-
-	// {{ Delimiter
 	Comma
 	Colon
 	BSlash
 	Dot
 	Hyphen
 	Hash
-	// }} Delimiter
 
-	// {{ Keyword
 	Package
 	Import
 	Using
@@ -52,16 +45,13 @@ const (
 	If
 	Cond
 	Enum
-	// }} Keyword
 
 	Ident
 
-	// {{ String
 	String
 	StringLine
 	StringTempl
 	StringLineTempl
-	// }} String
 
 	Number
 

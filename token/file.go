@@ -7,8 +7,8 @@ import (
 	"github.com/eml-lang/teml/internal/assert"
 )
 
-func NewFile(src []byte, size int, lines int) *File {
-	f := File{src: src}
+func NewFile(src []byte, name string, size int, lines int) *File {
+	f := File{src: src, Name: name}
 	f.Tokens = make([]Token, 0, size)
 	f.Pos = make([]Pos, 0, size)
 	f.Lines = make([]int, 0, lines)
@@ -20,6 +20,7 @@ func NewFile(src []byte, size int, lines int) *File {
 }
 
 type File struct {
+	Name   string
 	Tokens []Token
 	Pos    []Pos
 	Lines  []int

@@ -19,7 +19,7 @@ const (
 	ReduceAlloc
 )
 
-func Scan(src []byte, flags ...Flag) *File {
+func Scan(src []byte, name string, flags ...Flag) *File {
 	var file File
 	var flag Flag
 
@@ -29,9 +29,9 @@ func Scan(src []byte, flags ...Flag) *File {
 
 	if flag&ReduceAlloc != 0 {
 		lines, size := count(src)
-		file = *NewFile(src, size, lines)
+		file = *NewFile(src, name, size, lines)
 	} else {
-		file = *NewFile(src, 0, 0)
+		file = *NewFile(src, name, 0, 0)
 	}
 
 	scan(&file, flag)

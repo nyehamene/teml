@@ -91,7 +91,7 @@ func TestParse_short_valid(t *testing.T) {
 	for i, source := range valid {
 		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
 
-			tokens := token.Scan([]byte(source))
+			tokens := token.Scan([]byte(source), "test.teml")
 
 			file := ast.ParseFile(tokens)
 
@@ -163,7 +163,7 @@ func TestParse_short_invalid(t *testing.T) {
 	for i, source := range invalid {
 		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
 
-			tokens := token.Scan([]byte(source), token.PreserveComment)
+			tokens := token.Scan([]byte(source), "test.teml", token.PreserveComment)
 			goterrmsgs := map[string]string{}
 
 			file := ast.ParseFile(tokens, token.ExitOnError)
@@ -218,7 +218,7 @@ func TestValidCounting(t *testing.T) {
 	for i, source := range valid_count {
 		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
 
-			tokens := token.Scan([]byte(source), token.PreserveComment)
+			tokens := token.Scan([]byte(source), "test.teml", token.PreserveComment)
 			file := ast.ParseFile(tokens)
 
 			if file.HasError() {

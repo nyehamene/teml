@@ -78,7 +78,7 @@ func TestTransformToInstanceElement(t *testing.T) {
 func parseSource(t *testing.T, source []byte, decls int, targetDecl int) Stmt {
 	t.Helper()
 
-	toks := token.Scan(source)
+	toks := token.Scan(source, "test.teml")
 	astp := past.ParseFile(toks)
 	if astp.HasError() {
 		t.Fatal("source parser failed unexpected")

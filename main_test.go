@@ -14,7 +14,7 @@ import (
 var examplefile []byte
 
 func TestScanParse(t *testing.T) {
-	toks := token.Scan(examplefile)
+	toks := token.Scan(examplefile, "test.teml")
 	for _, tok := range toks.Tokens {
 		if tok.Kind == token.Invalid {
 			t.Fatal()
@@ -50,7 +50,7 @@ func BenchmarkScanReduceAlloc(b *testing.B) {
 }
 
 func parseFile() {
-	ft := token.Scan(examplefile)
+	ft := token.Scan(examplefile, "test.teml")
 	fa := parser.ParseFile(ft)
 	fn := transpiler.ParseFile(fa, ft)
 	transpiler.ResolveFile(fn)

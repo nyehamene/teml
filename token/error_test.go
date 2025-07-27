@@ -19,7 +19,7 @@ func TestScan_string_error(t *testing.T) {
 
 	for i, src := range source {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			f := token.Scan([]byte(src), token.PreserveComment)
+			f := token.Scan([]byte(src), "test.teml", token.PreserveComment)
 			kinds := getKinds(f.Tokens)
 
 			for _, got := range kinds {

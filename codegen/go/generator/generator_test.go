@@ -16,7 +16,7 @@ import (
 var source []byte
 
 func TestDebug(t *testing.T) {
-	tfile := token.Scan(source, token.PreserveComment|token.ReduceAlloc)
+	tfile := token.Scan(source, "test.teml", token.PreserveComment|token.ReduceAlloc)
 	pfile := past.ParseFile(tfile)
 
 	for _, err := range pfile.Errors {
