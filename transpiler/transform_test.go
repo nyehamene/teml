@@ -78,8 +78,8 @@ func TestTransformToInstanceElement(t *testing.T) {
 func parseSource(t *testing.T, source []byte, decls int, targetDecl int) Stmt {
 	t.Helper()
 
-	toks := token.Scan(source, 0)
-	astp := past.ParseFile(toks, 0)
+	toks := token.Scan(source)
+	astp := past.ParseFile(toks)
 	if astp.HasError() {
 		t.Fatal("source parser failed unexpected")
 	}

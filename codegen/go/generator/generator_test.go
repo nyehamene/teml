@@ -17,7 +17,7 @@ var source []byte
 
 func TestDebug(t *testing.T) {
 	tfile := token.Scan(source, token.PreserveComment|token.ReduceAlloc)
-	pfile := past.ParseFile(tfile, 0)
+	pfile := past.ParseFile(tfile)
 
 	for _, err := range pfile.Errors {
 		t.Error(err)

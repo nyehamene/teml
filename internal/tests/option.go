@@ -35,13 +35,13 @@ func SetResolverFlag(f transpiler.Flag) CompilationOption {
 	}
 }
 
-func SetTokenizerFlag(f token.Flags) CompilationOption {
+func SetTokenizerFlag(f token.Flag) CompilationOption {
 	return func(ctx *CompilationContext) {
 		ctx.tokenizerFlag = f
 	}
 }
 
-func SetParserFlag(f token.Flags) CompilationOption {
+func SetParserFlag(f token.Flag) CompilationOption {
 	return func(ctx *CompilationContext) {
 		ctx.parserFlag = f
 	}

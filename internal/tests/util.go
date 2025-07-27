@@ -97,9 +97,9 @@ func CompileSource(t *testing.T, buf []byte, opts ...CompilationOption) {
 	name := ctx.name
 
 	t.Run(name, func(t *testing.T) {
-		tok := token.Scan(buf, 0)
+		tok := token.Scan(buf)
 
-		astp := parser.ParseFile(tok, 0)
+		astp := parser.ParseFile(tok)
 		if !ctx.errhandler(t, StageParsed, astp.HasError(), newErrorSeq(astp.Errors)) {
 			return
 		}

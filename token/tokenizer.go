@@ -9,28 +9,33 @@ type tokenizer struct {
 	cur int
 }
 
-type Flags uint
+type Flag uint
 
 const (
-	PreserveNewline Flags = 1 << iota
+	PreserveNewline Flag = 1 << iota
 	PreserveComment
 	ExitOnError
 	HideErrors
 	ReduceAlloc
 )
 
-func Scan(src []byte, flags Flags) *File {
-	var f File
+func Scan(src []byte, flags ...Flag) *File {
+	var file File
+	var flag Flag
 
-	if flags&ReduceAlloc != 0 {
-		lines, size := count(src)
-		f = *NewFile(src, size, lines)
-	} else {
-		f = *NewFile(src, 0, 0)
+	for _, f := range flags {
+		flag |= f
 	}
 
-	scan(&f, flags)
-	return &f
+	if flag&ReduceAlloc != 0 {
+		lines, size := count(src)
+		file = *NewFile(src, size, lines)
+	} else {
+		file = *NewFile(src, 0, 0)
+	}
+
+	scan(&file, flag)
+	return &file
 }
 
 func count(src []byte) (lines int, size int) {
@@ -54,7 +59,7 @@ func count(src []byte) (lines int, size int) {
 	return lines, size
 }
 
-func scan(f *File, flags Flags) {
+func scan(f *File, flags Flag) {
 	t := tokenizer{f: f}
 
 	for {

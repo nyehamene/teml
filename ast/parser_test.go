@@ -91,9 +91,9 @@ func TestParse_short_valid(t *testing.T) {
 	for i, source := range valid {
 		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
 
-			tokens := token.Scan([]byte(source), 0)
+			tokens := token.Scan([]byte(source))
 
-			file := ast.ParseFile(tokens, 0)
+			file := ast.ParseFile(tokens)
 
 			if file.HasError() {
 				t.Error("Parser failed unexpectedly")
@@ -219,7 +219,7 @@ func TestValidCounting(t *testing.T) {
 		t.Run(fmt.Sprintf("%d %s", i, source), func(t *testing.T) {
 
 			tokens := token.Scan([]byte(source), token.PreserveComment)
-			file := ast.ParseFile(tokens, 0)
+			file := ast.ParseFile(tokens)
 
 			if file.HasError() {
 				t.Error("parser failed unexpectedly")

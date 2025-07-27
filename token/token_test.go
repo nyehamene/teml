@@ -23,7 +23,7 @@ func TestScan_keyword(t *testing.T) {
 		token.Enum,
 	}
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	kinds := getKinds(f.Tokens)
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
@@ -35,7 +35,7 @@ func TestScan_ident(t *testing.T) {
 	source := "foo foo_bar foo1 foo-bar"
 	expected := token.Ident
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	kinds := getKinds(f.Tokens)
 
 	for i, tok := range kinds {
@@ -56,7 +56,7 @@ func TestScan_bracket(t *testing.T) {
 		token.ParenClose,
 	}
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	kinds := getKinds(f.Tokens)
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
@@ -73,7 +73,7 @@ func TestScan_delimiter(t *testing.T) {
 		token.BSlash,
 	}
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	kinds := getKinds(f.Tokens)
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
@@ -85,7 +85,7 @@ func TestScan_quoted_string(t *testing.T) {
 	source := "\"foo\""
 	expected := token.String
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	kinds := getKinds(f.Tokens)
 
 	for i, got := range kinds {
@@ -99,7 +99,7 @@ func TestScan_line_string(t *testing.T) {
 	source := "-- line 1"
 	expected := token.StringLine
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	kinds := getKinds(f.Tokens)
 
 	for i, got := range kinds {
@@ -113,7 +113,7 @@ func TestScan_quoted_string_template_string(t *testing.T) {
 	source := "\"foo \\(bar)\""
 	expected := token.StringTempl
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	kinds := getKinds(f.Tokens)
 
 	for i, got := range kinds {
@@ -127,7 +127,7 @@ func TestScan_line_string_template_string(t *testing.T) {
 	source := "-- foo \\(bar)"
 	expected := token.StringLineTempl
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	kinds := getKinds(f.Tokens)
 
 	for i, got := range kinds {
@@ -166,7 +166,7 @@ func TestScan_lexeme(t *testing.T) {
 		"-- foo",
 	}
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	texts := getTexts(f.Texts())
 
 	if diff := cmp.Diff(expected, texts); diff != "" {
@@ -182,7 +182,7 @@ func TestScan_line_string_line(t *testing.T) {
 		token.StringLine,
 	}
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	kinds := getKinds(f.Tokens)
 
 	if diff := cmp.Diff(expected, kinds); diff != "" {
@@ -200,7 +200,7 @@ func TestScan_position(t *testing.T) {
 		{23, 29},
 	}
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	pos := getPosses(f.Pos)
 
 	if diff := cmp.Diff(expected, pos); diff != "" {
@@ -221,7 +221,7 @@ func TestScan_line(t *testing.T) {
 	//         0123456.7890.12
 	expected := []int{-1, 7, 11}
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	lines := getLines(f.Lines)
 
 	if diff := cmp.Diff(expected, lines); diff != "" {
@@ -233,7 +233,7 @@ func TestScan_number(t *testing.T) {
 	source := "10 1.0"
 	expected := token.Number
 
-	f := token.Scan([]byte(source), 0)
+	f := token.Scan([]byte(source))
 	kinds := getKinds(f.Tokens)
 
 	for i, got := range kinds {

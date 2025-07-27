@@ -26,8 +26,8 @@ func TestParse(t *testing.T) {
 }
 
 func parse(src []byte) *transpiler.File {
-	toks := token.Scan(src, 0)
-	asts := parser.ParseFile(toks, 0)
+	toks := token.Scan(src)
+	asts := parser.ParseFile(toks)
 	if asts.HasError() {
 		return nil
 	}

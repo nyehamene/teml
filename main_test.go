@@ -14,14 +14,14 @@ import (
 var examplefile []byte
 
 func TestScanParse(t *testing.T) {
-	toks := token.Scan(examplefile, 0)
+	toks := token.Scan(examplefile)
 	for _, tok := range toks.Tokens {
 		if tok.Kind == token.Invalid {
 			t.Fatal()
 		}
 	}
 
-	astp := parser.ParseFile(toks, 0)
+	astp := parser.ParseFile(toks)
 	for _, err := range astp.Errors {
 		t.Error(err.Message)
 	}
@@ -50,8 +50,8 @@ func BenchmarkScanReduceAlloc(b *testing.B) {
 }
 
 func parseFile() {
-	ft := token.Scan(examplefile, 0)
-	fa := parser.ParseFile(ft, 0)
+	ft := token.Scan(examplefile)
+	fa := parser.ParseFile(ft)
 	fn := transpiler.ParseFile(fa, ft)
 	transpiler.ResolveFile(fn)
 }

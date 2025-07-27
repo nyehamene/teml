@@ -13,7 +13,7 @@ type parser struct {
 	src          *token.File
 	dst          *File
 	cur          int
-	flag         token.Flags
+	flag         token.Flag
 	templateKind templateKind
 }
 
@@ -26,17 +26,7 @@ var (
 	eof token.Token = token.Token{Kind: -1, Pos: -1}
 )
 
-func ParseFile(toks *token.File, flag token.Flags) *File {
-	p := parser{
-		src:  toks,
-		flag: flag,
-		dst:  &File{},
-	}
-	p.parse(flag)
-	return p.dst
-}
-
-func (p *parser) parse(flag token.Flags) {
+func (p *parser) parse(flag token.Flag) {
 	type Order int
 	const (
 		OrderNone Order = iota

@@ -24,8 +24,8 @@ type CompilationContext struct {
 	resultHandler ResultHandler
 	errhandler    ErrorHandler
 	resolverFlag  transpiler.Flag
-	tokenizerFlag token.Flags
-	parserFlag    token.Flags
+	tokenizerFlag token.Flag
+	parserFlag    token.Flag
 }
 
 func NewCompilationContext(opts ...CompilationOption) CompilationContext {

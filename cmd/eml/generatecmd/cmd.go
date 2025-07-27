@@ -42,7 +42,7 @@ func Generate(args Arguments) error {
 	}
 
 	toks := token.Scan(buf, token.ReduceAlloc|token.PreserveComment)
-	astp := parser.ParseFile(toks, 0)
+	astp := parser.ParseFile(toks)
 	for _, errast := range astp.Errors {
 		err = errors.Join(errast)
 	}
