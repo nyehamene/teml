@@ -179,11 +179,11 @@ func (p *parser) parseStmt(m typeinfo, node ast.Element, stmts *[]Stmt) {
 
 		p.parseCloseTag(tag, stmts)
 
-	case ast.ComponentElement:
+	case ast.PropertyElement:
 		member := p.parseName(elem.Tag)
 		p.parseCallRenderMethod(m, m.getMember(member), elem.Attributes, elem.Body, stmts)
 
-	case ast.InstanceElement:
+	case ast.ComponentElement:
 		cmptype := p.parseName(elem.Tag)
 		cmpvar := makeTempVar()
 		parameters := p.parseInstanceParameters(cmpvar, elem.Parameters)

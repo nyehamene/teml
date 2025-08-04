@@ -1,36 +1,30 @@
 package ast
 
-import "fmt"
+type SymbolError int
 
-type SymbolError interface {
-	Error() string
-	symbolError()
-}
-
-func (ResolutionError) symbolError() {}
-func (TypeError) symbolError()       {}
-
-func (e ResolutionError) Error() string {
-	return fmt.Sprintf("resolution error: %s", e.String())
-}
-
-func (e TypeError) Error() string {
-	return fmt.Sprintf("type error: %s", e.String())
-}
-
-type ResolutionError int
-
-// resolution errors
 const (
-	ErrUndeclared ResolutionError = iota
+	ErrUndeclared SymbolError = iota
 	ErrDuplicateDeclaration
 	ErrInvalidPackageName
-)
-
-type TypeError int
-
-const (
-	ErrUndefined TypeError = iota
+	ErrNamespaceNotfound
 	ErrRecursiveDefinition
-	ErrMismatchElementTag
+	ErrInvalidElementTag
 )
+
+func (e SymbolError) Error() string {
+	switch e {
+	case ErrUndeclared:
+		return "undeclared"
+	case ErrDuplicateDeclaration:
+		return "duplicate declaration"
+	case ErrInvalidPackageName:
+		return "invalid package name"
+	case ErrNamespaceNotfound:
+		return "namespace not found"
+	case ErrRecursiveDefinition:
+		return "recursive declaration"
+	case ErrInvalidElementTag:
+		return "invalid element tag"
+	}
+	panic("unreachable")
+}

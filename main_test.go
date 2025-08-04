@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"testing"
 
+	"github.com/eml-lang/teml/internal/source"
 	"github.com/eml-lang/teml/token"
 
 	parser "github.com/eml-lang/teml/ast"
@@ -13,8 +14,14 @@ import (
 //go:embed app.teml
 var examplefile []byte
 
+var sourceFile = source.File{
+	Path:    "test.teml",
+	Name:    "test",
+	Content: examplefile,
+}
+
 func TestScanParse(t *testing.T) {
-	toks := token.Scan(examplefile, "test.teml")
+	toks := token.ScanInput(sourceFile)
 	for _, tok := range toks.Tokens {
 		if tok.Kind == token.Invalid {
 			t.Fatal()
@@ -28,12 +35,12 @@ func TestScanParse(t *testing.T) {
 
 	astn := transpiler.ParseFile(astp)
 	for _, err := range astn.Errors() {
-		t.Error(err.Message)
+		t.Error(err)
 	}
 
 	transpiler.ResolveFile(astn)
 	for _, err := range astn.Errors() {
-		t.Error(err.Message)
+		t.Error(err)
 	}
 }
 
@@ -50,7 +57,7 @@ func BenchmarkScanReduceAlloc(b *testing.B) {
 }
 
 func parseFile() {
-	ft := token.Scan(examplefile, "test.teml")
+	ft := token.ScanInput(sourceFile)
 	fa := parser.ParseFile(ft)
 	fn := transpiler.ParseFile(fa)
 	transpiler.ResolveFile(fn)

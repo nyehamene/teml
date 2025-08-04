@@ -1,91 +1,152 @@
 package ast
 
-import perrors "github.com/eml-lang/teml/internal/errors"
+import (
+	"errors"
+	"strings"
+)
 
-type Env interface {
-	Lookup(string) (Symbol, SymbolError)
-	LookupEnv(string) (Env, bool)
-	Bind(Symbol, string) SymbolError
-	BindEnv(Env, string) SymbolError
-	Nest(string) Env
+const nsNative = "<native>"
+
+type NameEnv struct {
+	Name     string
+	parent   *NameEnv
+	children map[string]NameEnv
+	names    map[string]string
 }
 
-type defaultEnv struct {
-	parent Env
-	env    map[string]Symbol
-	nested map[string]Env
-	errs   []perrors.Error
+type TypeEnv struct {
+	names NameEnv
+	types map[string]TypeSymbol
 }
 
-func (r defaultEnv) Lookup(name string) (Symbol, SymbolError) {
-	resolved, ok := r.env[name]
-	switch ok {
-	case true:
-		return resolved, nil
+func newRootNameEnv() NameEnv {
+	return newNameEnv(nil, "")
+}
 
-	case false:
-		if r.parent == nil {
-			break
-		}
-		return r.parent.Lookup(name)
+func newNameEnv(parent *NameEnv, name string) NameEnv {
+	env := NameEnv{
+		Name:     name,
+		parent:   parent,
+		children: map[string]NameEnv{},
+		names:    map[string]string{},
 	}
-
-	return nil, ErrUndeclared
+	return env
 }
 
-func (r defaultEnv) LookupEnv(name string) (Env, bool) {
-	env, ok := r.nested[name]
-	return env, ok
-}
-
-func (r defaultEnv) Bind(sym Symbol, name string) SymbolError {
-	if existing, ok := r.env[name]; ok {
-		switch existing {
-		case TypeUnchecked:
-			switch sym {
-			case TypeUnchecked:
-				return ErrDuplicateDeclaration
-			}
-		}
+func newTypeEnv(root NameEnv) TypeEnv {
+	return TypeEnv{
+		names: root,
+		types: map[string]TypeSymbol{},
 	}
-	r.env[name] = sym
+}
+
+func bindSame(env NameEnv, name string) error {
+	if err := env.BindName(name, name); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (r defaultEnv) BindEnv(env Env, name string) SymbolError {
-	if _, ok := r.nested[name]; ok {
-		return ErrDuplicateDeclaration
+func bindBuiltInTypeNames(env NameEnv) error {
+	errbool := bindSame(env, TypeBool.String())
+	errstr := bindSame(env, TypeString.String())
+	errnum := bindSame(env, TypeNumber.String())
+	return errors.Join(errbool, errstr, errnum)
+}
+
+func bindBuiltInTypes(env TypeEnv) error {
+	errbool := env.BindType(TypeBool, TypeBool.String())
+	errstr := env.BindType(TypeString, TypeString.String())
+	errnum := env.BindType(TypeNumber, TypeNumber.String())
+	return errors.Join(errbool, errstr, errnum)
+}
+
+func bindNativeElementNames(env NameEnv) {
+	for _, element := range NativeElements {
+		fqn := nsNative + "." + element.Tag
+		_ = env.BindName(element.Tag, fqn)
 	}
-	r.nested[name] = env
+}
+
+func bindNativeElementTypes(env TypeEnv) {
+	for _, element := range NativeElements {
+		fqn, ok := env.names.LookupName(element.Tag)
+		if !ok {
+			panic("unreachable")
+		}
+		_ = env.BindType(element, fqn)
+	}
+}
+
+func (e *NameEnv) Nest(name string) NameEnv {
+	env := newNameEnv(e, name)
+	e.children[name] = env
+	// add to root
+	root := e
+	for root.parent != nil {
+		root = root.parent
+	}
+	root.children[name] = env
+	return env
+}
+
+func (e *NameEnv) BindName(name, fqn string) error {
+	e.names[name] = fqn
 	return nil
 }
 
-func (r defaultEnv) Nest(name string) Env {
-	env := createEnv(r)
-	r.BindEnv(env, name)
-	return env
-}
-
-func createEnv(parent Env) Env {
-	env := defaultEnv{
-		parent: parent,
-		env:    map[string]Symbol{},
-		nested: map[string]Env{},
+func (e *NameEnv) LookupName(name string) (string, bool) {
+	resolved, ok := e.names[name]
+	if !ok {
+		if e.parent != nil {
+			return e.parent.LookupName(name)
+		}
+		return "", false
 	}
-	return env
+	return resolved, true
 }
 
-func bindBuiltinTypes(env Env) Env {
-	env.Bind(TypeString, "String")
-	env.Bind(TypeNumber, "Number")
-	env.Bind(TypeBool, "Bool")
-	return env
-
-}
-
-func bindNativeElements(env Env) Env {
-	for _, e := range NativeElements {
-		env.Bind(e, e.Tag)
+func (e *NameEnv) LookupNonNativeName(name string) (string, bool) {
+	resolved, ok := e.LookupName(name)
+	if !ok {
+		if e.parent != nil {
+			return e.parent.LookupNonNativeName(name)
+		}
+		return "", false
 	}
-	return env
+	if strings.Contains(resolved, nsNative) {
+		return e.parent.LookupNonNativeName(name)
+	}
+	return resolved, true
+}
+
+func (e *NameEnv) LookupNameEnv(name string) (NameEnv, bool) {
+	env, ok := e.children[name]
+	if !ok {
+		if e.parent != nil {
+			return e.parent.LookupNameEnv(name)
+		}
+		return NameEnv{}, false
+	}
+	return env, true
+}
+
+func (e *TypeEnv) LookupType(name string) (TypeSymbol, bool) {
+	sym, ok := e.types[name]
+	if !ok {
+		return nil, false
+	}
+	return sym, true
+}
+
+func (e *TypeEnv) BindType(sym TypeSymbol, name string) error {
+	_, existing := e.LookupType(name)
+	if existing {
+		// TODO compare the existing type with the new type
+		_ = existing
+	}
+
+	// bind if does not already exist
+	e.types[name] = sym
+	return nil
 }

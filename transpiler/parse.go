@@ -7,6 +7,29 @@ import (
 	"github.com/eml-lang/teml/ast"
 )
 
+func ParseFile(src *ast.File) *File {
+	f := parseFile(src)
+	return f
+}
+
+func parseFile(src *ast.File) *File {
+	p := &parser{src: src}
+
+	f := &File{
+		Name: src.Name,
+		errs: []error{},
+	}
+
+	f.Package = p.parsePackage()
+	f.Imports = p.parseImports()
+	f.Usings = p.parseUsings()
+
+	decls := p.parseDeclarations()
+
+	f.Declarations = decls
+	return f
+}
+
 type parser struct {
 	src *ast.File
 }
@@ -100,7 +123,8 @@ func (p *parser) parseDeclaration(n ast.Node) Declaration {
 func (p *parser) parseDocument(d ast.Document) Document {
 	var ident Var
 	if d.IsNamed() {
-		ident = p.parseVar(d.Ident)
+		i := p.parseVar(d.Ident)
+		ident = i
 	}
 
 	// TODO use the file name if document is not named

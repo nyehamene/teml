@@ -27,8 +27,8 @@ func (TextElement) element()      {}
 func (TextGroupElement) element() {}
 func (NumberElement) element()    {}
 func (StringElement) element()    {}
+func (PropertyElement) element()  {}
 func (ComponentElement) element() {}
-func (InstanceElement) element()  {}
 func (genericElement) element()   {}
 func (NativeElement) element()    {}
 func (IFElement) element()        {}
@@ -71,7 +71,11 @@ type Using struct {
 	Idents []Var
 }
 
-type Document Component
+type Document struct {
+	Ident      Var
+	Properties []Property
+	Stmts      []Stmt
+}
 
 type Component struct {
 	Ident      Var
@@ -120,13 +124,13 @@ type NativeElement struct {
 	Body       []Stmt
 }
 
-type ComponentElement struct {
+type PropertyElement struct {
 	Tag        Expr
 	Attributes []Attr
 	Body       []Stmt
 }
 
-type InstanceElement struct {
+type ComponentElement struct {
 	Tag        Expr
 	Parameters []KeyVal
 	Attributes []Attr

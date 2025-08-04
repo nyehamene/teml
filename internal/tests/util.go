@@ -12,13 +12,14 @@ import (
 
 	parser "github.com/eml-lang/teml/ast"
 	perrors "github.com/eml-lang/teml/internal/errors"
+	"github.com/eml-lang/teml/internal/source"
 	transpiler "github.com/eml-lang/teml/transpiler"
 )
 
-type ErrorSeq = func(yield func(int, perrors.Error) bool)
+type ErrorSeq = func(yield func(int, error) bool)
 
 type ErrorHandler func(t *testing.T, stage CompilationStage, hasError bool, errors ErrorSeq) bool
-type ResultHandler func(fn string, result string) error
+type ResultHandler func(nam string, stage CompilationStage, result any) error
 
 func NewErrorHandler(targetStage CompilationStage, failOnSuccessFlag bool) ErrorHandler {
 	return func(t *testing.T, stage CompilationStage, hasError bool, errors ErrorSeq) bool {
@@ -31,7 +32,7 @@ func NewErrorHandler(targetStage CompilationStage, failOnSuccessFlag bool) Error
 			lbl = "transformation"
 		case StageResolved:
 			lbl = "resolution"
-		case StageTypechecked:
+		case StageTypeChecked:
 			lbl = "type checking"
 		case StageGenerated:
 			lbl = "generation"
@@ -56,7 +57,7 @@ func CompileFiles(
 	basefs embed.FS,
 	basepath string,
 	filefilter func(string) bool,
-	outputhandler func(fn string, out string) error,
+	outputhandler ResultHandler,
 	errhandler ErrorHandler,
 ) {
 	t.Helper()
@@ -70,7 +71,7 @@ func CompileFiles(
 
 		var flag transpiler.Flag
 		if nobuiltinElement {
-			flag |= transpiler.FlagNoBuiltinElement
+			flag |= transpiler.FlagNoNativeElement
 		}
 
 		if nobuiltinTypes {
@@ -96,44 +97,71 @@ func CompileSource(t *testing.T, buf []byte, opts ...CompilationOption) {
 	ctx := NewCompilationContext(opts...)
 	name := ctx.name
 
+	var stage CompilationStage
+
 	t.Run(name, func(t *testing.T) {
-		tok := token.Scan(buf, "test.teml")
+		stage = StageTokenized
+		file := source.File{
+			Path:    "test.teml",
+			Name:    "test",
+			Content: buf,
+		}
+		tok := token.ScanInput(file, token.PreserveComment)
+		if err := ctx.resultHandler(name, stage, *tok); err != nil {
+			t.Fatal(err)
+		}
 
+		stage = StageParsed
 		astp := parser.ParseFile(tok)
-		if !ctx.errhandler(t, StageParsed, astp.HasError(), newErrorSeq(astp.Errors)) {
+		if !ctx.errhandler(t, stage, astp.HasError(), newErrorSeq(astp.Errors)) {
 			return
 		}
+		if err := ctx.resultHandler(name, stage, astp); err != nil {
+			t.Fatal(err)
+		}
 
+		stage = StageTransformed
 		nodes := transpiler.ParseFile(astp)
-		if !ctx.errhandler(t, StageTransformed, nodes.HasError(), nodes.Errors()) {
+		if !ctx.errhandler(t, stage, nodes.HasError(), nodes.Errors()) {
 			return
 		}
-
-		env := transpiler.ResolveFile(nodes, ctx.resolverFlag)
-		if !ctx.errhandler(t, StageResolved, nodes.HasError(), nodes.Errors()) {
-			return
+		if err := ctx.resultHandler(name, stage, nodes); err != nil {
+			t.Fatal(err)
 		}
 
-		_ = transpiler.TypecheckFile(nodes, env)
-		if !ctx.errhandler(t, StageTypechecked, nodes.HasError(), nodes.Errors()) {
+		stage = StageResolved
+		renv := transpiler.ResolveFile(nodes, ctx.resolverFlag)
+		if !ctx.errhandler(t, stage, nodes.HasError(), nodes.Errors()) {
 			return
 		}
+		if err := ctx.resultHandler(name, stage, renv); err != nil {
+			t.Fatal(err)
+		}
 
+		stage = StageTypeChecked
+		tenv := transpiler.TypecheckFile(nodes, renv)
+		if !ctx.errhandler(t, stage, nodes.HasError(), nodes.Errors()) {
+			return
+		}
+		if err := ctx.resultHandler(name, stage, tenv); err != nil {
+			t.Fatal(err)
+		}
+
+		stage = StageGenerated
 		w := strings.Builder{}
 		gonodes := gotranspiler.Parse(nodes)
 		err := codegen.Generate(&w, &gonodes)
-		if !ctx.errhandler(t, StageGenerated, err != nil, errorSeqFunc(err)) {
+		if !ctx.errhandler(t, stage, err != nil, errorSeqFunc(err)) {
 			return
 		}
-
-		if err = ctx.resultHandler(name, w.String()); err != nil {
-			t.Error(err)
+		if err = ctx.resultHandler(name, stage, w.String()); err != nil {
+			t.Fatal(err)
 		}
 	})
 }
 
 func errorSeqFunc(err error) ErrorSeq {
-	return func(yield func(int, perrors.Error) bool) {
+	return func(yield func(int, error) bool) {
 		if err == nil {
 			return
 		}
@@ -190,7 +218,7 @@ func failOnSuccess(t *testing.T, label string, hasError bool, _ ErrorSeq) {
 }
 
 func newErrorSeq(errs []perrors.Error) ErrorSeq {
-	return func(yield func(int, perrors.Error) bool) {
+	return func(yield func(int, error) bool) {
 		for i, err := range errs {
 			if !yield(i, err) {
 				break

@@ -1,7 +1,0 @@
-(package p "views")
-
-(document [B: B, A: A])
-
-(component A [B: B])
-
-(component B [])

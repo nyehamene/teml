@@ -5,140 +5,197 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/eml-lang/teml/internal/assert"
 	perrors "github.com/eml-lang/teml/internal/errors"
 )
 
 type typechecker struct {
 	src *File
+	env TypeEnv
 }
 
-func (t *typechecker) typecheckFile(env Env) Env {
-	pkg := t.typecheckPackage(env)
-	t.typecheckDeclaration(env, pkg)
+func TypecheckFile(src *File, names NameEnv, flags ...Flag) TypeEnv {
+	var flag Flag
 
-	for _, tmpl := range t.src.Declarations {
-		var name string
-		var props []Property
-		var stmts []Stmt
-
-		switch tt := tmpl.(type) {
-		case Document:
-			name = tt.Ident.Name
-			props = tt.Properties
-			stmts = tt.Stmts
-
-		case Component:
-			name = tt.Ident.Name
-			props = tt.Properties
-			stmts = tt.Stmts
-
-		default:
-			panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(t)))
-		}
-
-		dtype, err := env.Lookup(name)
-		assert.Assert(err == nil, "expected nil")
-
-		dtype = dtype.(TypeDeclaration)
-
-		nestedEnv, ok := env.LookupEnv(name)
-		if !ok {
-			panic(fmt.Sprintf("invalid state: env not found for %s", name))
-		}
-
-		t.typecheckProperties(nestedEnv, dtype, props)
-		t.typecheckStmts(nestedEnv, stmts)
+	for _, f := range flags {
+		flag |= f
 	}
 
+	env := newTypeEnv(names)
+
+	if flag&FlagNoBuiltinType == 0 {
+		_ = bindBuiltInTypes(env)
+	}
+
+	if flag&FlagNoNativeElement == 0 {
+		bindNativeElementTypes(env)
+	}
+
+	t := typechecker{src: src, env: env}
+	t.typecheckFile()
 	return env
 }
 
-func (t *typechecker) typecheckPackage(env Env) Var {
-	f := t.src
-	ident := f.Package.Ident.Name
-	namestr := f.Package.Path
+func (t *typechecker) typecheckFile() {
+	t.typecheckPackage()
+	t.typecheckDeclaration()
 
-	// remove double quote
-	name := Var{Name: namestr.Value()}
+	for _, declaration := range t.src.Declarations {
+		var typeIdent Var
+		var props []Property
+		var stmts []Stmt
 
-	pkgtype := TypePackage{Path: namestr}
-	t.bind(env, pkgtype, ident)
-	return name
-}
-
-func (t *typechecker) typecheckDeclaration(env Env, ns Var) {
-	for _, decl := range t.src.Declarations {
-		var name Var
-		var sym Symbol
-
-		switch tt := decl.(type) {
+		switch tt := declaration.(type) {
 		case Document:
-			name = tt.Ident
-			typename := ns.Join(name, ".")
-			sym = TypeDeclaration{
-				Kind: DocumentDeclaration,
-				Name: typename,
-			}
+			typeIdent = Var(tt.Ident)
+			props = tt.Properties
+			stmts = tt.Stmts
 
 		case Component:
-			name = tt.Ident
-			typename := ns.Join(name, ".")
-			sym = TypeDeclaration{
-				Kind: ComponentDeclaration,
-				Name: typename,
-			}
+			typeIdent = Var(tt.Ident)
+			props = tt.Properties
+			stmts = tt.Stmts
 
 		default:
 			panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(t)))
 		}
 
-		t.bind(env, sym, name.Name)
+		resolvedName, ok := t.lookupName(typeIdent.Name)
+		if !ok {
+			t.addError(ErrUndeclared, typeIdent)
+			return
+		}
+
+		resolvedType, ok := t.lookupType(resolvedName)
+		if !ok {
+			t.addError(ErrUndeclared, typeIdent)
+			return
+		}
+
+		t.typecheckProperties(typeIdent, resolvedType, props)
+		t.typecheckStmts(typeIdent, stmts)
 	}
 }
 
-func (t *typechecker) typecheckProperties(env Env, dtype Symbol, props []Property) {
-	for _, p := range props {
-		ident := p.Ident
+func (t *typechecker) typecheckPackage() {
+	resolvedName, ok := t.lookupNonNativeName(t.src.Package.Ident.Name)
+	if !ok {
+		t.addError(ErrUndeclared, t.src.Package.Ident)
+		return
+	}
+	path := t.src.Package.Path
+	pkgtype := TypePackage{Path: path}
+	if err := t.bind(pkgtype, resolvedName); err != nil {
+		t.addError(err, t.src.Package.Ident)
+		return
+	}
+}
 
-		switch proptype := p.Type.(type) {
-		case Var:
-			resolvedType := t.lookup(env, proptype)
+func (t *typechecker) typecheckDeclaration() {
+	for _, decl := range t.src.Declarations {
+		var node Var
+		var kind DeclarationKind
 
-			switch resolvedType := resolvedType.(type) {
-			case BuiltinType:
-				switch resolvedType {
-				case TypeUnchecked:
-					t.addError(ErrUndefined, proptype)
-				}
+		switch tt := decl.(type) {
+		case Document:
+			node = Var(tt.Ident)
+			kind = DocumentDeclaration
 
-			case TypeDeclaration:
-				switch resolvedType {
-				case dtype:
-					t.addError(ErrRecursiveDefinition, proptype)
-				default:
-					switch resolvedType.Kind {
-					case DocumentDeclaration:
-						t.addError(ErrMismatchElementTag, proptype)
-					}
-				}
-			}
-
-			t.bind(env, TypeVar{resolvedType}, ident.Name)
-
-		case Enum:
-			constantType := t.validateEnumConstants(proptype.Constants)
-			enumtype := TypeEnum{
-				ConstantType: constantType,
-			}
-			t.bind(env, enumtype, ident.Name)
-
-		case MemberAccess:
-			panic(errors.ErrUnsupported)
+		case Component:
+			node = Var(tt.Ident)
+			kind = ComponentDeclaration
 
 		default:
-			panic(fmt.Sprintf("unepxected property type: %v", reflect.TypeOf(proptype)))
+			panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(t)))
 		}
+
+		resolvedName, ok := t.lookupName(node.Name)
+		if !ok {
+			t.addError(ErrUndeclared, node)
+			return
+		}
+
+		sym := TypeDeclaration{
+			Kind:   kind,
+			Name:   node.Name,
+			TypeId: resolvedName,
+		}
+
+		if err := t.bind(sym, resolvedName); err != nil {
+			t.addError(err, node)
+			return
+		}
+	}
+}
+
+func (t *typechecker) typecheckProperties(decl Var, typesym TypeSymbol, props []Property) {
+	for _, p := range props {
+		t.typecheckProperty(decl, typesym, p)
+	}
+}
+
+func (t *typechecker) typecheckProperty(decl Var, sym Symbol, property Property) {
+	var propertyType TypeSymbol
+
+	switch typeNode := property.Type.(type) {
+	case Var:
+		resolvedName, ok := t.lookupName(typeNode.Name)
+		if !ok {
+			t.addError(ErrUndeclared, typeNode)
+			return
+		}
+
+		propertyType, ok = t.lookupType(resolvedName)
+		if !ok {
+			t.addError(ErrUndeclared, typeNode)
+			return
+		}
+
+		// component cannot used as a type in its property list
+		if propertyType == sym {
+			t.addError(ErrRecursiveDefinition, typeNode)
+			return
+		}
+
+		// a document cannot be used as a property type
+		switch resolvedType := propertyType.(type) {
+		case TypeDeclaration:
+			if resolvedType.Kind == DocumentDeclaration {
+				t.addError(ErrInvalidElementTag, typeNode)
+				return
+			}
+		}
+
+	case Enum:
+		constantType := t.validateEnumConstants(typeNode.Constants)
+		propertyType = TypeEnum{ConstantType: constantType}
+
+	case MemberAccess:
+		panic(errors.ErrUnsupported)
+
+	default:
+		panic(fmt.Sprintf("unepxected property type: %v", reflect.TypeOf(typeNode)))
+	}
+
+	resolvedEnvName, ok := t.lookupName(decl.Name)
+	if !ok {
+		panic("unreachable")
+	}
+
+	propertyEnv, ok := t.lookupNameEnv(resolvedEnvName)
+	if !ok {
+		panic("unreachable")
+	}
+
+	resolvedName, ok := propertyEnv.LookupName(property.Ident.Name)
+	if !ok {
+		t.addError(ErrUndeclared, property.Ident)
+		return
+	}
+
+	resolvedSymbol := PropertySymbol{propertyType}
+	if err := t.bind(resolvedSymbol, resolvedName); err != nil {
+		t.addError(err, property.Ident)
+		return
 	}
 }
 
@@ -176,171 +233,61 @@ func (t *typechecker) validateEnumConstants(cons []EnumConstant) Symbol {
 	return constantType
 }
 
-func (t *typechecker) typecheckStmts(env Env, stmts []Stmt) {
+func (t *typechecker) typecheckStmts(decl Var, stmts []Stmt) {
 	for i, stmt := range stmts {
-		element := t.typecheckElement(env, stmt.Element)
+		element := t.typecheckElement(decl, stmt.Element)
 		stmts[i] = Stmt{element}
 	}
 }
 
-func (t *typechecker) typecheckElement(env Env, expr Element) Element {
-	switch tt := expr.(type) {
+func (t *typechecker) typecheckElement(decl Var, node Element) Element {
+	switch element := node.(type) {
 	case TextElement:
-		return expr
+		return node
 
 	case TextGroupElement:
-		return expr
+		return node
 
-	case InstanceElement, ComponentElement, NativeElement, NumberElement, StringElement:
+	case ComponentElement, PropertyElement, NativeElement, NumberElement, StringElement:
 		// NOTE these are not produce by the parser
 		panic("Unreachable")
 
 	case genericElement:
-		t.typecheckTag(env, tt.Tag)
+		t.typecheckTagExpr(decl, element.Tag)
 		// TODO typecheck properties
-		t.typecheckAttributes(env, tt.Attributes)
-		t.typecheckStmts(env, tt.Body)
-		return t.transformElement(env, tt)
+		t.typecheckAttributes(decl, element.Attributes)
+		t.typecheckStmts(decl, element.Body)
+		return t.transformElement(decl, element)
 
 	case IFElement:
-		t.typecheckExpr(env, tt.Cond)
-		t.typecheckElement(env, tt.Then)
-		if tt.Else != nil {
-			t.typecheckElement(env, tt.Else)
+		t.typecheckExpr(decl, element.Cond)
+		t.typecheckElement(decl, element.Then)
+		if element.Else != nil {
+			t.typecheckElement(decl, element.Else)
 		}
-		return tt
+		return element
 
 	case CondElement:
-		t.typecheckExpr(env, tt.Target)
-		for _, c := range tt.Cases {
-			t.typecheckExpr(env, c.Cond)
-			t.typecheckElement(env, c.Branch.Element)
+		t.typecheckExpr(decl, element.Target)
+		for _, c := range element.Cases {
+			t.typecheckExpr(decl, c.Cond)
+			t.typecheckElement(decl, c.Branch.Element)
 		}
-		return tt
+		return element
 	}
-	panic(fmt.Sprintf("Unreachable: %v", reflect.TypeOf(expr)))
+	panic(fmt.Sprintf("Unreachable: %v", reflect.TypeOf(node)))
 }
 
-func (t *typechecker) transformElement(env Env, node genericElement) Element {
-	var element Element
-	switch nodetype := node.Tag.(type) {
-	case String, Number, Bool, Enum:
-		// NOTE literals cannot be used as a tag name
-		// NOTE an error should have been reported already
-		// TODO add a test case
-		element = node
-
-	case IFExpr:
-		// NOTE an if expression cannot be used as a tag name
-		// TODO add a test case
-		element = node
-
-	case CondExpr:
-		// NOTE an if expression cannot be used as a tag name
-		// TODO add a test case
-		element = node
-
-	case Var:
-		tag := t.lookup(env, nodetype)
-		element = t.transformElementByTagType(env, node, tag, false)
-
-	case MemberAccess:
-		// TODO transform element with member access tag expression
-		// NOTE can be transformed to either component or instance element
-		panic(errors.ErrUnsupported)
-	}
-
-	return element
-}
-
-func (t *typechecker) transformElementByTagType(env Env, genElem genericElement, tag Symbol, component bool) Element {
-	var element Element
-
-	switch tagtype := tag.(type) {
-	case TypePackage:
-		// NOTE an package cannot be used as a tag
-		// NOTE an error should have been reported already
-		// TODO add a test case
-		element = genElem
-
-	case TypeEnum:
-		// NOTE an enum cannot be used as a tag name
-		// NOTE an error should have been reported already
-		// TODO add a test case
-		element = genElem
-
-	case NativeElementType:
-		// TODO fail is parameter is not empty
-		element = NativeElement{
-			Tag:        genElem.Tag,
-			Attributes: genElem.Attributes,
-			Body:       genElem.Body,
-		}
-
-	case TypeVar:
-		return t.transformElementByTagType(env, genElem, tagtype.Type, true)
-
-	case TypeDeclaration:
-		if component {
-			// TODO fail is parameter is not empty
-			element = ComponentElement{
-				Tag:        genElem.Tag,
-				Attributes: genElem.Attributes,
-				Body:       genElem.Body,
-			}
-		} else {
-			// TODO typecheck parameters
-			// TODO fail if body is not empty
-			element = InstanceElement{
-				Tag:        genElem.Tag,
-				Parameters: genElem.Parameter,
-				Attributes: genElem.Attributes,
-			}
-		}
-
-	case BuiltinType:
-		switch tagtype {
-		case TypeString:
-			element = StringElement{
-				Tag:        genElem.Tag,
-				Attributes: genElem.Attributes,
-			}
-		case TypeNumber:
-			element = NumberElement{
-				Tag:        genElem.Tag,
-				Attributes: genElem.Attributes,
-			}
-		case TypeBool, TypeUnchecked:
-			// NOTE an should have already been reported when type checking element tag name expression
-			// TODO add a test case
-			element = genElem
-		default:
-			panic(fmt.Sprintf("unexpected builtin type: %v", reflect.TypeOf(tag)))
-		}
-
-	default:
-		panic(fmt.Sprintf("unexpected element symbol type: %v", reflect.TypeOf(tag)))
-	}
-
-	return element
-}
-
-func (t *typechecker) typecheckExpr(env Env, expr Expr) {
+func (t *typechecker) typecheckExpr(decl Var, expr Expr) {
 	switch tt := expr.(type) {
 	case String, Number, Bool:
 		// no oop
 
 	case IFExpr:
-		t.typecheckExpr(env, tt.Cond)
-		t.typecheckExpr(env, tt.Then)
-		t.typecheckExpr(env, tt.Else)
+		// TODO type check if expression
 
 	case CondExpr:
-		t.typecheckExpr(env, tt.Target)
-		for _, c := range tt.Cases {
-			t.typecheckExpr(env, c.Cond)
-			t.typecheckExpr(env, c.Branch)
-		}
+		// TODO type check cond expression
 
 	case Var:
 		// TODO typecheck Var
@@ -356,90 +303,120 @@ func (t *typechecker) typecheckExpr(env Env, expr Expr) {
 	}
 }
 
-func (t *typechecker) typecheckTag(env Env, expr Expr) {
+func (t *typechecker) typecheckTagExpr(ident Var, expr Expr) {
+	resolvedIdentName, ok := t.lookupName(ident.Name)
+	if !ok {
+		t.addError(ErrUndeclared, ident)
+		return
+	}
+
+	env, ok := t.lookupNameEnv(resolvedIdentName)
+	if !ok {
+		t.addError(ErrUndeclared, ident)
+		return
+	}
+
 	switch node := expr.(type) {
 	case Var:
-		nodetype := t.lookup(env, node)
-		t.typecheckTagSymbol(env, node, nodetype)
+		resolvedTag, ok := env.LookupName(node.Name)
+		if !ok {
+			t.addError(ErrUndeclared, node)
+			return
+		}
 
+		tagtype, ok := t.lookupType(resolvedTag)
+		if !ok {
+			t.addError(ErrUndeclared, node)
+			return
+		}
+
+		if err := t.typecheckTag(tagtype); err != nil {
+			t.addError(err, node)
+			return
+		}
 	case MemberAccess:
 		// TODO type check member access tag expression
 		panic(errors.ErrUnsupported)
 	}
 }
 
-func (t *typechecker) typecheckTagSymbol(env Env, node Var, sym Symbol) {
-	switch symtype := sym.(type) {
+func (t *typechecker) typecheckTag(sym TypeSymbol) error {
+	switch typeNode := sym.(type) {
+	case NativeElementType:
+	case PropertySymbol:
+
+	case TypeEnum, TypePackage:
+		return ErrInvalidElementTag
+
 	case BuiltinType:
-		switch symtype {
-		case TypeBool:
-			t.addError(ErrMismatchElementTag, node)
+		if sym == TypeBool {
+			return ErrInvalidElementTag
 		}
-
-	case TypeEnum:
-		t.addError(ErrMismatchElementTag, node)
-
-	case TypePackage:
-		t.addError(ErrMismatchElementTag, node)
 
 	case TypeDeclaration:
-		switch symtype.Kind {
+		switch typeNode.Kind {
 		case DocumentDeclaration:
-			t.addError(ErrMismatchElementTag, node)
+			return ErrInvalidElementTag
 		}
 
-	case TypeVar:
-		t.typecheckTagSymbol(env, node, symtype.Type)
+	default:
+		panic(fmt.Sprintf("unexpected type symbol: %#v", typeNode))
 	}
+
+	return nil
 }
 
-func (t *typechecker) typecheckAttributes(env Env, attrs []Attr) {
+func (t *typechecker) typecheckAttributes(decl Var, attrs []Attr) {
 	for _, attr := range attrs {
-		t.typecheckKeyVals(env, attr.Entries)
+		t.typecheckKeyVals(decl, attr.Entries)
 	}
 }
 
-func (t *typechecker) typecheckKeyVals(env Env, kvs []KeyVal) {
+func (t *typechecker) typecheckKeyVals(decl Var, kvs []KeyVal) {
 	for _, kv := range kvs {
-		t.typecheckExpr(env, kv.Value)
+		t.typecheckExpr(decl, kv.Value)
 	}
 }
 
-func (t *typechecker) bind(env Env, sym Symbol, name string) {
-	err := env.Bind(sym, name)
+func (t *typechecker) bind(sym TypeSymbol, name string) error {
+	err := t.env.BindType(sym, name)
 	if err != nil {
-		panic(fmt.Sprintf("failed to bind %s to %v: %v", name, sym, err))
+		return err
 	}
+	return nil
 }
 
-func (t *typechecker) lookup(env Env, node Var) Symbol {
-	sym, err := env.Lookup(node.Name)
-	if err != nil {
-		t.addError(ErrUndeclared, node)
-	}
-	return sym
+func (t *typechecker) lookupName(name string) (string, bool) {
+	return t.env.names.LookupName(name)
 }
 
-func (t *typechecker) addError(errkind SymbolError, n Var) {
+func (t *typechecker) lookupNonNativeName(name string) (string, bool) {
+	return t.env.names.LookupNonNativeName(name)
+}
+
+func (t *typechecker) lookupType(name string) (TypeSymbol, bool) {
+	return t.env.LookupType(name)
+}
+
+func (t *typechecker) lookupNameEnv(name string) (NameEnv, bool) {
+	return t.env.names.LookupNameEnv(name)
+}
+
+func (t *typechecker) addError(errkind error, node Var) {
 	var err perrors.Error
-	name := n.Name
-	line := n.Line
-	col := n.Col
+	name := node.Name
+	line, col := node.Line, node.Col
 
 	switch errkind {
 	case ErrUndeclared:
 		msg := fmt.Sprintf("undeclared type %v (%d, %d)", name, line, col)
 		err = perrors.Error{Message: msg}
 
-	case ErrUndefined:
-		msg := fmt.Sprintf("undefined type %v (%d, %d)", name, line, col)
-		err = perrors.Error{Message: msg}
-
 	case ErrRecursiveDefinition:
 		msg := fmt.Sprintf("recursive type %v (%d, %d)", name, line, col)
 		err = perrors.Error{Message: msg}
 
-	case ErrMismatchElementTag:
+	case ErrInvalidElementTag:
 		msg := fmt.Sprintf("type mismatch: element tag is not a component/element: %v (%d, %d)", name, line, col)
 		err = perrors.Error{Message: msg}
 

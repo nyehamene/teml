@@ -22,8 +22,7 @@ const (
 	ReduceAlloc
 )
 
-// TODO remove
-// @deprecate
+// Deprecated: TODO remove function
 func Scan(buf []byte, name string, flags ...Flag) *File {
 	input := source.File{
 		Path:    name,

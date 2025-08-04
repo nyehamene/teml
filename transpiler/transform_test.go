@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/eml-lang/teml/internal/source"
 	"github.com/eml-lang/teml/token"
 
 	past "github.com/eml-lang/teml/ast"
@@ -26,7 +27,7 @@ var instanceElement []byte
 var componentElement []byte
 
 func TestTransformToStringElement(t *testing.T) {
-	stmt := parseSource(t, stringElement, 1, 0)
+	stmt := parseSource(t, stringElement, 1, 0, FlagNoNativeElement)
 	var element StringElement
 	var ok bool
 
@@ -36,7 +37,7 @@ func TestTransformToStringElement(t *testing.T) {
 }
 
 func TestTransformToNumberElement(t *testing.T) {
-	stmt := parseSource(t, numberElement, 1, 0)
+	stmt := parseSource(t, numberElement, 1, 0, FlagNoNativeElement)
 	var element NumberElement
 	var ok bool
 
@@ -46,7 +47,7 @@ func TestTransformToNumberElement(t *testing.T) {
 }
 
 func TestTransformToNativeElement(t *testing.T) {
-	stmt := parseSource(t, nativeElement, 1, 0)
+	stmt := parseSource(t, nativeElement, 1, 0, 0)
 	var element NativeElement
 	var ok bool
 
@@ -55,8 +56,20 @@ func TestTransformToNativeElement(t *testing.T) {
 	}
 }
 
+// TODO rename to TestTransformToPropertyElement
 func TestTransformToComponentElement(t *testing.T) {
-	stmt := parseSource(t, componentElement, 2, 1)
+	stmt := parseSource(t, componentElement, 2, 1, FlagNoNativeElement)
+	var element PropertyElement
+	var ok bool
+
+	if element, ok = stmt.Element.(PropertyElement); !ok {
+		t.Fatalf("expected %v got %v", reflect.TypeOf(element), reflect.TypeOf(stmt.Element))
+	}
+}
+
+// TODO rename to TestTransformToComponentElement
+func TestTransformToInstanceElement(t *testing.T) {
+	stmt := parseSource(t, instanceElement, 2, 1, FlagNoNativeElement)
 	var element ComponentElement
 	var ok bool
 
@@ -65,36 +78,47 @@ func TestTransformToComponentElement(t *testing.T) {
 	}
 }
 
-func TestTransformToInstanceElement(t *testing.T) {
-	stmt := parseSource(t, instanceElement, 2, 1)
-	var element InstanceElement
-	var ok bool
-
-	if element, ok = stmt.Element.(InstanceElement); !ok {
-		t.Fatalf("expected %v got %v", reflect.TypeOf(element), reflect.TypeOf(stmt.Element))
-	}
-}
-
-func parseSource(t *testing.T, source []byte, decls int, targetDecl int) Stmt {
+func parseSource(t *testing.T, src []byte, decls int, targetDecl int, flag Flag) Stmt {
 	t.Helper()
 
-	toks := token.Scan(source, "test.teml")
+	file := source.File{
+		Path:    "test.teml",
+		Name:    "test",
+		Content: src,
+	}
+
+	toks := token.ScanInput(file)
 	astp := past.ParseFile(toks)
+	for _, err := range astp.Errors {
+		t.Error(err)
+	}
 	if astp.HasError() {
 		t.Fatal("source parser failed unexpected")
 	}
 
 	astt := ParseFile(astp)
+	for _, err := range astt.Errors() {
+		t.Error(err)
+	}
 	if astt.HasError() {
-		t.Fatal("source transpiler failed unexpected")
+		t.Fatal("ast parser failed unexpected")
 	}
 
-	renv := ResolveFile(astt)
+	renv := ResolveFile(astt, flag)
+	for _, err := range astt.Errors() {
+		t.Error(err)
+	}
 	if astt.HasError() {
-		t.Fatal("source transpiler failed unexpected")
+		t.Fatal("ast resolver failed unexpected")
 	}
 
-	_ = TypecheckFile(astt, renv)
+	_ = TypecheckFile(astt, renv, flag)
+	for _, err := range astt.Errors() {
+		t.Error(err)
+	}
+	if astt.HasError() {
+		t.Fatal("ast resolver failed unexpected")
+	}
 
 	if l := len(astt.Declarations); l != decls {
 		t.Fatalf("expected %d declarations got %d", decls, l)

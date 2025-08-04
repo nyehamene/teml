@@ -8,6 +8,7 @@ import (
 	past "github.com/eml-lang/teml/ast"
 	gen "github.com/eml-lang/teml/codegen/go/generator"
 	ast "github.com/eml-lang/teml/codegen/go/transpiler"
+	"github.com/eml-lang/teml/internal/source"
 	"github.com/eml-lang/teml/token"
 	tast "github.com/eml-lang/teml/transpiler"
 )
@@ -16,7 +17,12 @@ import (
 var content []byte
 
 func TestDebug(t *testing.T) {
-	tfile := token.Scan(content, "test.teml", token.PreserveComment|token.ReduceAlloc)
+	tsrc := source.File{
+		Path:    "test.teml",
+		Name:    "test",
+		Content: content,
+	}
+	tfile := token.ScanInput(tsrc, token.PreserveComment|token.ReduceAlloc)
 	pfile := past.ParseFile(tfile)
 
 	for _, err := range pfile.Errors {

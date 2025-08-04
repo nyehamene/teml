@@ -1,17 +1,33 @@
 (package p "views")
 
+; testdata format
+; ex: lookup <scope> <name> <fqn>
+
 (document D [fst: A, snd: B]
-  (fst)
-  (snd))
+  ;lookup D A valid.A
+  ;lookup D B valid.B
+
+  (fst)  ;lookup D fst valid.D.fst
+  (snd)) ;lookup D snd valid.D.snd
 
 (component A [name: String, other: B]
-  (name {id: name})
+  ;lookup A String String
+  ;lookup A B valid.B
+
+  (name {id: name}) ;lookup A name valid.A.name
+
   (other {id: name})
-  (div {id: name}
-    (name)))
+  ;lookup A other valid.A.other
+  ;lookup A name valid.A.name
+
+  (div {id: name} ;lookup A div <native>.div
+    (name)))      ;lookup A name valid.A.name
 
 (component B []
-  (div))
+  (div)) ;lookup B div <native>.div
 
 (component C []
-  (A [name: "string"]))
+  (A [name: "string"])
+  ;lookup C A valid.A
+  ;lookup A name valid.A.name
+  ) 

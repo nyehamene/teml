@@ -8,4 +8,5 @@
 (component D [p: Bool])
 (component E [p: (enum "one" "two")])
 (component F [] (B [p: "foo"]))
+(component G [] (p))
 

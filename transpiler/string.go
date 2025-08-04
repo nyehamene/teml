@@ -24,28 +24,6 @@ func (t BuiltinType) String() string {
 		return "Number"
 	case TypeString:
 		return "String"
-	case TypeUnchecked:
-		return "<unchecked>"
-	}
-	panic("Unreachable")
-}
-
-func (e ResolutionError) String() string {
-	switch e {
-	case ErrUndeclared:
-		return "Undeclared var"
-	case ErrDuplicateDeclaration:
-		return "Duplicate declaration"
-	}
-	panic("Unreachable")
-}
-
-func (e TypeError) String() string {
-	switch e {
-	case ErrUndefined:
-		return "Undefined"
-	case ErrRecursiveDefinition:
-		return "Undefined self"
 	}
 	panic("Unreachable")
 }

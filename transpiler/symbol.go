@@ -9,11 +9,7 @@ func (NativeElementType) symbol() {}
 func (TypePackage) symbol()       {}
 func (TypeDeclaration) symbol()   {}
 func (TypeEnum) symbol()          {}
-func (TypeVar) symbol()           {}
-
-type TypeVar struct {
-	Type Symbol
-}
+func (PropertySymbol) symbol()    {}
 
 type TypePackage struct {
 	Path String
@@ -24,8 +20,9 @@ type TypeEnum struct {
 }
 
 type TypeDeclaration struct {
-	Kind DeclarationKind
-	Name string
+	Kind   DeclarationKind
+	Name   string
+	TypeId string
 }
 
 type DeclarationKind int
@@ -42,5 +39,20 @@ const (
 	TypeBool BuiltinType = iota
 	TypeNumber
 	TypeString
-	TypeUnchecked
 )
+
+type TypeSymbol interface {
+	Symbol
+	typeSymbol()
+}
+
+func (BuiltinType) typeSymbol()       {}
+func (NativeElementType) typeSymbol() {}
+func (TypePackage) typeSymbol()       {}
+func (TypeDeclaration) typeSymbol()   {}
+func (TypeEnum) typeSymbol()          {}
+func (PropertySymbol) typeSymbol()    {}
+
+type PropertySymbol struct {
+	Type TypeSymbol
+}

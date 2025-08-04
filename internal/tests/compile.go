@@ -11,10 +11,11 @@ type CompilationStage int
 type CompilationOption func(*CompilationContext)
 
 const (
-	StageParsed CompilationStage = iota
+	StageTokenized CompilationStage = iota
+	StageParsed
 	StageTransformed
 	StageResolved
-	StageTypechecked
+	StageTypeChecked
 	StageGenerated
 )
 
@@ -32,7 +33,7 @@ func NewCompilationContext(opts ...CompilationOption) CompilationContext {
 	ctx := CompilationContext{
 		name:          "<unnamed>",
 		stage:         StageParsed,
-		resultHandler: func(string, string) error { return nil },
+		resultHandler: func(string, CompilationStage, any) error { return nil },
 		errhandler:    func(*testing.T, CompilationStage, bool, ErrorSeq) bool { return true },
 		resolverFlag:  0,
 		tokenizerFlag: 0,
