@@ -56,8 +56,8 @@ func (t *typechecker) transformElementByTagType(ident Var, element genericElemen
 				Body:       element.Body,
 			}
 		} else {
-			// TODO typecheck parameters
 			// TODO fail if body is not empty
+			t.typecheckElementParameter(t.env.names, element)
 			transformedTo = ComponentElement{
 				Tag:        element.Tag,
 				Parameters: element.Parameter,
@@ -89,6 +89,135 @@ func (t *typechecker) transformElementByTagType(ident Var, element genericElemen
 	}
 
 	return transformedTo
+}
+
+func (t *typechecker) typecheckElementParameter(env NameEnv, element genericElement) {
+	tag, ok := t.getName(element.Tag)
+	if !ok {
+		// TODO replace Var{} below with the tag ident
+		t.addError(ErrInvalidElementTag, Var{})
+	}
+
+	resolvedTagName, ok := env.LookupName(tag.Name)
+	if !ok {
+		t.addError(ErrUndeclared, tag)
+	}
+
+	resolvedEnv, ok := env.LookupNameEnv(resolvedTagName)
+	if !ok {
+		t.addError(ErrNamespaceNotfound, tag)
+	}
+
+	for _, p := range element.Parameter {
+		t.typecheckComponentElementParameter(resolvedEnv, p)
+	}
+}
+
+func (t *typechecker) getName(expr Expr) (Var, bool) {
+	switch node := expr.(type) {
+	case MemberAccess:
+		// objName, ok := r.getName(node.Object)
+		// if !ok {
+		// 	return "", false
+		// }
+
+		// resolvedObjName, ok := env.LookupName(objName)
+		// if !ok {
+		// 	return "", false
+		// }
+
+		// objEnv, ok := env.LookupNameEnv(resolvedObjName)
+		// if !ok {
+		// 	return "", false
+		// }
+
+		// resolvedName, ok := objEnv.LookupName(node.Member.Name)
+		// if !ok {
+		// 	return "", false
+		// }
+
+		// return resolvedName, true
+		// TODO TDB
+		return Var{}, false
+
+	case Var:
+		return node, true
+
+	default:
+		return Var{}, false
+	}
+}
+
+func (t *typechecker) typecheckComponentElementParameter(env NameEnv, p KeyVal) {
+	resolvedKey, ok := env.LookupName(p.Key.Name)
+	if !ok {
+		t.addError(ErrUndeclared, p.Key)
+		return
+	}
+
+	keyType, ok := t.lookupType(resolvedKey)
+	if !ok {
+		t.addError(ErrUndeclaredType, p.Key)
+		return
+	}
+
+	propertyType, ok := keyType.(PropertySymbol)
+	if !ok {
+		t.addError(ErrUnexpectedPropertyType, p.Key)
+	}
+
+	valueType, ok := t.getExprType(env, p.Value)
+	if !ok {
+		t.addError(ErrUndeclaredType, p.Key)
+		return
+	}
+
+	if ok := t.matchType(propertyType.Type, valueType); !ok {
+		t.addError(ErrTypeMismatch, p.Key)
+	}
+}
+
+func (t *typechecker) getExprType(env NameEnv, expr Expr) (TypeSymbol, bool) {
+	switch node := expr.(type) {
+	case CondExpr:
+		// TODO tbd
+		return nil, false
+	case Enum:
+		// TODO tbd
+		return nil, false
+	case IFExpr:
+		// TODO tbd
+		return nil, false
+	case MemberAccess:
+		// TODO tbd
+		return nil, false
+	case Bool:
+		return TypeBool, true
+	case Number:
+		return TypeNumber, true
+	case String:
+		return TypeString, true
+	case Var:
+		resolvedName, ok := env.LookupName(node.Name)
+		if !ok {
+			return nil, false
+		}
+		exprType, ok := t.lookupType(resolvedName)
+		if !ok {
+			return nil, false
+		}
+
+		return exprType, true
+	default:
+		panic(fmt.Sprintf("unexpected ast.Expr: %#v", node))
+	}
+}
+
+func (t *typechecker) matchType(t1, t2 TypeSymbol) bool {
+	if t1 == t2 {
+		return true
+	}
+	return false
 }
 
 func (t *typechecker) getElementTagType(ident Var, elementIdent Var) TypeSymbol {

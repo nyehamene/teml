@@ -1,9 +1,9 @@
 package ast
 
 import (
-	"embed"
 	"fmt"
 	"strings"
+	"testing"
 
 	"github.com/eml-lang/teml/ast"
 	"github.com/eml-lang/teml/internal/source"

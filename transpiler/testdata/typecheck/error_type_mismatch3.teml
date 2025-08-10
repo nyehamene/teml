@@ -1,0 +1,6 @@
+(package p "views")
+
+(component A [value: Bool])
+
+(component B []
+  (A [value: 100]))

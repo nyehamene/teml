@@ -9,6 +9,9 @@ const (
 	ErrNamespaceNotfound
 	ErrRecursiveDefinition
 	ErrInvalidElementTag
+	ErrUndeclaredType
+	ErrTypeMismatch
+	ErrUnexpectedPropertyType
 )
 
 func (e SymbolError) Error() string {

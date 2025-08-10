@@ -278,6 +278,7 @@ func (t *typechecker) typecheckElement(decl Var, node Element) Element {
 	panic(fmt.Sprintf("Unreachable: %v", reflect.TypeOf(node)))
 }
 
+// TODO replace with getExprType
 func (t *typechecker) typecheckExpr(decl Var, expr Expr) {
 	switch tt := expr.(type) {
 	case String, Number, Bool:
@@ -418,6 +419,10 @@ func (t *typechecker) addError(errkind error, node Var) {
 
 	case ErrInvalidElementTag:
 		msg := fmt.Sprintf("type mismatch: element tag is not a component/element: %v (%d, %d)", name, line, col)
+		err = perrors.Error{Message: msg}
+
+	case ErrTypeMismatch:
+		msg := fmt.Sprintf("type mismatch: %v (%d, %d)", name, line, col)
 		err = perrors.Error{Message: msg}
 
 	default:

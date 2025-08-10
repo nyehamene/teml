@@ -1,0 +1,6 @@
+(package p "views")
+
+(component A [s: String, n: Number, b: Bool])
+
+(component B []
+  (A [s: "foo", b: true]))
