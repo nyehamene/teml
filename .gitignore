@@ -1,3 +1,5 @@
+# vscode debug file
+__debug*
 teml-*
 
 # Generated files
