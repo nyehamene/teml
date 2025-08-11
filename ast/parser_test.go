@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/eml-lang/teml/ast"
+	"github.com/eml-lang/teml/internal/source"
 	"github.com/eml-lang/teml/token"
 )
 
@@ -91,23 +92,13 @@ func TestParse_short_valid(t *testing.T) {
 	for i, src := range valid {
 		t.Logf("(%d) %s", i, src)
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-
-			tokens := token.Scan([]byte(src), "test.teml")
-
-			for _, tok := range tokens.Tokens {
-				if tok.Kind == token.Invalid {
-					t.Error("Parser emitted an invalid token without failing")
-				}
-			}
-
-			file := ast.ParseFile(tokens)
-
+			fsrc := source.NewFile("valid.teml", []byte(src))
+			file := ast.ParseFile(fsrc)
 			for _, err := range file.Errors {
 				t.Error(err)
 			}
-
 			if file.HasError() {
-				t.Error("Parser failed unexpectedly")
+				t.Fatal("parser failed unexpectedly")
 			}
 		})
 	}
@@ -169,14 +160,9 @@ func TestParse_short_invalid(t *testing.T) {
 		t.Logf("(%d) %s", i, src)
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 
-			tokens := token.Scan([]byte(src), "test.teml", token.PreserveComment)
+			fsrc := source.NewFile("invalid.teml", []byte(src))
 			goterrmsgs := map[string]string{}
-
-			file := ast.ParseFile(tokens, token.ExitOnError)
-
-			if !file.HasError() {
-				t.Error("Parser succeeded unexpectedly")
-			}
+			file := ast.ParseFile(fsrc, token.PreserveComment, token.ExitOnError)
 
 			// collect error messages
 			for _, err := range file.Errors {
@@ -186,8 +172,7 @@ func TestParse_short_invalid(t *testing.T) {
 			}
 
 			checkedAtLeastOneError := false
-
-			for e := range getErrorMessagesFromComment(tokens) {
+			for e := range getErrorMessagesFromComment(file.Comments) {
 				got := goterrmsgs[e.key]
 				if expected := e.value; expected != got {
 					t.Errorf("expected %s but got %s", expected, got)
@@ -202,6 +187,7 @@ func TestParse_short_invalid(t *testing.T) {
 	}
 }
 
+// Deprecated: remove associated test
 var valid_count = []string{
 	`(document [a: A, b: B, c: C]) ;document_property: 3`,
 	`(document [] (div {a: true, b: false, c: 100})) ;document_attribute: 3`,
@@ -222,19 +208,19 @@ var valid_count = []string{
 	"(component F [] (div \"one\" --one\n (one))) ;nested: 3",
 }
 
+// Deprecated: best done in the type checker
 func TestValidCounting(t *testing.T) {
 	for i, src := range valid_count {
 		t.Log(src)
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 
-			tokens := token.Scan([]byte(src), "test.teml", token.PreserveComment)
-			file := ast.ParseFile(tokens)
-
+			fsrc := source.NewFile("counting.teml", []byte(src))
+			file := ast.ParseFile(fsrc, token.PreserveComment)
 			if file.HasError() {
-				t.Error("parser failed unexpectedly")
+				t.Fatal("parser failed unexpectedly")
 			}
 
-			for e := range getCountFromComment(tokens) {
+			for e := range getCountFromComment(file.Comments) {
 				document := false
 
 				switch e.key {
@@ -300,6 +286,35 @@ func TestValidCounting(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPreserveComment(t *testing.T) {
+	sourcecode := `(package p "views") ;; preserve comment`
+	srcfile := source.NewFile("test.teml", []byte(sourcecode))
+
+	t.Run("preserve comment when token.PreserveComment flag is given", func(t *testing.T) {
+		const expectedComments = 1
+		const expectedComment = ";; preserve comment"
+
+		file := ast.ParseFile(srcfile, token.PreserveComment)
+		if got := len(file.Comments); got != expectedComments {
+			t.Fatalf("expected %d comment(s) got %d", expectedComments, got)
+		}
+
+		cmt := file.Comments[0].Text
+		if cmt != expectedComment {
+			t.Fatalf("expected comment %q got %q", expectedComment, cmt)
+		}
+	})
+
+	t.Run("do not preserve comment if token.PreserveComment flag is not given", func(t *testing.T) {
+		const expectedComments = 0
+
+		file := ast.ParseFile(srcfile)
+		if got := len(file.Comments); got != expectedComments {
+			t.Fatalf("expected %d comment(s) got %d", expectedComments, got)
+		}
+	})
 }
 
 func getFirstAttributesAttributes(f *ast.File, document bool) ([]ast.Attribute, bool) {
@@ -386,15 +401,10 @@ type entry[T any] struct {
 	value T
 }
 
-func getCountFromComment(f *token.File) iter.Seq[entry[int]] {
+func getCountFromComment(cmts []ast.Comment) iter.Seq[entry[int]] {
 	return func(yield func(entry[int]) bool) {
-		for tok := range getKinds(f, token.Comment) {
-			cmt, ok := f.Text(tok)
-			if !ok {
-				continue
-			}
-
-			for estr := range getEntriesFromString(cmt) {
+		for _, cmt := range cmts {
+			for estr := range getEntriesFromString(cmt.Text) {
 
 				count, err := strconv.Atoi(estr.value)
 				if err != nil {
@@ -412,32 +422,13 @@ func getCountFromComment(f *token.File) iter.Seq[entry[int]] {
 	}
 }
 
-func getErrorMessagesFromComment(f *token.File) iter.Seq[entry[string]] {
+func getErrorMessagesFromComment(cmts []ast.Comment) iter.Seq[entry[string]] {
 	return func(yield func(entry[string]) bool) {
-		for tok := range getKinds(f, token.Comment) {
-			cmt, ok := f.Text(tok)
-			if !ok {
-				continue
-			}
-
-			for e := range getEntriesFromString(cmt) {
+		for _, cmt := range cmts {
+			for e := range getEntriesFromString(cmt.Text) {
 				if !yield(e) {
 					break
 				}
-			}
-		}
-	}
-}
-
-func getKinds(f *token.File, kind token.Kind) iter.Seq[token.Token] {
-	return func(yield func(token.Token) bool) {
-		for _, tok := range f.Tokens {
-			if tok.Kind != kind {
-				continue
-			}
-
-			if !yield(tok) {
-				break
 			}
 		}
 	}

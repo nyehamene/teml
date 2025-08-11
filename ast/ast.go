@@ -171,6 +171,12 @@ type MemberAccess struct {
 	Member Var
 }
 
+type Comment struct {
+	Text string
+	Line int
+	Col  int
+}
+
 type String string
 type StringTemplate string
 type Number int

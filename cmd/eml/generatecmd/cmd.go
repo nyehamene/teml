@@ -45,8 +45,9 @@ func Generate(args Arguments) error {
 		return err
 	}
 
-	toks := token.Scan(buf, file, token.ReduceAlloc|token.PreserveComment)
-	astp := parser.ParseFile(toks)
+	fsrc := source.NewFile(file, buf)
+	toks := token.ScanInput(fsrc, token.ReduceAlloc|token.PreserveComment)
+	astp := parser.ParseFile0(toks)
 	for _, errast := range astp.Errors {
 		err = errors.Join(errast)
 	}

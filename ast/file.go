@@ -1,7 +1,10 @@
 package ast
 
 import (
+	"fmt"
+
 	"github.com/eml-lang/teml/internal/errors"
+	"github.com/eml-lang/teml/internal/source"
 	"github.com/eml-lang/teml/token"
 )
 
@@ -13,6 +16,7 @@ type File struct {
 	Usings     []Using
 	Components []Component
 	Errors     []errors.Error
+	Comments   []Comment
 }
 
 func (p *File) HasError() bool {
@@ -23,7 +27,8 @@ func (p *File) HasDocument() bool {
 	return p.Document.IsNamed() || len(p.Document.Properties) > 0 || len(p.Document.Children) > 0
 }
 
-func ParseFile(toks *token.File, flags ...token.Flag) *File {
+// Deprecated: use ParseFile(source.File, ...token.Flag) instead
+func ParseFile0(toks *token.File, flags ...token.Flag) *File {
 	var flag token.Flag
 
 	for _, f := range flags {
@@ -37,6 +42,42 @@ func ParseFile(toks *token.File, flags ...token.Flag) *File {
 		flag: flag,
 		dst:  file,
 	}
+	p.parse(flag)
+	return p.dst
+}
+
+func ParseFile(src source.File, flags ...token.Flag) *File {
+	var flag token.Flag
+	for _, f := range flags {
+		flag |= f
+	}
+
+	toks := token.ScanInput(src, flag)
+	file := parseFile(toks, flag)
+
+	// preserve comment
+	if flag&token.PreserveComment != 0 {
+		for _, tok := range toks.Tokens {
+			if tok.Kind != token.Comment {
+				continue
+			}
+			text, ok := toks.Text(tok)
+			if !ok {
+				fmt.Printf("Could not get comment text for %#v\n", tok)
+				continue
+			}
+			line, col := toks.Line(tok)
+			cmt := Comment{Text: text, Line: line, Col: col}
+			file.Comments = append(file.Comments, cmt)
+		}
+	}
+
+	return file
+}
+
+func parseFile(toks *token.File, flag token.Flag) *File {
+	file := &File{Name: toks.Name}
+	p := parser{src: toks, flag: flag, dst: file}
 	p.parse(flag)
 	return p.dst
 }

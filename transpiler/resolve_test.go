@@ -18,7 +18,7 @@ func TestResolverValid(t *testing.T) {
 	}
 
 	toks := token.ScanInput(src, token.PreserveComment)
-	p_ast := ast.ParseFile(toks)
+	p_ast := ast.ParseFile0(toks)
 	for _, err := range p_ast.Errors {
 		t.Error(err)
 	}
