@@ -1,7 +1,6 @@
 package generatecmd
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,16 +8,11 @@ import (
 
 	"github.com/eml-lang/teml/cmd/eml/cmd"
 	"github.com/eml-lang/teml/internal/assert"
-	"github.com/eml-lang/teml/internal/flags"
 	"github.com/eml-lang/teml/internal/source"
 	"github.com/eml-lang/teml/token"
 
-	parser "github.com/eml-lang/teml/ast"
 	codegen "github.com/eml-lang/teml/codegen/go/generator"
 	gotranspiler "github.com/eml-lang/teml/codegen/go/transpiler"
-	transpiler "github.com/eml-lang/teml/transpiler"
-
-	"github.com/eml-lang/teml/token"
 )
 
 type Arguments struct {
@@ -29,11 +23,8 @@ type Arguments struct {
 }
 
 func Generate(args Arguments) error {
-	var buf []byte
-	var err error
-
-	w := args.Writer
-	file := args.File
+	w := args.Stdout
+	file := args.Path
 	root := args.Root
 
 	f, err := root.Open(file)
@@ -46,57 +37,16 @@ func Generate(args Arguments) error {
 		}
 	}()
 
-	buf, err = io.ReadAll(f)
+	buf, err := io.ReadAll(f)
 	if err != nil {
 		return err
 	}
 
-	fsrc := source.NewFile(file, buf)
-	toks := token.ScanInput(fsrc, flags.ReduceAlloc|flags.PreserveComment)
-	astp := parser.ParseFile0(toks)
-	for _, errast := range astp.Errors {
-		err = errors.Join(errast)
-	}
-	if astp.HasError() {
-		return err
-	}
-
-	astf := transpiler.ParseFile0(astp)
-	for _, errast := range astf.Errors() {
-		err = errors.Join(errast)
-	}
-	if astf.HasError() {
-		return err
-	}
-
-	envr := transpiler.ResolveFile0(astf)
-	for _, errast := range astf.Errors() {
-		err = errors.Join(errast)
-	}
-	if astf.HasError() {
-		return err
-	}
-
-	_ = transpiler.TypecheckFile0(astf, envr)
-	for _, errast := range astf.Errors() {
-		err = errors.Join(errast)
-	}
-	if astf.HasError() {
-		return err
-	}
-
-	gofile := gotranspiler.Parse(astf)
-	err = codegen.Generate(w, &gofile)
+	src := source.NewFile(file, buf)
+	err = codegen.Generate(w, src)
 	if err != nil {
 		return err
 	}
-
-	testdata := getTestDataFromComment(toks)
-	err = writeTestFile(args.TestWriter, testdata)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

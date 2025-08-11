@@ -1,6 +1,8 @@
 package ast
 
 import (
+	"github.com/eml-lang/teml/internal/flags"
+	"github.com/eml-lang/teml/internal/source"
 	ast "github.com/eml-lang/teml/transpiler"
 )
 
@@ -27,7 +29,19 @@ const (
 	NameFuncComponentStruct   = "funccomponent"
 )
 
-func Parse(fsrc *ast.File) File {
+// Deprecated: use Parse instead
+//
+// ParseFile0
+func ParseFile0(src *ast.File) File {
+	return parseFile(src)
+}
+
+func ParseFile(src source.File, cflags ...flags.Flag) File {
+	astfile, _ := ast.TypecheckFile(src, cflags...)
+	return parseFile(astfile)
+}
+
+func parseFile(fsrc *ast.File) File {
 	psr := parser{}
 
 	pkg := psr.parsePackage(fsrc.Package)

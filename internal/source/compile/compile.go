@@ -187,8 +187,8 @@ continueStage:
 
 	case StageGenerated:
 		w := strings.Builder{}
-		generatedFile = gotranspiler.Parse(transpiledFile)
-		err := codegen.Generate(&w, &generatedFile)
+		generatedFile = gotranspiler.ParseFile0(transpiledFile)
+		err := codegen.Generate0(&w, &generatedFile)
 		if err != nil {
 			ctx.errhandler(currentStage, newErrorSeq1(err))
 			return nil

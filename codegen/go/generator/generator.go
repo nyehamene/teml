@@ -8,12 +8,17 @@ import (
 
 	html "github.com/eml-lang/teml/codegen/go/source"
 	ast "github.com/eml-lang/teml/codegen/go/transpiler"
+	"github.com/eml-lang/teml/internal/flags"
+	"github.com/eml-lang/teml/internal/source"
 )
 
 const NameRenderContextVar = "rdc"
 const NamedRenderCopyMethod = "copyRenderContextWithAttributes"
 
-func Generate(stdout io.Writer, fsrc *ast.File) error {
+// Deprecated: use Generate instead
+//
+// Generate0
+func Generate0(stdout io.Writer, fsrc *ast.File) error {
 	w := html.NewSourceWriter(stdout)
 	g := generator{
 		writer: w,
@@ -51,6 +56,57 @@ func Generate(stdout io.Writer, fsrc *ast.File) error {
 
 	for _, m := range fsrc.Methods {
 		if err := g.writeRenderMethod(fsrc.RenderContext, m); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func Generate(stdout io.Writer, src source.File, cflags ...flags.Flag) error {
+	file := ast.ParseFile(src, cflags...)
+	return generateFile(stdout, &file)
+}
+
+func generateFile(stdout io.Writer, src *ast.File) error {
+
+	w := html.NewSourceWriter(stdout)
+	g := generator{
+		writer: w,
+	}
+
+	if err := g.writePackage(&src.Package); err != nil {
+		return err
+	}
+
+	for _, i := range src.Imports {
+		if err := g.writeImport(i); err != nil {
+			return err
+		}
+	}
+
+	if err := g.writeRenderContextStruct(src.RenderContext); err != nil {
+		return err
+	}
+
+	if err := g.writeComponentInterface(); err != nil {
+		return nil
+	}
+
+	for _, st := range src.Structs {
+		if err := g.writeStruct(st); err != nil {
+			return err
+		}
+	}
+
+	for _, gvar := range src.GlobalVars {
+		if err := g.writeGlobalVar(gvar); err != nil {
+			return err
+		}
+	}
+
+	for _, m := range src.Methods {
+		if err := g.writeRenderMethod(src.RenderContext, m); err != nil {
 			return err
 		}
 	}
