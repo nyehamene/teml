@@ -3,7 +3,6 @@ package ast
 import (
 	"fmt"
 
-	"github.com/eml-lang/teml/internal/errors"
 	"github.com/eml-lang/teml/internal/source"
 	"github.com/eml-lang/teml/token"
 
@@ -17,7 +16,7 @@ type File struct {
 	Imports    []Import
 	Usings     []Using
 	Components []Component
-	Errors     []errors.Error
+	Errors     []error
 	Comments   []Comment
 }
 

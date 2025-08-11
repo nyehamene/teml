@@ -1,7 +1,6 @@
 package ast
 
 import (
-	"errors"
 	"strings"
 )
 
@@ -55,11 +54,10 @@ func bindBuiltInTypeNames(env NameEnv) {
 	bindSame(env, TypeNumber.String())
 }
 
-func bindBuiltInTypes(env TypeEnv) error {
-	errbool := env.BindType(TypeBool, TypeBool.String())
-	errstr := env.BindType(TypeString, TypeString.String())
-	errnum := env.BindType(TypeNumber, TypeNumber.String())
-	return errors.Join(errbool, errstr, errnum)
+func bindBuiltInTypes(env TypeEnv) {
+	env.BindType(TypeBool, TypeBool.String())
+	env.BindType(TypeString, TypeString.String())
+	env.BindType(TypeNumber, TypeNumber.String())
 }
 
 func bindNativeElementNames(env NameEnv) {
@@ -77,7 +75,7 @@ func bindNativeElementTypes(env TypeEnv) {
 		}
 		// NOTE since binding has IsType field, might want to check
 		// if the resolved name is actually a type and report an error.
-		_ = env.BindType(element, resolved.ID)
+		env.BindType(element, resolved.ID)
 	}
 }
 
@@ -147,7 +145,7 @@ func (e *TypeEnv) LookupType(name string) (TypeSymbol, bool) {
 	return sym, true
 }
 
-func (e *TypeEnv) BindType(sym TypeSymbol, name string) error {
+func (e *TypeEnv) BindType(sym TypeSymbol, name string) {
 	_, existing := e.LookupType(name)
 	if existing {
 		// TODO compare the existing type with the new type
@@ -156,5 +154,4 @@ func (e *TypeEnv) BindType(sym TypeSymbol, name string) error {
 
 	// bind if does not already exist
 	e.types[name] = sym
-	return nil
 }

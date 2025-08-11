@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
-	perrors "github.com/eml-lang/teml/internal/errors"
-	cflags "github.com/eml-lang/teml/internal/flags"
+	"github.com/eml-lang/teml/internal/flags"
+	"github.com/eml-lang/teml/internal/source"
 )
 
 type typechecker struct {
@@ -14,26 +14,46 @@ type typechecker struct {
 	env TypeEnv
 }
 
-func TypecheckFile(src *File, names NameEnv, flags ...cflags.Flag) TypeEnv {
-	var flag cflags.Flag
-
-	for _, f := range flags {
+// Deprecated: use TypecheckFile instead
+//
+// TypecheckFile0
+func TypecheckFile0(src *File, names NameEnv, cflags ...flags.Flag) TypeEnv {
+	var flag flags.Flag
+	for _, f := range cflags {
 		flag |= f
 	}
 
 	env := newTypeEnv(names)
-
-	if flag&cflags.FlagNoBuiltinType == 0 {
-		_ = bindBuiltInTypes(env)
+	if flag&flags.FlagNoBuiltinType == 0 {
+		bindBuiltInTypes(env)
 	}
-
-	if flag&cflags.FlagNoNativeElement == 0 {
+	if flag&flags.FlagNoNativeElement == 0 {
 		bindNativeElementTypes(env)
 	}
 
 	t := typechecker{src: src, env: env}
 	t.typecheckFile()
 	return env
+}
+
+func TypecheckFile(src source.File, cflags ...flags.Flag) (*File, TypeEnv) {
+	var flag flags.Flag
+	for _, f := range cflags {
+		flag |= f
+	}
+
+	file, bindings := ResolveFile(src, cflags...)
+	env := newTypeEnv(bindings)
+	if flag&flags.FlagNoBuiltinType == 0 {
+		bindBuiltInTypes(env)
+	}
+	if flag&flags.FlagNoNativeElement == 0 {
+		bindNativeElementTypes(env)
+	}
+
+	t := typechecker{src: file, env: env}
+	t.typecheckFile()
+	return file, env
 }
 
 func (t *typechecker) typecheckFile() {
@@ -85,10 +105,7 @@ func (t *typechecker) typecheckPackage() {
 	}
 	path := t.src.Package.Path
 	pkgtype := TypePackage{Path: path}
-	if err := t.bind(pkgtype, resolvedName.ID); err != nil {
-		t.addError(err, t.src.Package.Ident)
-		return
-	}
+	t.bind(pkgtype, resolvedName.ID)
 }
 
 func (t *typechecker) typecheckDeclaration() {
@@ -121,10 +138,7 @@ func (t *typechecker) typecheckDeclaration() {
 			TypeId: resolvedName.ID,
 		}
 
-		if err := t.bind(sym, resolvedName.ID); err != nil {
-			t.addError(err, node)
-			return
-		}
+		t.bind(sym, resolvedName.ID)
 	}
 }
 
@@ -193,10 +207,7 @@ func (t *typechecker) typecheckProperty(decl Var, sym Symbol, property Property)
 		return
 	}
 
-	if err := t.bind(propertyType, resolvedName.ID); err != nil {
-		t.addError(err, property.Ident)
-		return
-	}
+	t.bind(propertyType, resolvedName.ID)
 }
 
 func (t *typechecker) validateEnumConstants(cons []EnumConstant) Symbol {
@@ -378,12 +389,8 @@ func (t *typechecker) typecheckKeyVals(decl Var, kvs []KeyVal) {
 	}
 }
 
-func (t *typechecker) bind(sym TypeSymbol, name string) error {
-	err := t.env.BindType(sym, name)
-	if err != nil {
-		return err
-	}
-	return nil
+func (t *typechecker) bind(sym TypeSymbol, name string) {
+	t.env.BindType(sym, name)
 }
 
 func (t *typechecker) lookupName(name string) (Binding, bool) {
@@ -403,26 +410,22 @@ func (t *typechecker) lookupNameEnv(binding string) (NameEnv, bool) {
 }
 
 func (t *typechecker) addError(errkind error, node Var) {
-	var err perrors.Error
+	var err error
 	name := node.Name
 	line, col := node.Line, node.Col
 
 	switch errkind {
 	case ErrUndeclared:
-		msg := fmt.Sprintf("undeclared type %v (%d, %d)", name, line, col)
-		err = perrors.Error{Message: msg}
+		err = fmt.Errorf("undeclared type %v (%d, %d)", name, line, col)
 
 	case ErrRecursiveDefinition:
-		msg := fmt.Sprintf("recursive type %v (%d, %d)", name, line, col)
-		err = perrors.Error{Message: msg}
+		err = fmt.Errorf("recursive type %v (%d, %d)", name, line, col)
 
 	case ErrInvalidElementTag:
-		msg := fmt.Sprintf("type mismatch: element tag is not a component/element: %v (%d, %d)", name, line, col)
-		err = perrors.Error{Message: msg}
+		err = fmt.Errorf("type mismatch: element tag is not a component/element: %v (%d, %d)", name, line, col)
 
 	case ErrTypeMismatch:
-		msg := fmt.Sprintf("type mismatch: %v (%d, %d)", name, line, col)
-		err = perrors.Error{Message: msg}
+		err = fmt.Errorf("type mismatch: %v (%d, %d)", name, line, col)
 
 	default:
 		panic(fmt.Sprintf("unexpected error: \"%v\" at %s (%d, %d)", errkind, name, line, col))

@@ -77,7 +77,7 @@ func Generate(args Arguments) error {
 		return err
 	}
 
-	_ = transpiler.TypecheckFile(astf, envr)
+	_ = transpiler.TypecheckFile0(astf, envr)
 	for _, errast := range astf.Errors() {
 		err = errors.Join(errast)
 	}

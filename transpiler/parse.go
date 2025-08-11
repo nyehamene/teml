@@ -27,7 +27,7 @@ func parseFile(src *ast.File) *File {
 	f := &File{
 		Name:     src.Name,
 		Comments: src.Comments,
-		errs:     []error{},
+		errs:     src.Errors,
 	}
 
 	f.Package = p.parsePackage()

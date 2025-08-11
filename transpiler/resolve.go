@@ -7,8 +7,7 @@ import (
 
 	"github.com/eml-lang/teml/internal/source"
 
-	perrors "github.com/eml-lang/teml/internal/errors"
-	cflags "github.com/eml-lang/teml/internal/flags"
+	"github.com/eml-lang/teml/internal/flags"
 )
 
 type resolver struct {
@@ -18,9 +17,9 @@ type resolver struct {
 
 // Deprecated: use ParseFile instead
 // ResolveFile0
-func ResolveFile0(src *File, flags ...cflags.Flag) NameEnv {
-	var flag cflags.Flag
-	for _, f := range flags {
+func ResolveFile0(src *File, cflags ...flags.Flag) NameEnv {
+	var flag flags.Flag
+	for _, f := range cflags {
 		flag |= f
 	}
 
@@ -28,26 +27,26 @@ func ResolveFile0(src *File, flags ...cflags.Flag) NameEnv {
 	return e
 }
 
-func ResolveFile(src source.File, flags ...cflags.Flag) NameEnv {
-	var flag cflags.Flag
-	for _, f := range flags {
+func ResolveFile(src source.File, cflags ...flags.Flag) (*File, NameEnv) {
+	var flag flags.Flag
+	for _, f := range cflags {
 		flag |= f
 	}
 
-	file := ParseFile(src, flags...)
-	e := resolveFile(file, flag)
-	return e
+	file := ParseFile(src, cflags...)
+	env := resolveFile(file, flag)
+	return file, env
 }
 
-func resolveFile(f *File, flag cflags.Flag) NameEnv {
+func resolveFile(f *File, flag flags.Flag) NameEnv {
 	rootEnv := newNameRootEnv()
-	if flag&cflags.FlagNoBuiltinType == 0 {
+	if flag&flags.FlagNoBuiltinType == 0 {
 		bindBuiltInTypeNames(rootEnv)
 	}
 
 	namespaceEnv := rootEnv.Nest(f.Name)
 	nativeEnv := namespaceEnv.Nest(nsNative)
-	if flag&cflags.FlagNoNativeElement == 0 {
+	if flag&flags.FlagNoNativeElement == 0 {
 		bindNativeElementNames(nativeEnv)
 	}
 
@@ -86,7 +85,7 @@ func resolveFile(f *File, flag cflags.Flag) NameEnv {
 		}
 
 		var declEnv NameEnv
-		if flag&cflags.FlagNoNativeElement == 0 {
+		if flag&flags.FlagNoNativeElement == 0 {
 			declEnv = nativeEnv.Nest(resolvedName.ID)
 		} else {
 			declEnv = namespaceEnv.Nest(resolvedName.ID)
@@ -254,23 +253,20 @@ func (t *resolver) getQualifiedName(v Var) string {
 }
 
 func (t *resolver) addError(errkind error, n Var) {
-	var err perrors.Error
+	var err error
 	name := n.Name
 	line := n.Line
 	col := n.Col
 
 	switch errkind {
 	case ErrUndeclared:
-		msg := fmt.Sprintf("undeclared var %v (%d, %d)", name, line, col)
-		err = perrors.Error{Message: msg}
+		err = fmt.Errorf("undeclared var %v (%d, %d)", name, line, col)
 
 	case ErrDuplicateDeclaration:
-		msg := fmt.Sprintf("duplicate var %v (%d, %d)", name, line, col)
-		err = perrors.Error{Message: msg}
+		err = fmt.Errorf("duplicate var %v (%d, %d)", name, line, col)
 
 	case ErrNamespaceNotfound:
-		msg := fmt.Sprintf("undeclared type %v (%d, %d)", name, line, col)
-		err = perrors.Error{Message: msg}
+		err = fmt.Errorf("undeclared type %v (%d, %d)", name, line, col)
 
 	default:
 		panic(fmt.Errorf("unexpected error %v at %s (%d, %d)", errkind, name, line, col))

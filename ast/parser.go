@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/eml-lang/teml/internal/assert"
-	"github.com/eml-lang/teml/internal/errors"
 	"github.com/eml-lang/teml/token"
 
 	cflags "github.com/eml-lang/teml/internal/flags"
@@ -1127,7 +1126,7 @@ func (p *parser) addError(msg string) {
 	tok := p.peek()
 
 	if tok == eof {
-		p.dst.Errors = append(p.dst.Errors, errors.Error{Message: errors.Desc(msg)})
+		p.dst.Errors = append(p.dst.Errors, errdescString(msg))
 		return
 	}
 
@@ -1150,6 +1149,6 @@ func (p *parser) addError(msg string) {
 		col = lst - position.Start
 	}
 
-	err := errors.Error{Line: line, Col: col, Message: errors.Desc(msg)}
-	p.dst.Errors = append(p.dst.Errors, err)
+	err := asterror{Message: msg, Line: line, Col: col}
+	p.dst.Errors = append(p.dst.Errors, errdesc(err))
 }

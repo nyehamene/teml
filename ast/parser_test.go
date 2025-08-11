@@ -166,7 +166,7 @@ func TestParse_short_invalid(t *testing.T) {
 
 			// collect error messages
 			for _, err := range file.Errors {
-				for e := range getEntriesFromString(err.Message) {
+				for e := range getEntriesFromString(err.Error()) {
 					goterrmsgs[e.key] = e.value
 				}
 			}
@@ -174,8 +174,11 @@ func TestParse_short_invalid(t *testing.T) {
 			checkedAtLeastOneError := false
 			for e := range getErrorMessagesFromComment(file.Comments) {
 				got := goterrmsgs[e.key]
-				if expected := e.value; expected != got {
-					t.Errorf("expected %s but got %s", expected, got)
+				expected := e.value
+				if !strings.HasPrefix(got, expected) {
+					// if expected := e.value; expected != got {
+					t.Errorf("expected %s", expected)
+					t.Errorf("got %s", got)
 				}
 				checkedAtLeastOneError = true
 			}
