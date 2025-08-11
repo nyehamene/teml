@@ -55,7 +55,7 @@ func Generate(args Arguments) error {
 		return err
 	}
 
-	astf := transpiler.ParseFile(astp)
+	astf := transpiler.ParseFile0(astp)
 	for _, errast := range astf.Errors() {
 		err = errors.Join(errast)
 	}

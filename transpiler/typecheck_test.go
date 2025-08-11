@@ -63,7 +63,7 @@ func runTypechecker(t *testing.T, testdata string, succeedOnError bool) {
 		t.Fatalf("parser failed unexpectedly")
 	}
 
-	t_ast := ParseFile(p_ast)
+	t_ast := ParseFile0(p_ast)
 	for _, err := range t_ast.Errors() {
 		t.Error(err)
 	}

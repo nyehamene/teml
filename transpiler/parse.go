@@ -5,19 +5,29 @@ import (
 	"reflect"
 
 	"github.com/eml-lang/teml/ast"
+	"github.com/eml-lang/teml/internal/source"
+	"github.com/eml-lang/teml/token"
 )
 
-func ParseFile(src *ast.File) *File {
+// Deprecated: use ParseFile instead
+// ParseFile0
+func ParseFile0(src *ast.File) *File {
 	f := parseFile(src)
 	return f
+}
+
+func ParseFile(src source.File, flags ...token.Flag) *File {
+	file := ast.ParseFile(src, flags...)
+	return parseFile(file)
 }
 
 func parseFile(src *ast.File) *File {
 	p := &parser{src: src}
 
 	f := &File{
-		Name: src.Name,
-		errs: []error{},
+		Name:     src.Name,
+		Comments: src.Comments,
+		errs:     []error{},
 	}
 
 	f.Package = p.parsePackage()

@@ -21,6 +21,7 @@ type File struct {
 	Usings       []Using
 	Declarations []Declaration
 	errs         []error
+	Comments     []Comment
 }
 
 func (f *File) HasError() bool {

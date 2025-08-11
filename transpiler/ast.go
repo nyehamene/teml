@@ -196,6 +196,8 @@ type Attr struct {
 	Entries []KeyVal
 }
 
+type Comment = ast.Comment
+
 func (s String) Value() string {
 	// strip double quoted
 	return string(s[1 : len(s)-1])
