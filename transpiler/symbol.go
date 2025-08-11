@@ -9,7 +9,6 @@ func (NativeElementType) symbol() {}
 func (TypePackage) symbol()       {}
 func (TypeDeclaration) symbol()   {}
 func (TypeEnum) symbol()          {}
-func (PropertySymbol) symbol()    {}
 
 type TypePackage struct {
 	Path String
@@ -51,8 +50,3 @@ func (NativeElementType) typeSymbol() {}
 func (TypePackage) typeSymbol()       {}
 func (TypeDeclaration) typeSymbol()   {}
 func (TypeEnum) typeSymbol()          {}
-func (PropertySymbol) typeSymbol()    {}
-
-type PropertySymbol struct {
-	Type TypeSymbol
-}

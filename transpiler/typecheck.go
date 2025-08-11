@@ -65,7 +65,7 @@ func (t *typechecker) typecheckFile() {
 			return
 		}
 
-		resolvedType, ok := t.lookupType(resolvedName)
+		resolvedType, ok := t.lookupType(resolvedName.ID)
 		if !ok {
 			t.addError(ErrUndeclared, typeIdent)
 			return
@@ -84,7 +84,7 @@ func (t *typechecker) typecheckPackage() {
 	}
 	path := t.src.Package.Path
 	pkgtype := TypePackage{Path: path}
-	if err := t.bind(pkgtype, resolvedName); err != nil {
+	if err := t.bind(pkgtype, resolvedName.ID); err != nil {
 		t.addError(err, t.src.Package.Ident)
 		return
 	}
@@ -117,10 +117,10 @@ func (t *typechecker) typecheckDeclaration() {
 		sym := TypeDeclaration{
 			Kind:   kind,
 			Name:   node.Name,
-			TypeId: resolvedName,
+			TypeId: resolvedName.ID,
 		}
 
-		if err := t.bind(sym, resolvedName); err != nil {
+		if err := t.bind(sym, resolvedName.ID); err != nil {
 			t.addError(err, node)
 			return
 		}
@@ -144,7 +144,7 @@ func (t *typechecker) typecheckProperty(decl Var, sym Symbol, property Property)
 			return
 		}
 
-		propertyType, ok = t.lookupType(resolvedName)
+		propertyType, ok = t.lookupType(resolvedName.ID)
 		if !ok {
 			t.addError(ErrUndeclared, typeNode)
 			return
@@ -181,7 +181,7 @@ func (t *typechecker) typecheckProperty(decl Var, sym Symbol, property Property)
 		panic("unreachable")
 	}
 
-	propertyEnv, ok := t.lookupNameEnv(resolvedEnvName)
+	propertyEnv, ok := t.lookupNameEnv(resolvedEnvName.ID)
 	if !ok {
 		panic("unreachable")
 	}
@@ -192,8 +192,7 @@ func (t *typechecker) typecheckProperty(decl Var, sym Symbol, property Property)
 		return
 	}
 
-	resolvedSymbol := PropertySymbol{propertyType}
-	if err := t.bind(resolvedSymbol, resolvedName); err != nil {
+	if err := t.bind(propertyType, resolvedName.ID); err != nil {
 		t.addError(err, property.Ident)
 		return
 	}
@@ -311,7 +310,7 @@ func (t *typechecker) typecheckTagExpr(ident Var, expr Expr) {
 		return
 	}
 
-	env, ok := t.lookupNameEnv(resolvedIdentName)
+	env, ok := t.lookupNameEnv(resolvedIdentName.ID)
 	if !ok {
 		t.addError(ErrUndeclared, ident)
 		return
@@ -325,7 +324,7 @@ func (t *typechecker) typecheckTagExpr(ident Var, expr Expr) {
 			return
 		}
 
-		tagtype, ok := t.lookupType(resolvedTag)
+		tagtype, ok := t.lookupType(resolvedTag.ID)
 		if !ok {
 			t.addError(ErrUndeclared, node)
 			return
@@ -344,7 +343,6 @@ func (t *typechecker) typecheckTagExpr(ident Var, expr Expr) {
 func (t *typechecker) typecheckTag(sym TypeSymbol) error {
 	switch typeNode := sym.(type) {
 	case NativeElementType:
-	case PropertySymbol:
 
 	case TypeEnum, TypePackage:
 		return ErrInvalidElementTag
@@ -387,20 +385,20 @@ func (t *typechecker) bind(sym TypeSymbol, name string) error {
 	return nil
 }
 
-func (t *typechecker) lookupName(name string) (string, bool) {
+func (t *typechecker) lookupName(name string) (Binding, bool) {
 	return t.env.names.LookupName(name)
 }
 
-func (t *typechecker) lookupNonNativeName(name string) (string, bool) {
+func (t *typechecker) lookupNonNativeName(name string) (Binding, bool) {
 	return t.env.names.LookupNonNativeName(name)
 }
 
-func (t *typechecker) lookupType(name string) (TypeSymbol, bool) {
-	return t.env.LookupType(name)
+func (t *typechecker) lookupType(binding string) (TypeSymbol, bool) {
+	return t.env.LookupType(binding)
 }
 
-func (t *typechecker) lookupNameEnv(name string) (NameEnv, bool) {
-	return t.env.names.LookupNameEnv(name)
+func (t *typechecker) lookupNameEnv(binding string) (NameEnv, bool) {
+	return t.env.names.LookupNameEnv(binding)
 }
 
 func (t *typechecker) addError(errkind error, node Var) {

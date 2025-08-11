@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func (t *typechecker) transformElement(decl Var, node genericElement) Element {
+func (t *typechecker) transformElement(compIdent Var, node genericElement) Element {
 	var transformedTo Element = node
 
 	switch element := node.Tag.(type) {
@@ -14,8 +14,8 @@ func (t *typechecker) transformElement(decl Var, node genericElement) Element {
 		panic("unreachable")
 
 	case Var:
-		tagtype := t.getElementTagType(decl, element)
-		transformedTo = t.transformElementByTagType(element, node, tagtype, false)
+		resolvedTagType, resolvedTag := t.getElementTagType(compIdent, element)
+		transformedTo = t.transformElementByTagType(compIdent, node, resolvedTagType, resolvedTag)
 
 	case MemberAccess:
 		// TODO transform element with member access tag expression
@@ -26,10 +26,11 @@ func (t *typechecker) transformElement(decl Var, node genericElement) Element {
 	return transformedTo
 }
 
-func (t *typechecker) transformElementByTagType(ident Var, element genericElement, tag TypeSymbol, property bool) Element {
+// func (t *typechecker) transformElementByTagType(ident Var, element genericElement, tag TypeSymbol, property bool) Element
+func (t *typechecker) transformElementByTagType(ident Var, element genericElement, tagtype TypeSymbol, tag Binding) Element {
 	var transformedTo Element = element
 
-	switch tagtype := tag.(type) {
+	switch tagtype := tagtype.(type) {
 	case TypePackage:
 		t.addError(ErrInvalidElementTag, ident)
 
@@ -44,24 +45,21 @@ func (t *typechecker) transformElementByTagType(ident Var, element genericElemen
 			Body:       element.Body,
 		}
 
-	case PropertySymbol:
-		transformedTo = t.transformElementByTagType(ident, element, tagtype.Type, true)
-
 	case TypeDeclaration:
-		if property {
-			// TODO fail if parameter is not empty
-			transformedTo = PropertyElement{
-				Tag:        element.Tag,
-				Attributes: element.Attributes,
-				Body:       element.Body,
-			}
-		} else {
+		if tag.IsType {
 			// TODO fail if body is not empty
 			t.typecheckElementParameter(t.env.names, element)
 			transformedTo = ComponentElement{
 				Tag:        element.Tag,
 				Parameters: element.Parameter,
 				Attributes: element.Attributes,
+			}
+		} else {
+			// TODO fail if parameter is not empty
+			transformedTo = PropertyElement{
+				Tag:        element.Tag,
+				Attributes: element.Attributes,
+				Body:       element.Body,
 			}
 		}
 
@@ -103,7 +101,7 @@ func (t *typechecker) typecheckElementParameter(env NameEnv, element genericElem
 		t.addError(ErrUndeclared, tag)
 	}
 
-	resolvedEnv, ok := env.LookupNameEnv(resolvedTagName)
+	resolvedEnv, ok := env.LookupNameEnv(resolvedTagName.ID)
 	if !ok {
 		t.addError(ErrNamespaceNotfound, tag)
 	}
@@ -155,15 +153,10 @@ func (t *typechecker) typecheckComponentElementParameter(env NameEnv, p KeyVal) 
 		return
 	}
 
-	keyType, ok := t.lookupType(resolvedKey)
+	keyType, ok := t.lookupType(resolvedKey.ID)
 	if !ok {
 		t.addError(ErrUndeclaredType, p.Key)
 		return
-	}
-
-	propertyType, ok := keyType.(PropertySymbol)
-	if !ok {
-		t.addError(ErrUnexpectedPropertyType, p.Key)
 	}
 
 	valueType, ok := t.getExprType(env, p.Value)
@@ -172,7 +165,7 @@ func (t *typechecker) typecheckComponentElementParameter(env NameEnv, p KeyVal) 
 		return
 	}
 
-	if ok := t.matchType(propertyType.Type, valueType); !ok {
+	if ok := t.matchType(keyType, valueType); !ok {
 		t.addError(ErrTypeMismatch, p.Key)
 	}
 }
@@ -202,7 +195,7 @@ func (t *typechecker) getExprType(env NameEnv, expr Expr) (TypeSymbol, bool) {
 		if !ok {
 			return nil, false
 		}
-		exprType, ok := t.lookupType(resolvedName)
+		exprType, ok := t.lookupType(resolvedName.ID)
 		if !ok {
 			return nil, false
 		}
@@ -220,30 +213,33 @@ func (t *typechecker) matchType(t1, t2 TypeSymbol) bool {
 	return false
 }
 
-func (t *typechecker) getElementTagType(ident Var, elementIdent Var) TypeSymbol {
-	resolvedIdentName, ok := t.lookupName(ident.Name)
+func (t *typechecker) getElementTagType(compIdent Var, elementIdent Var) (TypeSymbol, Binding) {
+	resolvedComponent, ok := t.lookupName(compIdent.Name)
 	if !ok {
-		t.addError(ErrUndeclared, ident)
-		return nil
+		t.addError(ErrUndeclared, compIdent)
+		return nil, Binding{}
 	}
 
-	env, ok := t.lookupNameEnv(resolvedIdentName)
+	env, ok := t.lookupNameEnv(resolvedComponent.ID)
 	if !ok {
-		t.addError(ErrUndeclared, elementIdent)
-		return nil
+		// TODO include elementIdent (Binding)
+		t.addError(ErrUndeclared, compIdent)
+		return nil, Binding{}
 	}
 
-	resolvedElementName, ok := env.LookupName(elementIdent.Name)
+	resolvedElement, ok := env.LookupName(elementIdent.Name)
 	if !ok {
-		t.addError(ErrUndeclared, elementIdent)
-		return nil
+		// TODO include elementIdent (Binding)
+		t.addError(ErrUndeclared, compIdent)
+		return nil, Binding{}
 	}
 
-	elementType, ok := t.lookupType(resolvedElementName)
+	resolvedType, ok := t.lookupType(resolvedElement.ID)
 	if !ok {
-		t.addError(ErrUndeclared, elementIdent)
-		return nil
+		// TODO include elementIdent (Binding)
+		t.addError(ErrUndeclared, compIdent)
+		return nil, Binding{}
 	}
 
-	return elementType
+	return resolvedType, resolvedElement
 }

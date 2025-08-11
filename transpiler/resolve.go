@@ -26,13 +26,11 @@ func ResolveFile(src *File, flags ...Flag) NameEnv {
 func resolveFile(f *File, flag Flag) NameEnv {
 	rootEnv := newRootNameEnv()
 	if flag&FlagNoBuiltinType == 0 {
-		if err := bindBuiltInTypeNames(rootEnv); err != nil {
-			panic("unreachable")
-		}
+		bindBuiltInTypeNames(rootEnv)
 	}
 
 	namespaceEnv := rootEnv.Nest(f.Name)
-	nativeEnv := namespaceEnv.Nest("<native>")
+	nativeEnv := namespaceEnv.Nest(nsNative)
 	if flag&FlagNoNativeElement == 0 {
 		bindNativeElementNames(nativeEnv)
 	}
@@ -73,9 +71,9 @@ func resolveFile(f *File, flag Flag) NameEnv {
 
 		var declEnv NameEnv
 		if flag&FlagNoNativeElement == 0 {
-			declEnv = nativeEnv.Nest(resolvedName)
+			declEnv = nativeEnv.Nest(resolvedName.ID)
 		} else {
-			declEnv = namespaceEnv.Nest(resolvedName)
+			declEnv = namespaceEnv.Nest(resolvedName.ID)
 		}
 
 		r.resolveProperties(declEnv, props)
@@ -88,7 +86,8 @@ func resolveFile(f *File, flag Flag) NameEnv {
 }
 
 func (t *resolver) resolvePackage(env NameEnv) {
-	t.bindVar(env, t.src.Package.Ident)
+	const isType = false
+	t.bindVar(env, t.src.Package.Ident, isType)
 }
 
 func (t *resolver) resolveDeclarations(env NameEnv) []Declaration {
@@ -100,11 +99,12 @@ func (t *resolver) resolveDeclarations(env NameEnv) []Declaration {
 }
 
 func (r *resolver) resolveDeclaration(env NameEnv, rec Declaration) Declaration {
+	const isType = true
 	switch t := rec.(type) {
 	case Document:
-		r.bindVar(env, t.Ident)
+		r.bindVar(env, t.Ident, isType)
 	case Component:
-		r.bindVar(env, t.Ident)
+		r.bindVar(env, t.Ident, isType)
 	default:
 		panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(rec)))
 	}
@@ -112,9 +112,10 @@ func (r *resolver) resolveDeclaration(env NameEnv, rec Declaration) Declaration 
 }
 
 func (t *resolver) resolveProperties(env NameEnv, props []Property) {
+	const isType = false
 	for _, p := range props {
 		t.resolvePropertyType(env, p.Type)
-		t.bindVar(env, p.Ident)
+		t.bindVar(env, p.Ident, isType)
 	}
 }
 
@@ -165,9 +166,10 @@ func (t *resolver) resolveAttributes(env NameEnv, attrs []Attr) {
 }
 
 func (r *resolver) resolveEntries(env, keyEnv NameEnv, attrs []KeyVal) {
+	const isType = false
 	for i := range attrs {
 		entry := attrs[i]
-		r.bindVar(keyEnv, entry.Key)
+		r.bindVar(keyEnv, entry.Key, isType)
 
 		switch t := entry.Value.(type) {
 		case Var:
@@ -221,10 +223,12 @@ func (t *resolver) resolveVar(env NameEnv, v Var) {
 	}
 }
 
-func (t *resolver) bindVar(env NameEnv, v Var) {
+func (t *resolver) bindVar(env NameEnv, v Var, isType bool) {
 	fqn := t.getQualifiedName(v)
-	if err := env.BindName(v.Name, fqn); err != nil {
-		t.addError(err, v)
+	if isType {
+		env.BindTypeName(v.Name, fqn)
+	} else {
+		env.BindName(v.Name, fqn)
 	}
 }
 

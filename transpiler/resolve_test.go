@@ -50,9 +50,9 @@ func TestResolverValid(t *testing.T) {
 			continue
 		}
 
-		resolvedEnv, ok := r_env.LookupNameEnv(resolvedScope)
+		resolvedEnv, ok := r_env.LookupNameEnv(resolvedScope.ID)
 		if !ok {
-			t.Errorf("could not resolve env %q", resolvedScope)
+			t.Errorf("could not resolve env %q", resolvedScope.ID)
 			continue
 		}
 
@@ -62,9 +62,9 @@ func TestResolverValid(t *testing.T) {
 			continue
 		}
 
-		if binding.FQN != resolvedName {
+		if binding.FQN != resolvedName.ID {
 			t.Errorf("expected %q", binding.FQN)
-			t.Errorf("got %q", resolvedName)
+			t.Errorf("got %q", resolvedName.ID)
 		}
 	}
 }

@@ -11,7 +11,7 @@ type NameEnv struct {
 	Name     string
 	parent   *NameEnv
 	children map[string]NameEnv
-	names    map[string]string
+	names    map[string]Binding
 }
 
 type TypeEnv struct {
@@ -19,7 +19,12 @@ type TypeEnv struct {
 	types map[string]TypeSymbol
 }
 
-func newRootNameEnv() NameEnv {
+type Binding struct {
+	ID     string
+	IsType bool
+}
+
+func newNameRootEnv() NameEnv {
 	return newNameEnv(nil, "")
 }
 
@@ -28,7 +33,7 @@ func newNameEnv(parent *NameEnv, name string) NameEnv {
 		Name:     name,
 		parent:   parent,
 		children: map[string]NameEnv{},
-		names:    map[string]string{},
+		names:    map[string]Binding{},
 	}
 	return env
 }
@@ -40,18 +45,14 @@ func newTypeEnv(root NameEnv) TypeEnv {
 	}
 }
 
-func bindSame(env NameEnv, name string) error {
-	if err := env.BindName(name, name); err != nil {
-		return err
-	}
-	return nil
+func bindSame(env NameEnv, name string) {
+	env.BindName(name, name)
 }
 
-func bindBuiltInTypeNames(env NameEnv) error {
-	errbool := bindSame(env, TypeBool.String())
-	errstr := bindSame(env, TypeString.String())
-	errnum := bindSame(env, TypeNumber.String())
-	return errors.Join(errbool, errstr, errnum)
+func bindBuiltInTypeNames(env NameEnv) {
+	bindSame(env, TypeBool.String())
+	bindSame(env, TypeString.String())
+	bindSame(env, TypeNumber.String())
 }
 
 func bindBuiltInTypes(env TypeEnv) error {
@@ -64,17 +65,19 @@ func bindBuiltInTypes(env TypeEnv) error {
 func bindNativeElementNames(env NameEnv) {
 	for _, element := range NativeElements {
 		fqn := nsNative + "." + element.Tag
-		_ = env.BindName(element.Tag, fqn)
+		env.BindName(element.Tag, fqn)
 	}
 }
 
 func bindNativeElementTypes(env TypeEnv) {
 	for _, element := range NativeElements {
-		fqn, ok := env.names.LookupName(element.Tag)
+		resolved, ok := env.names.LookupName(element.Tag)
 		if !ok {
 			panic("unreachable")
 		}
-		_ = env.BindType(element, fqn)
+		// NOTE since binding has IsType field, might want to check
+		// if the resolved name is actually a type and report an error.
+		_ = env.BindType(element, resolved.ID)
 	}
 }
 
@@ -90,31 +93,36 @@ func (e *NameEnv) Nest(name string) NameEnv {
 	return env
 }
 
-func (e *NameEnv) BindName(name, fqn string) error {
-	e.names[name] = fqn
-	return nil
+func (e *NameEnv) BindName(name, fqn string) {
+	binding := Binding{ID: fqn, IsType: false}
+	e.names[name] = binding
 }
 
-func (e *NameEnv) LookupName(name string) (string, bool) {
+func (e *NameEnv) BindTypeName(name, fqn string) {
+	binding := Binding{ID: fqn, IsType: true}
+	e.names[name] = binding
+}
+
+func (e *NameEnv) LookupName(name string) (Binding, bool) {
 	resolved, ok := e.names[name]
 	if !ok {
 		if e.parent != nil {
 			return e.parent.LookupName(name)
 		}
-		return "", false
+		return Binding{}, false
 	}
 	return resolved, true
 }
 
-func (e *NameEnv) LookupNonNativeName(name string) (string, bool) {
+func (e *NameEnv) LookupNonNativeName(name string) (Binding, bool) {
 	resolved, ok := e.LookupName(name)
 	if !ok {
 		if e.parent != nil {
 			return e.parent.LookupNonNativeName(name)
 		}
-		return "", false
+		return Binding{}, false
 	}
-	if strings.Contains(resolved, nsNative) {
+	if strings.Contains(resolved.ID, nsNative) {
 		return e.parent.LookupNonNativeName(name)
 	}
 	return resolved, true
