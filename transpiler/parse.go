@@ -5,8 +5,8 @@ import (
 	"reflect"
 
 	"github.com/eml-lang/teml/ast"
+	"github.com/eml-lang/teml/internal/flags"
 	"github.com/eml-lang/teml/internal/source"
-	"github.com/eml-lang/teml/token"
 )
 
 // Deprecated: use ParseFile instead
@@ -16,7 +16,7 @@ func ParseFile0(src *ast.File) *File {
 	return f
 }
 
-func ParseFile(src source.File, flags ...token.Flag) *File {
+func ParseFile(src source.File, flags ...flags.Flag) *File {
 	file := ast.ParseFile(src, flags...)
 	return parseFile(file)
 }

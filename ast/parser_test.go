@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/eml-lang/teml/ast"
+	"github.com/eml-lang/teml/internal/flags"
 	"github.com/eml-lang/teml/internal/source"
-	"github.com/eml-lang/teml/token"
 )
 
 var valid = []string{
@@ -162,7 +162,7 @@ func TestParse_short_invalid(t *testing.T) {
 
 			fsrc := source.NewFile("invalid.teml", []byte(src))
 			goterrmsgs := map[string]string{}
-			file := ast.ParseFile(fsrc, token.PreserveComment, token.ExitOnError)
+			file := ast.ParseFile(fsrc, flags.PreserveComment, flags.ExitOnError)
 
 			// collect error messages
 			for _, err := range file.Errors {
@@ -215,7 +215,7 @@ func TestValidCounting(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 
 			fsrc := source.NewFile("counting.teml", []byte(src))
-			file := ast.ParseFile(fsrc, token.PreserveComment)
+			file := ast.ParseFile(fsrc, flags.PreserveComment)
 			if file.HasError() {
 				t.Fatal("parser failed unexpectedly")
 			}
@@ -296,7 +296,7 @@ func TestPreserveComment(t *testing.T) {
 		const expectedComments = 1
 		const expectedComment = ";; preserve comment"
 
-		file := ast.ParseFile(srcfile, token.PreserveComment)
+		file := ast.ParseFile(srcfile, flags.PreserveComment)
 		if got := len(file.Comments); got != expectedComments {
 			t.Fatalf("expected %d comment(s) got %d", expectedComments, got)
 		}

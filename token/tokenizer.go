@@ -5,6 +5,8 @@ import (
 
 	"github.com/eml-lang/teml/internal/assert"
 	"github.com/eml-lang/teml/internal/source"
+
+	cmd "github.com/eml-lang/teml/internal/flags"
 )
 
 type tokenizer struct {
@@ -12,18 +14,9 @@ type tokenizer struct {
 	cur int
 }
 
-type Flag uint
-
-const (
-	PreserveNewline Flag = 1 << iota
-	PreserveComment
-	ExitOnError
-	HideErrors
-	ReduceAlloc
-)
-
-// Deprecated: TODO remove function
-func Scan(buf []byte, name string, flags ...Flag) *File {
+// Deprecated:
+// Scan
+func Scan(buf []byte, name string, flags ...cmd.Flag) *File {
 	input := source.File{
 		Path:    name,
 		Name:    path.Base(name),
@@ -32,9 +25,9 @@ func Scan(buf []byte, name string, flags ...Flag) *File {
 	return ScanInput(input, flags...)
 }
 
-func ScanInput(src source.File, flags ...Flag) *File {
+func ScanInput(src source.File, flags ...cmd.Flag) *File {
 	var file *File
-	var flag Flag
+	var flag cmd.Flag
 
 	for _, f := range flags {
 		flag |= f
@@ -42,7 +35,7 @@ func ScanInput(src source.File, flags ...Flag) *File {
 
 	buf := src.Content
 
-	if flag&ReduceAlloc != 0 {
+	if flag&cmd.ReduceAlloc != 0 {
 		lines, size := count(buf)
 		file = newFile(buf, src, size, lines)
 	} else {
@@ -74,7 +67,7 @@ func count(src []byte) (lines int, size int) {
 	return lines, size
 }
 
-func scan(f *File, flags Flag) {
+func scan(f *File, flags cmd.Flag) {
 	t := tokenizer{f: f}
 
 	for {
@@ -93,7 +86,7 @@ func scan(f *File, flags Flag) {
 		if kind == Newline {
 			f.addLine(start)
 
-			addLine := flags & PreserveNewline
+			addLine := flags & cmd.PreserveNewline
 			if addLine != 0 {
 				f.add(kind, pos)
 			}
@@ -101,7 +94,7 @@ func scan(f *File, flags Flag) {
 		}
 
 		if kind == Comment {
-			addComment := flags & PreserveComment
+			addComment := flags & cmd.PreserveComment
 			if addComment != 0 {
 				f.add(kind, pos)
 			}

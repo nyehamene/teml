@@ -1,12 +1,5 @@
 package ast
 
-type Flag uint
-
-const (
-	FlagNoNativeElement Flag = 1 << iota
-	FlagNoBuiltinType
-)
-
 type Pos struct {
 	Start int
 	End   int

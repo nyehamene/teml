@@ -5,17 +5,64 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/eml-lang/teml/internal/flags"
 	"github.com/eml-lang/teml/internal/source"
 	"github.com/eml-lang/teml/token"
 
 	past "github.com/eml-lang/teml/ast"
 )
 
-//go:embed testdata/transform/string_element.teml
-var stringElement []byte
+type testtable struct {
+	path                string
+	declCount           int
+	targetDeclIndex     int
+	targetStmtIndex     int
+	expectedElementType transpiler.Element
+	flag                flags.Flag
+}
 
-//go:embed testdata/transform/number_element.teml
-var numberElement []byte
+func TestTransform(t *testing.T) {
+	tests := []testtable{
+		{
+			path:                "./testdata/transform/string_element.teml",
+			declCount:           1,
+			targetDeclIndex:     0,
+			targetStmtIndex:     0,
+			expectedElementType: transpiler.StringElement{},
+			flag:                flags.FlagNoNativeElement,
+		},
+		{
+			path:                "./testdata/transform/number_element.teml",
+			declCount:           1,
+			targetDeclIndex:     0,
+			targetStmtIndex:     0,
+			expectedElementType: transpiler.NumberElement{},
+			flag:                flags.FlagNoNativeElement,
+		},
+		{
+			path:                "./testdata/transform/native_element.teml",
+			declCount:           1,
+			targetDeclIndex:     0,
+			targetStmtIndex:     0,
+			expectedElementType: transpiler.NativeElement{},
+		},
+		{
+			path:                "./testdata/transform/property_element.teml",
+			declCount:           2,
+			targetDeclIndex:     1,
+			targetStmtIndex:     0,
+			expectedElementType: transpiler.PropertyElement{},
+			flag:                flags.FlagNoNativeElement,
+		},
+		{
+			path:                "./testdata/transform/component_element.teml",
+			declCount:           2,
+			targetDeclIndex:     1,
+			targetStmtIndex:     0,
+			expectedElementType: transpiler.ComponentElement{},
+			flag:                flags.FlagNoNativeElement,
+		},
+	}
 
 //go:embed testdata/transform/native_element.teml
 var nativeElement []byte

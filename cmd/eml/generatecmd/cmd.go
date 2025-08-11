@@ -7,6 +7,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/eml-lang/teml/cmd/eml/cmd"
+	"github.com/eml-lang/teml/internal/assert"
+	"github.com/eml-lang/teml/internal/flags"
+	"github.com/eml-lang/teml/internal/source"
+	"github.com/eml-lang/teml/token"
+
 	parser "github.com/eml-lang/teml/ast"
 	codegen "github.com/eml-lang/teml/codegen/go/generator"
 	gotranspiler "github.com/eml-lang/teml/codegen/go/transpiler"
@@ -46,7 +52,7 @@ func Generate(args Arguments) error {
 	}
 
 	fsrc := source.NewFile(file, buf)
-	toks := token.ScanInput(fsrc, token.ReduceAlloc|token.PreserveComment)
+	toks := token.ScanInput(fsrc, flags.ReduceAlloc|flags.PreserveComment)
 	astp := parser.ParseFile0(toks)
 	for _, errast := range astp.Errors {
 		err = errors.Join(errast)
@@ -63,7 +69,7 @@ func Generate(args Arguments) error {
 		return err
 	}
 
-	envr := transpiler.ResolveFile(astf)
+	envr := transpiler.ResolveFile0(astf)
 	for _, errast := range astf.Errors() {
 		err = errors.Join(errast)
 	}

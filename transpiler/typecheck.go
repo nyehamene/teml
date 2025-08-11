@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	perrors "github.com/eml-lang/teml/internal/errors"
+	cflags "github.com/eml-lang/teml/internal/flags"
 )
 
 type typechecker struct {
@@ -13,8 +14,8 @@ type typechecker struct {
 	env TypeEnv
 }
 
-func TypecheckFile(src *File, names NameEnv, flags ...Flag) TypeEnv {
-	var flag Flag
+func TypecheckFile(src *File, names NameEnv, flags ...cflags.Flag) TypeEnv {
+	var flag cflags.Flag
 
 	for _, f := range flags {
 		flag |= f
@@ -22,11 +23,11 @@ func TypecheckFile(src *File, names NameEnv, flags ...Flag) TypeEnv {
 
 	env := newTypeEnv(names)
 
-	if flag&FlagNoBuiltinType == 0 {
+	if flag&cflags.FlagNoBuiltinType == 0 {
 		_ = bindBuiltInTypes(env)
 	}
 
-	if flag&FlagNoNativeElement == 0 {
+	if flag&cflags.FlagNoNativeElement == 0 {
 		bindNativeElementTypes(env)
 	}
 

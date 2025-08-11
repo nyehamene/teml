@@ -7,6 +7,8 @@ import (
 	"github.com/eml-lang/teml/internal/assert"
 	"github.com/eml-lang/teml/internal/errors"
 	"github.com/eml-lang/teml/token"
+
+	cflags "github.com/eml-lang/teml/internal/flags"
 )
 
 type errmessage = string
@@ -16,7 +18,7 @@ type parser struct {
 	src          *token.File
 	dst          *File
 	cur          int
-	flag         token.Flag
+	flag         cflags.Flag
 	templateKind templateKind
 }
 
@@ -29,7 +31,7 @@ var (
 	eof token.Token = token.Token{Kind: -1, Pos: -1}
 )
 
-func (p *parser) parse(flag token.Flag) {
+func (p *parser) parse(flag cflags.Flag) {
 	type Order int
 	const (
 		OrderNone Order = iota
@@ -44,7 +46,7 @@ func (p *parser) parse(flag token.Flag) {
 	for !p.eof() {
 		decl, ok := p.parseDeclaration()
 		if !ok {
-			if flag&token.ExitOnError != 0 {
+			if flag&cflags.ExitOnError != 0 {
 				return
 			}
 			continue

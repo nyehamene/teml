@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/eml-lang/teml/ast"
+	"github.com/eml-lang/teml/internal/flags"
 	"github.com/eml-lang/teml/internal/source"
 	"github.com/eml-lang/teml/token"
 )
@@ -17,7 +18,7 @@ func TestResolverValid(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	toks := token.ScanInput(src, token.PreserveComment)
+	toks := token.ScanInput(src, flags.PreserveComment)
 	p_ast := ast.ParseFile0(toks)
 	for _, err := range p_ast.Errors {
 		t.Error(err)
@@ -34,7 +35,7 @@ func TestResolverValid(t *testing.T) {
 		t.Fatal("transpiler failed unexpectedly")
 	}
 
-	r_env := ResolveFile(t_ast)
+	r_env := ResolveFile0(t_ast)
 	for _, err := range t_ast.Errors() {
 		t.Error(err)
 	}

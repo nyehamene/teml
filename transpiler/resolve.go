@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/eml-lang/teml/internal/source"
+
 	perrors "github.com/eml-lang/teml/internal/errors"
+	cflags "github.com/eml-lang/teml/internal/flags"
 )
 
 type resolver struct {
@@ -13,8 +16,10 @@ type resolver struct {
 	scopeName string
 }
 
-func ResolveFile(src *File, flags ...Flag) NameEnv {
-	var flag Flag
+// Deprecated: use ParseFile instead
+// ResolveFile0
+func ResolveFile0(src *File, flags ...cflags.Flag) NameEnv {
+	var flag cflags.Flag
 	for _, f := range flags {
 		flag |= f
 	}
@@ -23,15 +28,26 @@ func ResolveFile(src *File, flags ...Flag) NameEnv {
 	return e
 }
 
-func resolveFile(f *File, flag Flag) NameEnv {
-	rootEnv := newRootNameEnv()
-	if flag&FlagNoBuiltinType == 0 {
+func ResolveFile(src source.File, flags ...cflags.Flag) NameEnv {
+	var flag cflags.Flag
+	for _, f := range flags {
+		flag |= f
+	}
+
+	file := ParseFile(src, flags...)
+	e := resolveFile(file, flag)
+	return e
+}
+
+func resolveFile(f *File, flag cflags.Flag) NameEnv {
+	rootEnv := newNameRootEnv()
+	if flag&cflags.FlagNoBuiltinType == 0 {
 		bindBuiltInTypeNames(rootEnv)
 	}
 
 	namespaceEnv := rootEnv.Nest(f.Name)
 	nativeEnv := namespaceEnv.Nest(nsNative)
-	if flag&FlagNoNativeElement == 0 {
+	if flag&cflags.FlagNoNativeElement == 0 {
 		bindNativeElementNames(nativeEnv)
 	}
 
@@ -70,7 +86,7 @@ func resolveFile(f *File, flag Flag) NameEnv {
 		}
 
 		var declEnv NameEnv
-		if flag&FlagNoNativeElement == 0 {
+		if flag&cflags.FlagNoNativeElement == 0 {
 			declEnv = nativeEnv.Nest(resolvedName.ID)
 		} else {
 			declEnv = namespaceEnv.Nest(resolvedName.ID)

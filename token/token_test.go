@@ -4,6 +4,7 @@ import (
 	"iter"
 	"testing"
 
+	"github.com/eml-lang/teml/internal/flags"
 	"github.com/eml-lang/teml/token"
 	"github.com/google/go-cmp/cmp"
 )
@@ -143,7 +144,7 @@ func TestScan_newline(t *testing.T) {
 	`
 	expected := token.Newline
 
-	f := token.Scan([]byte(source), "test.teml", token.PreserveNewline)
+	f := token.Scan([]byte(source), "test.teml", flags.PreserveNewline)
 	kinds := getKinds(f.Tokens)
 
 	if len(kinds) == 0 {
@@ -244,7 +245,7 @@ func TestScan_comment(t *testing.T) {
 	source := "; howdy"
 	expected := token.Comment
 
-	f := token.Scan([]byte(source), "test.teml", token.PreserveComment)
+	f := token.Scan([]byte(source), "test.teml", flags.PreserveComment)
 	kinds := getKinds(f.Tokens)
 
 	if len(kinds) == 0 {
@@ -267,7 +268,7 @@ func TestScan_newline_after_string_line(t *testing.T) {
 		token.Newline,
 	}
 
-	f := token.Scan([]byte(source), "test.teml", token.PreserveNewline)
+	f := token.Scan([]byte(source), "test.teml", flags.PreserveNewline)
 	nl := getNewlines(f.Tokens)
 
 	if diff := cmp.Diff(expected, nl); diff != "" {
@@ -284,7 +285,7 @@ func TestScan_newline_after_comment(t *testing.T) {
 		token.Newline,
 	}
 
-	f := token.Scan([]byte(source), "test.teml", token.PreserveNewline)
+	f := token.Scan([]byte(source), "test.teml", flags.PreserveNewline)
 	nl := getKinds(f.Tokens)
 
 	if diff := cmp.Diff(expected, nl); diff != "" {

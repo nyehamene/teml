@@ -4,11 +4,9 @@ import (
 	_ "embed"
 	"testing"
 
+	"github.com/eml-lang/teml/internal/flags"
 	"github.com/eml-lang/teml/internal/source"
-	"github.com/eml-lang/teml/token"
-
-	parser "github.com/eml-lang/teml/ast"
-	transpiler "github.com/eml-lang/teml/transpiler"
+	"github.com/eml-lang/teml/internal/source/compile"
 )
 
 //go:embed app.teml
@@ -46,11 +44,35 @@ func TestScanParse(t *testing.T) {
 
 func BenchmarkScan(b *testing.B) {
 	for b.Loop() {
-		parseFile()
+		parseFile(ctx)
+	}
+}
+
+func BenchmarkScanReduceAllocTokenizer(b *testing.B) {
+	ctx := compile.NewCompilationContext(
+		compile.SetTokenizerFlag(flags.ReduceAlloc),
+		compile.SetErrorHandler(errhandler),
+	)
+	for b.Loop() {
+		parseFile(ctx)
+	}
+}
+
+func BenchmarkScanReduceAllocParser(b *testing.B) {
+	ctx := compile.NewCompilationContext(
+		compile.SetParserFlag(flags.ReduceAlloc),
+		compile.SetErrorHandler(errhandler),
+	)
+	for b.Loop() {
+		parseFile(ctx)
 	}
 }
 
 func BenchmarkScanReduceAlloc(b *testing.B) {
+	ctx := compile.NewCompilationContext(
+		compile.SetSourceFlag(flags.ReduceAlloc),
+		compile.SetErrorHandler(errhandler),
+	)
 	for b.Loop() {
 		parseFile()
 	}
