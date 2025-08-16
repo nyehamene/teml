@@ -1,3 +1,0 @@
-(package p "views")
-
-(document A [] (div {id: "one"} {id: "two"}))

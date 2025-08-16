@@ -1,5 +1,0 @@
-(package p "views")
-
-;; error: String is undeclared
-(document H [s: String])
-

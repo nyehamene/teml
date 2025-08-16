@@ -1,0 +1,58 @@
+package views
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+	"testing"
+	_ "embed"
+
+	"github.com/google/go-cmp/cmp"
+)
+
+//go:embed {{.Expected}}
+var expectedHTML string
+
+func TestRender(t *testing.T) {
+	data := {{.Data}}
+
+	w := strings.Builder{}
+
+	ctx := {{.ContextStructName -}} {
+		ctx: context.Background(),
+		writer: &w,
+	}
+
+	err := data. {{- .RenderMethodName -}} (ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outfile, err := os.Create("./output.html")
+	if err != nil {
+		panic(err)
+	}
+	defer func(){
+		if err := outfile.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	if _, err := io.WriteString(outfile, w.String()); err != nil {
+		panic(err)
+	}
+
+	expected := strings.TrimSpace(expectedHTML)
+	expected = strings.ReplaceAll(expected, "\n", "")
+
+	got := w.String()
+	got = strings.TrimSpace(got)
+	got = strings.ReplaceAll(got, "\n", "")
+
+	if diff := cmp.Diff(expected, got); diff != "" {
+		fmt.Println(got)
+		t.Error(diff)
+	}
+}

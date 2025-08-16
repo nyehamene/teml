@@ -1,7 +1,0 @@
-(package p "views")
-
-;;test:instance A{status: "ON"}
-(component A [status: (enum "ON" "OFF")]
-  (cond status
-    "ON": "Green"
-    "OFF": "Red"))

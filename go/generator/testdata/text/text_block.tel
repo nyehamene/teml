@@ -1,0 +1,7 @@
+(package pp "demo")
+
+;go_data TextBlock{}
+(component TextBlock []
+  -- line 1
+  -- line 2
+  )

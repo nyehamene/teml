@@ -1,5 +1,0 @@
-(package p "views")
-
-;;test:instance A{text: "Hello, World!"}
-(component A [text: String]
-  (text { id: "content" class: "text" }))

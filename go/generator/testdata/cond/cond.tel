@@ -1,0 +1,7 @@
+(package pp "demo")
+
+;go_data Cond{ user_mode: "A" }
+(component Cond [user_mode: (enum "A" "G")]
+  (cond user_mode
+    "A": "Admin"
+    "G": "Guest"))

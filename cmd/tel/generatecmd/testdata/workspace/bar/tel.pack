@@ -1,0 +1,3 @@
+package "github.com/tel-lang/bar"
+
+version "0.0.1"

@@ -1,0 +1,8 @@
+(package pp "demo")
+
+(component User [name: String]
+  (name))
+
+;go_data Component{}
+(component Component []
+  (Component [name: "Joh Doe"]))

@@ -1,86 +1,63 @@
-package main_test
+package tel_test
 
 import (
 	_ "embed"
+	"io"
+	"strings"
 	"testing"
 
-	"github.com/eml-lang/teml/internal/flags"
-	"github.com/eml-lang/teml/internal/source"
-	"github.com/eml-lang/teml/internal/source/compile"
+	"github.com/tel-lang/tel"
+	"github.com/tel-lang/tel/go/generator"
+	"github.com/tel-lang/tel/go/transpiler"
 )
 
-//go:embed app.teml
+//go:embed grammar/example/app.tel
 var examplefile []byte
 
-var sourceFile = source.File{
-	Path:    "test.teml",
-	Name:    "test",
-	Content: examplefile,
-}
-
-func TestScanParse(t *testing.T) {
-	toks := token.ScanInput(sourceFile)
-	for _, tok := range toks.Tokens {
-		if tok.Kind == token.Invalid {
-			t.Fatal()
-		}
-	}
-
-	astp := parser.ParseFile(toks)
-	for _, err := range astp.Errors {
-		t.Error(err.Message)
-	}
-
-	astn := transpiler.ParseFile(astp)
-	for _, err := range astn.Errors() {
-		t.Error(err)
-	}
-
-	transpiler.ResolveFile(astn)
-	for _, err := range astn.Errors() {
-		t.Error(err)
-	}
+func TestMain(t *testing.T) {
+	telFile := &strings.Builder{}
+	namespaceFile := &strings.Builder{}
+	files := tel.NewFileSet("test")
+	files.Add("app.tel", examplefile)
+	run(t, telFile, namespaceFile, files)
 }
 
 func BenchmarkScan(b *testing.B) {
+	telFile := &strings.Builder{}
+	namespaceFile := &strings.Builder{}
+	files := tel.NewFileSet("test")
+	files.Add("app.tel", examplefile)
+
 	for b.Loop() {
-		parseFile(ctx)
+		run(b, telFile, namespaceFile, files)
 	}
 }
 
 func BenchmarkScanReduceAllocTokenizer(b *testing.B) {
-	ctx := compile.NewCompilationContext(
-		compile.SetTokenizerFlag(flags.ReduceAlloc),
-		compile.SetErrorHandler(errhandler),
-	)
+	telFile := &strings.Builder{}
+	namespaceFile := &strings.Builder{}
+	files := tel.NewFileSet("test")
+	files.Add("app.tel", examplefile)
+
 	for b.Loop() {
-		parseFile(ctx)
+		run(b, telFile, namespaceFile, files)
 	}
 }
 
-func BenchmarkScanReduceAllocParser(b *testing.B) {
-	ctx := compile.NewCompilationContext(
-		compile.SetParserFlag(flags.ReduceAlloc),
-		compile.SetErrorHandler(errhandler),
-	)
-	for b.Loop() {
-		parseFile(ctx)
-	}
+type runner interface {
+	Helper()
+	Fail()
+	Error(...any)
+	Fatal(...any)
 }
 
-func BenchmarkScanReduceAlloc(b *testing.B) {
-	ctx := compile.NewCompilationContext(
-		compile.SetSourceFlag(flags.ReduceAlloc),
-		compile.SetErrorHandler(errhandler),
-	)
-	for b.Loop() {
-		parseFile()
-	}
-}
+func run(_ runner, tw, w io.Writer, fileset tel.FileSet) {
+	ctx := tel.NewContext()
+	src := transpiler.ParseFile(ctx, fileset)
 
-func parseFile() {
-	ft := token.ScanInput(sourceFile)
-	fa := parser.ParseFile(ft)
-	fn := transpiler.ParseFile(fa)
-	transpiler.ResolveFile(fn)
+	_ = generator.WriteTel(tw, src.Package)
+
+	for _, file := range src.Files {
+		_ = generator.WriteNamespace(w, file)
+	}
 }

@@ -1,8 +1,0 @@
-(package p "views")
-
-;;test:instance A{}
-(component A []
-  (B [name: "John", age: 100, admin: true]))
-
-(component B [name: String, age: Number, admin: Bool]
-  (name))

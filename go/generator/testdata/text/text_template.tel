@@ -1,0 +1,5 @@
+(package pp "demo")
+
+;go_data TextTemplate{ count: 2, singular: false }
+(component TextTemplate [count: Number, singular: Bool]
+  "There are \(count) colored boxes \(if singular "box" "boxes") on the table.")

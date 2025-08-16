@@ -1,0 +1,34 @@
+(package p "views")
+
+(import i "views/other")
+(import ii "views/other")
+
+(using card i)
+(using [container, box] ii)
+
+(enum Z [one two])
+
+(document Home [x: i.A, y: B, z: Z])
+
+(enum ZZ [a, b])
+
+(component A [x: i.A, y: B, z: ZZ]
+  (B [name: "john"]))
+
+(enum Mode [open, close])
+
+(component C [a-card: card, mode: Mode]
+  (div {id: "foo"} "text" (div))
+  (div
+    -- line 1
+    -- line 2
+    )
+  (if true (div) (span))
+  (cond mode
+    "open": (div)
+    "close": (span))
+  (a-card {id: "card", enabled: true}
+    ; #data{ number: 100 step: (cond mode "open": 10 "close": 20) }
+    (i.card)
+    ; #css.grid{ display: (if true "grid" "flex") }
+    (div)))

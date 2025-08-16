@@ -1,0 +1,3 @@
+*.teml
+*.html
+*_string.go

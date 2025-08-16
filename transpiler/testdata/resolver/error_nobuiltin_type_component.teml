@@ -1,5 +1,0 @@
-(package p "views")
-
-;; error: String is undefined
-(component H [s: String])
-

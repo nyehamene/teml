@@ -1,8 +1,0 @@
-(package p "views")
-
-(component A [text: String]
-  (text))
-
-;;test:instance B{element: A{text: "Hello, World!"}}
-(component B [element: A]
-  (element))

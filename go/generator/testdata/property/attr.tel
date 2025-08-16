@@ -1,0 +1,6 @@
+(package pp "demo")
+
+;go_data Attr{ text: "Hello, World!", number: 100 }
+(component Attr[text: String, number: Number]
+  (text { id: "mytext" })
+  (number { id: "mynumber" }))

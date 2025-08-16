@@ -1,0 +1,9 @@
+usage: tel generate <options>...
+
+Generates source code for a supported language
+
+options:
+	-h --help   Display this help message
+
+supported languages:
+    go

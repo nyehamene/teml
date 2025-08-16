@@ -4,3 +4,6 @@ teml-*
 
 # Generated files
 **/test-*/**/*.go
+
+# repl
+repl/

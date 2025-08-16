@@ -1,6 +1,0 @@
-(package pp "views")
-
-(document A [])
-
-;; error: b is a bool used as an element
-(component C [b: Bool] (b))

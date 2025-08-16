@@ -1,4 +1,0 @@
-(package p "views")
-
-;; error: recursive type definition. A refers to itself.
-(component A [a: A])

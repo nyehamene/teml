@@ -1,0 +1,6 @@
+(package pp "demo")
+
+;go_data If{ is_admin: true, can_edit: false }
+(component If [is_admin: Bool, can_edit: Bool]
+	(if is_admin "Admin")
+	(if can_edit "Edit" "View"))

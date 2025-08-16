@@ -1,0 +1,9 @@
+(package pp "demo")
+
+;go_data Attr{}
+(component Attr []
+  (div
+    { id: "main"
+    , data-name: "mydiv"
+    }
+    "Hello, World!"))

@@ -1,0 +1,8 @@
+(package pp "demo")
+
+;go_data TextBlockTemplate { date: "yesterday" }
+(component TextBlockTemplate [date: String]
+  -- Buy 5 \("pens")
+  -- Send \(date)'s report
+  -- Create \(5) TUIs
+  )

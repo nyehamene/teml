@@ -1,6 +1,0 @@
-(package pp "views")
-
-(document AA [])
-
-;; error: AA is a document used as an element
-(component B [] (AA))

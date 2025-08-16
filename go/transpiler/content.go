@@ -1,0 +1,50 @@
+package transpiler
+
+import (
+	"fmt"
+
+	"github.com/tel-lang/tel/ast"
+)
+
+func doubleQuoteString(s string) String {
+	quoted := fmt.Sprintf("\"%s\"", s)
+	return String(quoted)
+}
+
+func escapeSurrounding(str ast.String) String {
+	prefix := string(str[0])
+	suffix := string(str[len(str)-1])
+	content := str[1 : len(str)-1]
+	escape := "\\"
+	txt := fmt.Sprintf("%s%s%s%[1]s%[4]s", escape, prefix, content, suffix)
+	return String(txt)
+}
+
+var errvarCount = 0
+
+func makeErrVar() Var {
+	// TODO return Var
+	name := fmt.Sprintf("err%d", errvarCount)
+	errvarCount += 1
+	return Var(name)
+}
+
+var tempvarCount = 0
+
+func makeTempVar() Var {
+	// TODO return Var
+	name := fmt.Sprintf("temp%d", tempvarCount)
+	tempvarCount += 1
+	return Var(name)
+}
+
+func join(text ast.TextGroup, sep string) string {
+	var str string
+	for i, line := range text.Lines {
+		if i > 0 {
+			str += sep
+		}
+		str += line.Value
+	}
+	return str
+}

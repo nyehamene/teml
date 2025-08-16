@@ -11,10 +11,19 @@ roots = ["token.grammar", "ast.grammar"]
 name = "teml"
 scope = "source.teml"
 injection-regex = "teml"
-file-types = ["teml"]
+file-types = ["teml", "tel"]
 comment-tokens = ";"
 indent = { tab-width = 2, unit = "  " }
-roots = ["teml.mod"]
+roots = ["teml.mod", "tel.mod"]
+
+[[language]]
+name = "teml"
+scope = "source.teml"
+injection-regex = "tel"
+file-types = ["tel"]
+comment-tokens = ";"
+indent = { tab-width = 2, unit = "  " }
+roots = ["tel.mod"]
 
 [[grammar]]
 name = "grammar"
@@ -22,4 +31,8 @@ source = { path = "/home/hnyehamene/.local/tree-sitter/tree-sitter-grammar" }
 
 [[grammar]]
 name = "teml"
+source = { path = "/home/hnyehamene/.local/tree-sitter/tree-sitter-teml" }
+
+[[grammar]]
+name = "tel"
 source = { path = "/home/hnyehamene/.local/tree-sitter/tree-sitter-teml" }

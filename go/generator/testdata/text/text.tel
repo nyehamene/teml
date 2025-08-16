@@ -1,0 +1,5 @@
+(package pp "demo")
+
+;go_data Text{}
+(component Text []
+	"Hello, World!")

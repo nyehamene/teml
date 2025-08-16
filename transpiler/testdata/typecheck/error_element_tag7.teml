@@ -1,4 +1,0 @@
-(package pp "views")
-
-;; error: b is an enum used as an element
-(component C [b: (enum "yes" "no")] (b))

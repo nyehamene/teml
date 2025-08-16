@@ -1,0 +1,5 @@
+(package pp "demo")
+
+;go_data Home{}
+(document Home []
+  "Hello, World!")

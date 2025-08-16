@@ -4,28 +4,27 @@ type Node interface {
 	node()
 }
 
-func (Package) node()      {}
-func (Import) node()       {}
-func (Using) node()        {}
-func (Template) node()     {}
-func (IntErrorNode) node() {}
+func (PackageDecl) node()  {}
+func (ImportDecl) node()   {}
+func (UsingDecl) node()    {}
+func (TemplateDecl) node() {}
+func (EnumDecl) node()     {}
+func (badNode) node()      {}
 
-type AttributeSet interface {
-	attrs()
+type Stmt interface {
+	stmt()
 }
 
-func (TaggedAttributeSet) attrs()   {}
-func (UntaggedAttributeSet) attrs() {}
-
-type Content interface {
-	content()
-}
-
-func (Text) content()        {}
-func (TextGroup) content()   {}
-func (Element) content()     {}
-func (IfElement) content()   {}
-func (CondElement) content() {}
+func (Text) stmt()             {}
+func (TextGroup) stmt()        {}
+func (If) stmt()               {}
+func (Cond) stmt()             {}
+func (Element) stmt()          {}
+func (StringElement) stmt()    {}
+func (NumberElement) stmt()    {}
+func (PropertyElement) stmt()  {}
+func (ComponentElement) stmt() {}
+func (HTMLElement) stmt()      {}
 
 type Expr interface {
 	expr()
@@ -35,106 +34,135 @@ func (Var) expr()            {}
 func (Number) expr()         {}
 func (Bool) expr()           {}
 func (String) expr()         {}
-func (StringTemplate) expr() {}
 func (MemberAccess) expr()   {}
-func (IfExpression) expr()   {}
-func (CondExpression) expr() {}
-func (Enum) expr()           {}
+func (IfExpr) expr()         {}
+func (CondExpr) expr()       {}
+func (StringTemplate) expr() {}
 
-type PropertyType interface {
-	typeExpr()
+type PackageDecl struct {
+	Var
+	ID string
 }
 
-func (Enum) typeExpr()         {}
-func (Var) typeExpr()          {}
-func (MemberAccess) typeExpr() {}
-
-type Package struct {
-	Ident Var
-	Path  String
+type ImportDecl struct {
+	Var
+	Path String
 }
 
-type Import struct {
-	Ident Var
-	Path  String
+type UsingDecl struct {
+	From    Expr
+	Aliases []Var
 }
 
-type Using struct {
-	Idents []Var
-	From   Var
-}
-
-type TemplateKind uint8
-
-const (
-	DocumentTemplate TemplateKind = iota
-	ComponentTemplate
-)
-
-type Template struct {
+type TemplateDecl struct {
+	Var
+	Properties []FieldDecl
+	Stmts      []Stmt
 	Kind       TemplateKind
-	Ident      Var
-	Properties []Property
-	Children   []Content
 }
 
-type Property struct {
-	Ident Var
-	Type  PropertyType
+type FieldDecl struct {
+	Var
+	Type Expr
 }
 
-type Enum struct {
-	Constants []Expr
+type EnumDecl struct {
+	Var
+	Constants []FieldDecl
 }
 
 type Element struct {
-	Ident      Expr
-	Parameter  []ElementParameter
-	Attributes []AttributeSet
-	Children   []Content
+	Tag        Expr
+	Parameter  []ParameterDecl
+	Attributes []Attr
+	Children   []Stmt
 }
 
-type ElementParameter struct {
-	Ident Var
+type ParameterDecl struct {
+	Var
 	Value Expr
 }
 
-type IfElement struct {
+type NumberElement struct {
+	Tag        Var
+	Attributes []Attr
+}
+
+type StringElement struct {
+	Tag        Var
+	Attributes []Attr
+}
+
+type HTMLElement struct {
+	Tag        Var
+	Attributes []Attr
+	Children   []Stmt
+}
+
+type PropertyElement struct {
+	Tag        Var
+	Attributes []Attr
+	Children   []Stmt
+}
+
+type ComponentElement struct {
+	Tag        Var
+	Parameters []ParameterDecl
+	Attributes []Attr
+}
+
+type If struct {
 	Cond Expr
-	Then Content
-	Else Content
+	Then Stmt
+	Else Stmt
 }
 
-type CondElement struct {
+type Cond struct {
 	Target Expr
-	Cases  []CaseElement
+	Cases  []Case
 }
 
-type CaseElement struct {
+type Case struct {
 	Cond   Expr
-	Branch Content
+	Branch Stmt
 }
 
-type TaggedAttributeSet struct {
-	Tag        Expr
-	Attributes []Attribute
+type Attr struct {
+	// TBD: create a different type to represent attribute tags
+	// Tags should have the format:
+	// #<member_access>:<directive>
+	// Ex:
+	// #foo.bar:style
+	// #baz:style
+	// #main.(foo,baz):style
+	//   which is equivalent to
+	//   #main.foo:style
+	//   #main.baz:style
+	Directive Expr
+	Entries   []KeyVal
 }
 
-type UntaggedAttributeSet struct {
-	Attributes []Attribute
-}
-
-type Attribute struct {
+type KeyVal struct {
 	Key   Var
 	Value Expr
 }
 
 type Var struct {
-	Name string
-	Line int
-	Col  int
+	Name      string
+	Line      int
+	Col       int
+	namespace string
 }
 
+//go:generate stringer -type=TemplateKind
+type TemplateKind uint8
+
+const (
+	TemplateDocument TemplateKind = iota
+	TemplateComponent
+)
+
+//go:generater stringer -type=TextKind
 type TextKind uint8
 
 const (
@@ -149,20 +177,22 @@ type Text struct {
 	Value string
 }
 
-type TextGroup []Text
+type TextGroup struct {
+	Lines []Text
+}
 
-type IfExpression struct {
+type IfExpr struct {
 	Cond Expr
 	Then Expr
 	Else Expr
 }
 
-type CondExpression struct {
+type CondExpr struct {
 	Target Expr
-	Cases  []Case
+	Cases  []CaseExpr
 }
 
-type Case struct {
+type CaseExpr struct {
 	Cond   Expr
 	Branch Expr
 }
@@ -178,18 +208,16 @@ type Comment struct {
 	Col  int
 }
 
+type badNode struct{}
+
 type String string
 type StringTemplate string
 type Number int
+
+//go:generate stringer -type=Bool
 type Bool uint8
 
 const (
 	False Bool = iota
 	True
-)
-
-type IntErrorNode int
-
-const (
-	badNode IntErrorNode = iota
 )

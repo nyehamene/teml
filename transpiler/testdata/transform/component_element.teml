@@ -1,6 +1,0 @@
-(package p "views")
-
-(component A [])
-
-(component B [a: A]
-  (a {id: "id"}))

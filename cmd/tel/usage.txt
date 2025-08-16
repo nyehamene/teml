@@ -1,0 +1,11 @@
+usage: tel <command> [<args>...]
+
+tel - build declarative UIs compiled to any supported language
+
+See docs at https://github.com/tel-lang/tel
+
+commands:
+	help   Display this help message
+
+supported languages:
+   go

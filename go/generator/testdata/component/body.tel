@@ -1,0 +1,8 @@
+(package pp "demo")
+
+(component Content []
+  "Line 1")
+
+;go_data Body{}
+(component Body []
+  (Content " Line 2"))

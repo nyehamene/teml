@@ -1,0 +1,12 @@
+(package pp "demo")
+
+(using Foo pp.foo)
+
+(component Main
+  [ foo: Foo
+  , bar: pp.bar.Bar
+  , faz: pp.foo.Foo
+  ]
+  (foo)
+  (bar)
+  (faz))

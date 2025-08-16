@@ -1,4 +1,0 @@
-(package p "views")
-
-;;test:instance A{}
-(component A [] "Hello, World!")

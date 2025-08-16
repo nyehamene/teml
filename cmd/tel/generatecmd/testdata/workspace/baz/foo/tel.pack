@@ -1,0 +1,3 @@
+package "github.com/tel-lang/foo"
+
+version "0.0.1"
