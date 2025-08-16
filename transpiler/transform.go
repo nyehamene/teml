@@ -6,39 +6,142 @@ import (
 	"reflect"
 )
 
-func (t *typechecker) transformElement(compIdent Var, node genericElement) Element {
-	var transformedTo Element = node
+type TypeBinding struct {
+	Type TypeSymbol
+	Name Binding
+}
 
+func (t *typechecker) transformStmts(src *File) error {
+	var err error
+
+	for _, d := range src.Declarations {
+		var typeIdent Var
+		var stmts []Stmt
+
+		switch tt := d.(type) {
+		case Document:
+			typeIdent = Var(tt.Ident)
+			stmts = tt.Stmts
+
+		case Component:
+			typeIdent = Var(tt.Ident)
+			stmts = tt.Stmts
+
+		default:
+			panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(t)))
+		}
+
+		for i, stmt := range stmts {
+			transformed, err_t := t.transformElement(typeIdent, stmt.Element)
+			if err_t != nil {
+				err = errors.Join(err_t)
+			}
+			stmts[i] = Stmt{transformed}
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *typechecker) transformElement(compIdent Var, node Element) (Element, error) {
+	var transformed Element = node
+	var err error
+
+	switch element := node.(type) {
+	case TextElement, TextGroupElement:
+
+	case ComponentElement, NativeElement, NumberElement, PropertyElement, StringElement:
+		panic("unreachable")
+
+	case CondElement:
+		for i, c := range element.Cases {
+			transformedBranch, err_t := t.transformElement(compIdent, c.Branch.Element)
+			if err_t != nil {
+				err = errors.Join(err, err_t)
+			}
+			element.Cases[i] = CaseStmt{
+				Cond:   c.Cond,
+				Branch: Stmt{Element: transformedBranch},
+			}
+		}
+
+		transformed = element
+
+	case IFElement:
+		var transformedThen Element
+		var transformedElse Element
+		var err_t error
+
+		transformedThen, err_t = t.transformElement(compIdent, element.Then)
+		if err_t != nil {
+			err = errors.Join(err, err_t)
+		}
+
+		if element.Else != nil {
+			transformedElse, err_t = t.transformElement(compIdent, element.Else)
+		}
+		if err_t != nil {
+			err = errors.Join(err, err_t)
+		}
+
+		transformed = IFElement{
+			Cond: element.Cond,
+			Then: transformedThen,
+			Else: transformedElse,
+		}
+
+	case genericElement:
+		transformed, err = t.transformGenericElement(compIdent, element)
+
+	default:
+		panic(fmt.Sprintf("unexpected ast.Element: %#v", element))
+	}
+
+	if err != nil {
+		return transformed, err
+	}
+	return transformed, nil
+}
+
+func (t *typechecker) transformGenericElement(compIdent Var, node genericElement) (Element, error) {
 	switch element := node.Tag.(type) {
 	case String, Number, Bool, Enum, IFExpr, CondExpr:
 		panic("unreachable")
 
 	case Var:
-		resolvedTagType, resolvedTag := t.getElementTagType(compIdent, element)
-		transformedTo = t.transformElementByTagType(compIdent, node, resolvedTagType, resolvedTag)
+		var nodeIdent Var = element
+		return t.transformGenerictElementByTagType(compIdent, nodeIdent, node)
 
 	case MemberAccess:
-		// TODO transform element with member access tag expression
-		// NOTE can be transformed to either component or instance element
 		panic(errors.ErrUnsupported)
 	}
 
-	return transformedTo
+	return node, nil
 }
 
-// func (t *typechecker) transformElementByTagType(ident Var, element genericElement, tag TypeSymbol, property bool) Element
-func (t *typechecker) transformElementByTagType(ident Var, element genericElement, tagtype TypeSymbol, tag Binding) Element {
+func (t *typechecker) transformGenerictElementByTagType(compIdent, elementIdent Var, element genericElement) (Element, error) {
 	var transformedTo Element = element
+	var err error
 
-	switch tagtype := tagtype.(type) {
+	binding, err := t.getElementTagType(compIdent, elementIdent)
+	if err != nil {
+		return element, err
+	}
+
+	switch tagtype := binding.Type.(type) {
 	case TypePackage:
-		t.addError(ErrInvalidElementTag, ident)
+		err = SymbolError{ErrPackageElementTag, elementIdent}
 
 	case TypeEnum:
-		t.addError(ErrInvalidElementTag, ident)
+		err = SymbolError{ErrEnumElementTag, elementIdent}
 
 	case NativeElementType:
-		// TODO fail if parameter is not empty
+		if len(element.Parameter) != 0 {
+			err = SymbolError{ErrParameterInNativeElement, elementIdent}
+		}
 		transformedTo = NativeElement{
 			Tag:        element.Tag,
 			Attributes: element.Attributes,
@@ -46,16 +149,17 @@ func (t *typechecker) transformElementByTagType(ident Var, element genericElemen
 		}
 
 	case TypeDeclaration:
-		if tag.IsType {
-			// TODO fail if body is not empty
-			t.typecheckElementParameter(t.env.names, element)
+		if binding.Name.IsType {
+			err = t.typecheckElementParameter(t.env.names, element)
 			transformedTo = ComponentElement{
 				Tag:        element.Tag,
 				Parameters: element.Parameter,
 				Attributes: element.Attributes,
 			}
 		} else {
-			// TODO fail if parameter is not empty
+			if len(element.Parameter) != 0 {
+				err = SymbolError{ErrParameterInPropertyElement, elementIdent}
+			}
 			transformedTo = PropertyElement{
 				Tag:        element.Tag,
 				Attributes: element.Attributes,
@@ -66,7 +170,7 @@ func (t *typechecker) transformElementByTagType(ident Var, element genericElemen
 	case BuiltinType:
 		switch tagtype {
 		case TypeBool:
-			t.addError(ErrInvalidElementTag, ident)
+			err = SymbolError{ErrBoolElementTag, elementIdent}
 
 		case TypeString:
 			transformedTo = StringElement{
@@ -79,39 +183,45 @@ func (t *typechecker) transformElementByTagType(ident Var, element genericElemen
 				Attributes: element.Attributes,
 			}
 		default:
-			panic(fmt.Sprintf("unexpected builtin type: %v", reflect.TypeOf(tag)))
+			panic(fmt.Sprintf("unexpected builtin type: %v", reflect.TypeOf(binding.Name)))
 		}
 
 	default:
-		panic(fmt.Sprintf("unexpected element symbol type: %v", reflect.TypeOf(tag)))
+		panic(fmt.Sprintf("unexpected element symbol type: %v", reflect.TypeOf(binding.Name)))
 	}
 
-	return transformedTo
+	if err != nil {
+		return transformedTo, err
+	}
+	return transformedTo, nil
 }
 
-func (t *typechecker) typecheckElementParameter(env NameEnv, element genericElement) {
-	tag, ok := t.getName(element.Tag)
-	if !ok {
-		// TODO replace Var{} below with the tag ident
-		t.addError(ErrInvalidElementTag, Var{})
+func (t *typechecker) typecheckElementParameter(env NameEnv, element genericElement) error {
+	tag, err := t.getName(element.Tag)
+	if err != nil {
+		return err
 	}
 
 	resolvedTagName, ok := env.LookupName(tag.Name)
 	if !ok {
-		t.addError(ErrUndeclared, tag)
+		return SymbolError{ErrUndeclared, tag}
 	}
 
 	resolvedEnv, ok := env.LookupNameEnv(resolvedTagName.ID)
 	if !ok {
-		t.addError(ErrNamespaceNotfound, tag)
+		return SymbolError{ErrNamespaceNotfound, tag}
 	}
 
 	for _, p := range element.Parameter {
-		t.typecheckComponentElementParameter(resolvedEnv, p)
+		if err := t.typecheckComponentElementParameter(resolvedEnv, p); err != nil {
+			t.addError(err)
+		}
 	}
+
+	return nil
 }
 
-func (t *typechecker) getName(expr Expr) (Var, bool) {
+func (t *typechecker) getName(expr Expr) (Var, error) {
 	switch node := expr.(type) {
 	case MemberAccess:
 		// objName, ok := r.getName(node.Object)
@@ -136,38 +246,36 @@ func (t *typechecker) getName(expr Expr) (Var, bool) {
 
 		// return resolvedName, true
 		// TODO TDB
-		return Var{}, false
+		panic(errors.ErrUnsupported)
 
 	case Var:
-		return node, true
+		return node, nil
 
 	default:
-		return Var{}, false
+		panic(fmt.Sprintf("unexpected element tag %#v", reflect.TypeOf(expr)))
 	}
 }
 
-func (t *typechecker) typecheckComponentElementParameter(env NameEnv, p KeyVal) {
+func (t *typechecker) typecheckComponentElementParameter(env NameEnv, p KeyVal) error {
 	resolvedKey, ok := env.LookupName(p.Key.Name)
 	if !ok {
-		t.addError(ErrUndeclared, p.Key)
-		return
+		return SymbolError{ErrUndeclared, p.Key}
 	}
 
 	keyType, ok := t.lookupType(resolvedKey.ID)
 	if !ok {
-		t.addError(ErrUndeclaredType, p.Key)
-		return
+		return SymbolError{ErrUndeclaredType, p.Key}
 	}
 
 	valueType, ok := t.getExprType(env, p.Value)
 	if !ok {
-		t.addError(ErrUndeclaredType, p.Key)
-		return
+		return SymbolError{ErrUndeclaredType, p.Key}
 	}
 
 	if ok := t.matchType(keyType, valueType); !ok {
-		t.addError(ErrTypeMismatch, p.Key)
+		return SymbolError{ErrTypeMismatch, p.Key}
 	}
+	return nil
 }
 
 func (t *typechecker) getExprType(env NameEnv, expr Expr) (TypeSymbol, bool) {
@@ -195,7 +303,14 @@ func (t *typechecker) getExprType(env NameEnv, expr Expr) (TypeSymbol, bool) {
 		if !ok {
 			return nil, false
 		}
-		exprType, ok := t.lookupType(resolvedName.ID)
+		return t.lookupType(resolvedName.ID)
+	case MemberAccess:
+		panic(errors.ErrUnsupported)
+	case Enum:
+		constantType := t.typecheckEnumConstants(tt.Constants)
+		return TypeEnum{ConstantType: constantType}, true
+	case IFExpr:
+		thenType, ok := t.getExprType(env, tt.Then)
 		if !ok {
 			return nil, false
 		}
@@ -207,39 +322,35 @@ func (t *typechecker) getExprType(env NameEnv, expr Expr) (TypeSymbol, bool) {
 }
 
 func (t *typechecker) matchType(t1, t2 TypeSymbol) bool {
-	if t1 == t2 {
-		return true
-	}
-	return false
+	return t1 == t2
 }
 
-func (t *typechecker) getElementTagType(compIdent Var, elementIdent Var) (TypeSymbol, Binding) {
+// TODO rename to resolveElementTagType
+func (t *typechecker) getElementTagType(compIdent, elementIdent Var) (TypeBinding, error) {
 	resolvedComponent, ok := t.lookupName(compIdent.Name)
 	if !ok {
-		t.addError(ErrUndeclared, compIdent)
-		return nil, Binding{}
+		err := SymbolError{ErrUndeclared, compIdent}
+		return TypeBinding{}, err
 	}
 
-	env, ok := t.lookupNameEnv(resolvedComponent.ID)
+	componentEnv, ok := t.lookupNameEnv(resolvedComponent.ID)
 	if !ok {
-		// TODO include elementIdent (Binding)
-		t.addError(ErrUndeclared, compIdent)
-		return nil, Binding{}
+		err := SymbolError{ErrNamespaceNotfound, compIdent}
+		return TypeBinding{}, err
 	}
 
-	resolvedElement, ok := env.LookupName(elementIdent.Name)
+	resolvedElement, ok := componentEnv.LookupName(elementIdent.Name)
 	if !ok {
-		// TODO include elementIdent (Binding)
-		t.addError(ErrUndeclared, compIdent)
-		return nil, Binding{}
+		err := SymbolError{ErrUndeclared, elementIdent}
+		return TypeBinding{}, err
 	}
 
 	resolvedType, ok := t.lookupType(resolvedElement.ID)
 	if !ok {
-		// TODO include elementIdent (Binding)
-		t.addError(ErrUndeclared, compIdent)
-		return nil, Binding{}
+		err := SymbolError{ErrUndeclared, elementIdent}
+		return TypeBinding{}, err
 	}
 
-	return resolvedType, resolvedElement
+	binding := TypeBinding{Type: resolvedType, Name: resolvedElement}
+	return binding, nil
 }

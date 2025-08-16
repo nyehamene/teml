@@ -11,7 +11,6 @@ import (
 )
 
 type resolver struct {
-	src       *File
 	scopeName string
 }
 
@@ -50,11 +49,17 @@ func resolveFile(f *File, flag flags.Flag) NameEnv {
 		bindNativeElementNames(nativeEnv)
 	}
 
-	r := &resolver{src: f, scopeName: f.Name}
-	r.resolvePackage(namespaceEnv)
+	r := &resolver{scopeName: f.Name}
+	if err := r.bindPackage(f, namespaceEnv); err != nil {
+		f.addError(err)
+	}
 	// TODO handle import and using declarations
 
-	f.Declarations = r.resolveDeclarations(namespaceEnv)
+	if errs := r.bindDeclarations(f, namespaceEnv); len(errs) > 0 {
+		for _, err := range errs {
+			f.addError(err)
+		}
+	}
 
 	for _, decl := range f.Declarations {
 		var ident Var
@@ -80,7 +85,7 @@ func resolveFile(f *File, flag flags.Flag) NameEnv {
 
 		resolvedName, ok := namespaceEnv.LookupName(ident.Name)
 		if !ok {
-			r.addError(ErrUndeclared, ident)
+			f.addSymbolError(ErrUndeclared, ident)
 			continue
 		}
 
@@ -91,8 +96,16 @@ func resolveFile(f *File, flag flags.Flag) NameEnv {
 			declEnv = namespaceEnv.Nest(resolvedName.ID)
 		}
 
-		r.resolveProperties(declEnv, props)
-		r.resolveStmts(declEnv, stmts)
+		if errs := r.bindProperties(declEnv, props); len(errs) > 0 {
+			for _, err := range errs {
+				f.addError(err)
+			}
+		}
+		if errs := r.resolveStmts(f, declEnv, stmts); len(errs) > 0 {
+			for _, err := range errs {
+				f.addError(err)
+			}
+		}
 
 		r.scopeName = f.Name
 	}
@@ -100,47 +113,59 @@ func resolveFile(f *File, flag flags.Flag) NameEnv {
 	return nativeEnv
 }
 
-func (t *resolver) resolvePackage(env NameEnv) {
+func (t *resolver) bindPackage(f *File, env NameEnv) error {
 	const isType = false
-	t.bindVar(env, t.src.Package.Ident, isType)
+	return t.bindVar(env, f.Package.Ident, isType)
 }
 
-func (t *resolver) resolveDeclarations(env NameEnv) []Declaration {
-	declarations := t.src.Declarations
+func (t *resolver) bindDeclarations(f *File, env NameEnv) []error {
+	declarations := f.Declarations
+	var errs []error
 	for _, d := range declarations {
-		t.resolveDeclaration(env, d)
+		if err := t.bindDeclaration(env, d); err != nil {
+			errs = append(errs, err)
+		}
 	}
-	return declarations
+	return errs
 }
 
-func (r *resolver) resolveDeclaration(env NameEnv, rec Declaration) Declaration {
+func (r *resolver) bindDeclaration(env NameEnv, rec Declaration) error {
 	const isType = true
 	switch t := rec.(type) {
 	case Document:
-		r.bindVar(env, t.Ident, isType)
+		return r.bindVar(env, t.Ident, isType)
 	case Component:
-		r.bindVar(env, t.Ident, isType)
+		return r.bindVar(env, t.Ident, isType)
 	default:
 		panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(rec)))
 	}
-	return rec
 }
 
-func (t *resolver) resolveProperties(env NameEnv, props []Property) {
+func (t *resolver) bindProperties(env NameEnv, props []Property) []error {
 	const isType = false
+	var errs []error
 	for _, p := range props {
-		t.resolvePropertyType(env, p.Type)
-		t.bindVar(env, p.Ident, isType)
+		if err := t.resolvePropertyType(env, p.Type); err != nil {
+			errs = append(errs, err)
+		}
+		if err := t.bindVar(env, p.Ident, isType); err != nil {
+			errs = append(errs, err)
+		}
 	}
+	return errs
 }
 
-func (t *resolver) resolveStmts(env NameEnv, stmts []Stmt) {
+func (t *resolver) resolveStmts(f *File, env NameEnv, stmts []Stmt) []error {
+	var errs []error
 	for _, stmt := range stmts {
-		t.resolveElement(env, stmt.Element)
+		if err := t.resolveElement(f, env, stmt.Element); err != nil {
+			errs = append(errs, err)
+		}
 	}
+	return errs
 }
 
-func (r *resolver) resolveElement(env NameEnv, expr Element) {
+func (r *resolver) resolveElement(f *File, env NameEnv, expr Element) error {
 	switch t := expr.(type) {
 	case TextElement, TextGroupElement: // noop
 	case PropertyElement, NativeElement, NumberElement, StringElement:
@@ -148,103 +173,150 @@ func (r *resolver) resolveElement(env NameEnv, expr Element) {
 		panic("unreachable")
 
 	case genericElement:
-		r.resolveExpr(env, t.Tag)
-		// NOTE handle in the typecheck
-		// r.resolveElementParameter(env, t)
-		r.resolveAttributes(env, t.Attributes)
-		r.resolveStmts(env, t.Body)
+		if err := r.resolveExpr(env, t.Tag); err != nil {
+			return err
+		}
+		if errs := r.bindAttributes(env, t.Attributes); len(errs) > 0 {
+			for _, err := range errs {
+				f.addError(err)
+			}
+		}
+		if errs := r.resolveStmts(f, env, t.Body); len(errs) > 0 {
+			for _, err := range errs {
+				f.addError(err)
+			}
+		}
 
 	case IFElement:
-		r.resolveExpr(env, t.Cond)
-		r.resolveElement(env, t.Then)
+		if err := r.resolveExpr(env, t.Cond); err != nil {
+			return err
+		}
+		if err := r.resolveElement(f, env, t.Then); err != nil {
+			return err
+		}
 		if t.Else != nil {
-			r.resolveElement(env, t.Else)
+			if err := r.resolveElement(f, env, t.Else); err != nil {
+				return err
+			}
 		}
 
 	case CondElement:
-		r.resolveExpr(env, t.Target)
+		if err := r.resolveExpr(env, t.Target); err != nil {
+			return err
+		}
 		for _, c := range t.Cases {
-			r.resolveExpr(env, c.Cond)
-			r.resolveElement(env, c.Branch.Element)
+			if err := r.resolveExpr(env, c.Cond); err != nil {
+				return err
+			}
+			if err := r.resolveElement(f, env, c.Branch.Element); err != nil {
+				return err
+			}
 		}
 
 	default:
 		panic(fmt.Sprintf("unexpected expression statement: %v", reflect.TypeOf(expr)))
 	}
+	return nil
 }
 
-func (t *resolver) resolveAttributes(env NameEnv, attrs []Attr) {
+func (t *resolver) bindAttributes(env NameEnv, attrs []Attr) []error {
 	attributeEnv := newNameEnv(nil, "<attr>")
+	var errs []error
 	for _, attr := range attrs {
-		t.resolveEntries(env, attributeEnv, attr.Entries)
+		if err := t.bindAttribute(env, attributeEnv, attr.Entries); err != nil {
+			errs = append(errs, err)
+		}
 	}
+	return errs
 }
 
-func (r *resolver) resolveEntries(env, keyEnv NameEnv, attrs []KeyVal) {
+func (r *resolver) bindAttribute(env, keyEnv NameEnv, attrs []KeyVal) error {
 	const isType = false
 	for i := range attrs {
 		entry := attrs[i]
-		r.bindVar(keyEnv, entry.Key, isType)
+		if err := r.bindVar(keyEnv, entry.Key, isType); err != nil {
+			return err
+		}
 
 		switch t := entry.Value.(type) {
 		case Var:
-			r.resolveVar(env, t)
+			if err := r.resolveVar(env, t); err != nil {
+				return err
+			}
 		case MemberAccess:
 			panic(errors.ErrUnsupported)
 		}
 	}
+	return nil
 }
 
-func (r *resolver) resolveExpr(env NameEnv, expr Expr) {
+func (r *resolver) resolveExpr(env NameEnv, expr Expr) error {
 	switch t := expr.(type) {
 	case String, Number, Bool, Enum: // noop
 	case Var:
-		r.resolveVar(env, t)
+		return r.resolveVar(env, t)
 	case MemberAccess:
-		r.resolveExpr(env, t.Object)
-		r.resolveVar(env, t.Member)
+		if err := r.resolveExpr(env, t.Object); err != nil {
+			return err
+		}
+		return r.resolveVar(env, t.Member)
 	case IFExpr:
-		r.resolveExpr(env, t.Cond)
-		r.resolveExpr(env, t.Then)
-		r.resolveExpr(env, t.Else)
+		if err := r.resolveExpr(env, t.Cond); err != nil {
+			return err
+		}
+		if err := r.resolveExpr(env, t.Then); err != nil {
+			return err
+		}
+		return r.resolveExpr(env, t.Else)
 	case CondExpr:
-		r.resolveExpr(env, t.Target)
+		if err := r.resolveExpr(env, t.Target); err != nil {
+			return err
+		}
 		for _, c := range t.Cases {
-			r.resolveExpr(env, c.Cond)
-			r.resolveExpr(env, c.Branch)
+			if err := r.resolveExpr(env, c.Cond); err != nil {
+				return err
+			}
+			if err := r.resolveExpr(env, c.Branch); err != nil {
+				return err
+			}
 		}
 	default:
 		panic(fmt.Errorf("unexpected expression type :%v", reflect.TypeOf(expr)))
 	}
+	return nil
 }
 
-func (r *resolver) resolvePropertyType(env NameEnv, t PropertyType) {
+func (r *resolver) resolvePropertyType(env NameEnv, t PropertyType) error {
 	switch tt := t.(type) {
 	case Var:
-		r.resolveVar(env, tt)
+		return r.resolveVar(env, tt)
 	case MemberAccess:
-		r.resolveExpr(env, tt.Object)
-		r.resolveVar(env, tt.Member)
+		if err := r.resolveExpr(env, tt.Object); err != nil {
+			return err
+		}
+		return r.resolveVar(env, tt.Member)
 	case Enum:
-		r.resolveExpr(env, tt)
+		return r.resolveExpr(env, tt)
 	default:
 		panic(fmt.Errorf("unexpected property type: %v", reflect.TypeOf(t)))
 	}
 }
 
-func (t *resolver) resolveVar(env NameEnv, v Var) {
+func (t *resolver) resolveVar(env NameEnv, v Var) error {
 	if _, ok := env.LookupName(v.Name); !ok {
-		t.addError(ErrUndeclared, v)
+		return &SymbolError{err: ErrUndeclared, symbol: v}
 	}
+	return nil
 }
 
-func (t *resolver) bindVar(env NameEnv, v Var, isType bool) {
+func (t *resolver) bindVar(env NameEnv, v Var, isType bool) error {
 	fqn := t.getQualifiedName(v)
 	if isType {
 		env.BindTypeName(v.Name, fqn)
 	} else {
 		env.BindName(v.Name, fqn)
 	}
+	return nil
 }
 
 func (t *resolver) getQualifiedName(v Var) string {
