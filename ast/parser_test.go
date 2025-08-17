@@ -341,12 +341,10 @@ func getChildren(f *ast.File, document bool) ([]ast.Content, bool) {
 		return f.Document.Children, true
 	}
 
-	c, ok := getFirstComponent(f)
-	if !ok {
-		return nil, false
+	if len(f.Components) > 0 {
+		return f.Components[0].Children, true
 	}
-
-	return c.Children, true
+	return nil, false
 }
 
 func getFirstProperties(f *ast.File, document bool) ([]ast.Property, bool) {
@@ -354,18 +352,10 @@ func getFirstProperties(f *ast.File, document bool) ([]ast.Property, bool) {
 		return f.Document.Properties, true
 	}
 
-	c, ok := getFirstComponent(f)
-	if !ok {
-		return nil, false
+	if len(f.Components) > 0 {
+		return f.Components[0].Properties, true
 	}
-	return c.Properties, true
-}
-
-func getFirstComponent(f *ast.File) (ast.Component, bool) {
-	if len(f.Components) == 0 {
-		return ast.Component{}, false
-	}
-	return f.Components[0], true
+	return nil, false
 }
 
 func getFirstElementChildren(f *ast.File, document bool) ([]ast.Content, bool) {
@@ -391,12 +381,11 @@ func getFirstElement(f *ast.File, document bool) (ast.Element, bool) {
 		return getfirst(f.Document.Children)
 	}
 
-	c, ok := getFirstComponent(f)
-	if !ok {
-		return ast.Element{}, false
+	if len(f.Components) > 0 {
+		return getfirst(f.Components[0].Children)
 	}
 
-	return getfirst(c.Children)
+	return ast.Element{}, false
 }
 
 type entry[T any] struct {
