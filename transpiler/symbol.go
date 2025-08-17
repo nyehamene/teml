@@ -1,5 +1,7 @@
 package ast
 
+import "github.com/eml-lang/teml/ast"
+
 type Symbol interface {
 	symbol()
 }
@@ -19,17 +21,10 @@ type TypeEnum struct {
 }
 
 type TypeDeclaration struct {
-	Kind   DeclarationKind
+	Kind   ast.TemplateKind
 	Name   string
 	TypeId string
 }
-
-type DeclarationKind int
-
-const (
-	DocumentDeclaration DeclarationKind = iota
-	ComponentDeclaration
-)
 
 // builtin types
 type BuiltinType int

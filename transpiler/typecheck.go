@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/eml-lang/teml/ast"
 	"github.com/eml-lang/teml/internal/flags"
 	"github.com/eml-lang/teml/internal/source"
 )
@@ -67,24 +68,9 @@ func (t *typechecker) typecheckFile(f *File) {
 	}
 
 	for _, declaration := range f.Declarations {
-		var typeIdent Var
-		var props []Property
-		var stmts []Stmt
-
-		switch tt := declaration.(type) {
-		case Document:
-			typeIdent = Var(tt.Ident)
-			props = tt.Properties
-			stmts = tt.Stmts
-
-		case Component:
-			typeIdent = Var(tt.Ident)
-			props = tt.Properties
-			stmts = tt.Stmts
-
-		default:
-			panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(t)))
-		}
+		typeIdent := Var(declaration.Ident)
+		props := declaration.Properties
+		stmts := declaration.Stmts
 
 		resolvedName, ok := t.lookupName(typeIdent.Name)
 		if !ok {
@@ -117,24 +103,11 @@ func (t *typechecker) typecheckPackage(pkg Package) error {
 	return nil
 }
 
-func (t *typechecker) typecheckDeclaration(decls []Declaration) []error {
+func (t *typechecker) typecheckDeclaration(decls []Template) []error {
 	var errs []error
 	for _, d := range decls {
-		var node Var
-		var kind DeclarationKind
-
-		switch tt := d.(type) {
-		case Document:
-			node = Var(tt.Ident)
-			kind = DocumentDeclaration
-
-		case Component:
-			node = Var(tt.Ident)
-			kind = ComponentDeclaration
-
-		default:
-			panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(t)))
-		}
+		node := Var(d.Ident)
+		kind := d.Kind
 
 		resolvedName, ok := t.lookupName(node.Name)
 		if !ok {
@@ -186,7 +159,7 @@ func (t *typechecker) typecheckProperty(decl Var, sym Symbol, property Property)
 		// a document cannot be used as a property type
 		switch resolvedType := resolvedType.(type) {
 		case TypeDeclaration:
-			if resolvedType.Kind == DocumentDeclaration {
+			if resolvedType.Kind == ast.DocumentTemplate {
 				return &SymbolError{err: ErrDocumentElementTag, symbol: typeNode}
 			}
 		}
@@ -423,8 +396,7 @@ func (t *typechecker) typecheckTag(sym TypeSymbol) error {
 			return ErrBoolElementTag
 		}
 	case TypeDeclaration:
-		switch typeNode.Kind {
-		case DocumentDeclaration:
+		if typeNode.Kind == ast.DocumentTemplate {
 			return ErrDocumentElementTag
 		}
 	default:

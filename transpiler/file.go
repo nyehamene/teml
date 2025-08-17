@@ -12,8 +12,8 @@ type File struct {
 	Package      Package
 	Imports      []Import
 	Usings       []Using
-	Declarations []Declaration
-	errs         []error
+	Declarations []Template
+	Errors       []error
 	Comments     []Comment
 }
 

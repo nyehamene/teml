@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/eml-lang/teml/ast"
 	"github.com/eml-lang/teml/internal/flags"
 	"github.com/eml-lang/teml/internal/source"
 	"github.com/eml-lang/teml/token"
@@ -134,26 +135,25 @@ func parseSource(t *testing.T, src []byte, decls int, targetDecl int, flag Flag)
 		Content: src,
 	}
 
-	toks := token.ScanInput(file)
-	astp := past.ParseFile(toks)
-	for _, err := range astp.Errors {
-		t.Error(err)
-	}
-	if astp.HasError() {
-		t.Fatal("source parser failed unexpected")
+	templ := decls[test.targetDeclIndex]
+	if templ.Kind != ast.ComponentTemplate {
+		t.Errorf("expected %s", ast.ComponentTemplate)
+		t.Errorf("got %s", templ.Kind)
+		return
 	}
 
-	astt := ParseFile(astp)
-	for _, err := range astt.Errors() {
-		t.Error(err)
-	}
-	if astt.HasError() {
-		t.Fatal("ast parser failed unexpected")
+	if l := len(templ.Stmts); l < test.targetStmtIndex {
+		t.Errorf("expected %d at least statements", test.targetStmtIndex)
+		t.Errorf("got %d statements", l)
+		return
 	}
 
-	renv := ResolveFile(astt, flag)
-	for _, err := range astt.Errors() {
-		t.Error(err)
+	stmt := templ.Stmts[test.targetStmtIndex]
+	expectedElementType := reflect.TypeOf(test.expectedElementType)
+	gotElemnetType := reflect.TypeOf(stmt.Element)
+	if gotElemnetType != expectedElementType {
+		t.Errorf("expected %v", expectedElementType)
+		t.Errorf("got %v", gotElemnetType)
 	}
 	if astt.HasError() {
 		t.Fatal("ast resolver failed unexpected")

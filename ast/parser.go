@@ -66,7 +66,7 @@ func (p *parser) parse(flag cflags.Flag) {
 			}
 
 		case Template:
-			if d.Kind == KindDocument {
+			if d.Kind == DocumentTemplate {
 				p.dst.Document = d
 				if hasDocument {
 					p.addError("duplicate document declaration")
@@ -88,19 +88,16 @@ func (p *parser) parse(flag cflags.Flag) {
 
 func (p *parser) parsePackage() (Package, bool) {
 	assert.Assert(p.peek().Kind == token.Package, "expected package keyword")
-
-	var ident Var
-	var path token.Token
-	var ok bool
-
 	// consume package keyword
 	p.advance()
 
-	if ident, ok = p.parseVar(); !ok {
+	ident, ok := p.parseVar()
+	if !ok {
 		return Package{}, false
 	}
 
-	if path, ok = p.expect(token.String, "missing package path"); !ok {
+	path, ok := p.expect(token.String, "missing package path")
+	if !ok {
 		return Package{}, false
 	}
 
@@ -110,22 +107,18 @@ func (p *parser) parsePackage() (Package, bool) {
 
 func (p *parser) parseImport() (Import, bool) {
 	assert.Assert(p.peek().Kind == token.Import, "expected import keyword")
-
-	var ident Var
-	var path token.Token
-	var ok bool
-
 	// consume import keyword
 	p.advance()
 
-	if ident, ok = p.parseVar(); !ok {
+	ident, ok := p.parseVar()
+	if !ok {
 		return Import{}, false
 	}
 
-	if path, ok = p.expect(token.String, "missing import path"); !ok {
+	path, ok := p.expect(token.String, "missing import path")
+	if !ok {
 		return Import{}, false
 	}
-
 	pathStr := String(p.mustExtractSourceText(path))
 	return Import{Ident: ident, Path: pathStr}, true
 }
@@ -188,32 +181,35 @@ func (p *parser) parseUsing() (Using, bool) {
 	return u, true
 }
 
-func (p *parser) parseComponent() (Template, bool) {
-	assert.Assert(p.peek().Kind == token.Component, "expected component keyword")
-
-	var ident Var
-	var properties []Property
-	var children []Content
-	var ok bool
-
-	p.templateKind = KindComponent
-
-	// consume component keyword
+func (p *parser) parseTemplateDeclaration(kind TemplateKind) (Template, bool) {
+	// consume component/document keyword
 	p.advance()
+	p.templateKind = kind
 
-	if ident, ok = p.parseVar(); !ok {
+	// ident is required for component but optional for document
+	var ident Var
+	if kind == DocumentTemplate {
+		if p.peek().Kind == token.Ident {
+			ident, _ = p.parseVar()
+		}
+	} else {
+		i, ok := p.parseVar()
+		if !ok {
+			return Template{}, false
+		}
+		ident = i
+	}
+
+	properties, ok := p.parseProperties()
+	if !ok {
 		return Template{}, false
 	}
 
-	if properties, ok = p.parseProperties(); !ok {
-		return Template{}, false
-	}
-
+	var children []Content
 	for !p.eof() {
 		if ch := p.peek(); ch.Kind == token.ParenClose {
 			break
 		}
-
 		templ, ok := p.parseTemplate()
 		if !ok {
 			return Template{}, false
@@ -221,46 +217,8 @@ func (p *parser) parseComponent() (Template, bool) {
 		children = append(children, templ)
 	}
 
-	c := Template{Kind: KindComponent, Ident: ident, Properties: properties, Children: children}
-
-	return c, true
-}
-
-func (p *parser) parseDocument() (Template, bool) {
-	assert.Assert(p.peek().Kind == token.Document, "expected document keyword")
-
-	var ident Var
-	var properties []Property
-	var children []Content
-	var ok bool
-
-	p.templateKind = KindDocument
-
-	// consume document keyword
-	p.advance()
-
-	if ch := p.peek(); ch.Kind == token.Ident {
-		ident, _ = p.parseVar()
-	}
-
-	if properties, ok = p.parseProperties(); !ok {
-		return Template{}, false
-	}
-
-	for !p.eof() {
-		if ch := p.peek(); ch.Kind == token.ParenClose {
-			break
-		}
-
-		templ, ok := p.parseTemplate()
-		if !ok {
-			return Template{}, false
-		}
-		children = append(children, templ)
-	}
-
-	d := Template{Kind: KindDocument, Ident: ident, Properties: properties, Children: children}
-	return d, true
+	t := Template{Kind: kind, Ident: ident, Properties: properties, Children: children}
+	return t, true
 }
 
 func (p *parser) parseProperties() ([]Property, bool) {
@@ -419,9 +377,9 @@ func (p *parser) parseDeclaration() (Node, bool) {
 	case token.Using:
 		node, ok = p.parseUsing()
 	case token.Document:
-		node, ok = p.parseDocument()
+		node, ok = p.parseTemplateDeclaration(DocumentTemplate)
 	case token.Component:
-		node, ok = p.parseComponent()
+		node, ok = p.parseTemplateDeclaration(ComponentTemplate)
 	case token.Ident:
 		node, ok = badNode, false
 
@@ -610,7 +568,7 @@ loop:
 		return Element{}, false
 	}
 
-	if p.templateKind == KindComponent {
+	if p.templateKind == ComponentTemplate {
 		for _, attr := range attributes {
 			switch attr := attr.(type) {
 			case TaggedAttributeSet:

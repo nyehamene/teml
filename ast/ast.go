@@ -67,8 +67,8 @@ type Using struct {
 type TemplateKind uint8
 
 const (
-	KindDocument TemplateKind = iota
-	KindComponent
+	DocumentTemplate TemplateKind = iota
+	ComponentTemplate
 )
 
 type Template struct {

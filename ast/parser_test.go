@@ -3,8 +3,6 @@ package ast_test
 import (
 	"fmt"
 	"iter"
-	"log"
-	"strconv"
 	"strings"
 	"testing"
 

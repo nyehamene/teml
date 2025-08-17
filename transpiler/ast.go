@@ -6,18 +6,10 @@ type Node interface {
 	code()
 }
 
-func (Package) code()   {}
-func (Import) code()    {}
-func (Using) code()     {}
-func (Component) code() {}
-func (Document) code()  {}
-
-type Declaration interface {
-	decl()
-}
-
-func (Document) decl()  {}
-func (Component) decl() {}
+func (Package) code()  {}
+func (Import) code()   {}
+func (Using) code()    {}
+func (Template) code() {}
 
 type Element interface {
 	element()
@@ -71,13 +63,8 @@ type Using struct {
 	Idents []Var
 }
 
-type Document struct {
-	Ident      Var
-	Properties []Property
-	Stmts      []Stmt
-}
-
-type Component struct {
+type Template struct {
+	Kind       ast.TemplateKind
 	Ident      Var
 	Properties []Property
 	Stmts      []Stmt

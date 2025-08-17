@@ -62,24 +62,9 @@ func resolveFile(f *File, flag flags.Flag) NameEnv {
 	}
 
 	for _, decl := range f.Declarations {
-		var ident Var
-		var props []Property
-		var stmts []Stmt
-
-		switch t := decl.(type) {
-		case Document:
-			ident = Var(t.Ident)
-			props = t.Properties
-			stmts = t.Stmts
-
-		case Component:
-			ident = Var(t.Ident)
-			props = t.Properties
-			stmts = t.Stmts
-
-		default:
-			panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(t)))
-		}
+		ident := Var(decl.Ident)
+		props := decl.Properties
+		stmts := decl.Stmts
 
 		r.scopeName = r.getQualifiedName(ident)
 
@@ -129,16 +114,9 @@ func (t *resolver) bindDeclarations(f *File, env NameEnv) []error {
 	return errs
 }
 
-func (r *resolver) bindDeclaration(env NameEnv, rec Declaration) error {
+func (r *resolver) bindDeclaration(env NameEnv, rec Template) error {
 	const isType = true
-	switch t := rec.(type) {
-	case Document:
-		return r.bindVar(env, t.Ident, isType)
-	case Component:
-		return r.bindVar(env, t.Ident, isType)
-	default:
-		panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(rec)))
-	}
+	return r.bindVar(env, rec.Ident, isType)
 }
 
 func (t *resolver) bindProperties(env NameEnv, props []Property) []error {

@@ -15,21 +15,8 @@ func (t *typechecker) transformStmts(src *File) error {
 	var err error
 
 	for _, d := range src.Declarations {
-		var typeIdent Var
-		var stmts []Stmt
-
-		switch tt := d.(type) {
-		case Document:
-			typeIdent = Var(tt.Ident)
-			stmts = tt.Stmts
-
-		case Component:
-			typeIdent = Var(tt.Ident)
-			stmts = tt.Stmts
-
-		default:
-			panic(fmt.Sprintf("unexpected declaration: %v", reflect.TypeOf(t)))
-		}
+		typeIdent := Var(d.Ident)
+		stmts := d.Stmts
 
 		for i, stmt := range stmts {
 			transformed, err_t := t.transformElement(typeIdent, stmt.Element)

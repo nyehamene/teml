@@ -95,14 +95,14 @@ func (p *parser) parseUsing(use ast.Using) Using {
 	return node
 }
 
-func (p *parser) parseDeclarations() []Declaration {
+func (p *parser) parseDeclarations() []Template {
 	size := len(p.src.Components)
 
 	if p.src.HasDocument() {
 		size += 1
 	}
 
-	tmpls := make([]Declaration, 0, size)
+	tmpls := make([]Template, 0, size)
 
 	if p.src.HasDocument() {
 		node := p.parseDeclaration(p.src.Document)
@@ -117,10 +117,10 @@ func (p *parser) parseDeclarations() []Declaration {
 	return tmpls
 }
 
-func (p *parser) parseDeclaration(n ast.Node) Declaration {
+func (p *parser) parseDeclaration(n ast.Node) Template {
 	switch t := n.(type) {
 	case ast.Template:
-		if t.Kind == ast.KindDocument {
+		if t.Kind == ast.DocumentTemplate {
 			return p.parseDocument(t)
 		}
 		return p.parseComponent(t)
@@ -129,7 +129,7 @@ func (p *parser) parseDeclaration(n ast.Node) Declaration {
 	}
 }
 
-func (p *parser) parseDocument(d ast.Template) Document {
+func (p *parser) parseDocument(d ast.Template) Template {
 	var ident Var
 	if d.IsNamed() {
 		i := p.parseVar(d.Ident)
@@ -140,15 +140,15 @@ func (p *parser) parseDocument(d ast.Template) Document {
 
 	props := p.parseProperties(d.Properties)
 	stmts := p.parseStmts(d.Children)
-	node := Document{Ident: ident, Properties: props, Stmts: stmts}
+	node := Template{Kind: ast.DocumentTemplate, Ident: ident, Properties: props, Stmts: stmts}
 	return node
 }
 
-func (p *parser) parseComponent(cmp ast.Template) Declaration {
+func (p *parser) parseComponent(cmp ast.Template) Template {
 	ident := p.parseVar(cmp.Ident)
 	props := p.parseProperties(cmp.Properties)
 	stmts := p.parseStmts(cmp.Children)
-	node := Component{Ident: ident, Properties: props, Stmts: stmts}
+	node := Template{Kind: ast.ComponentTemplate, Ident: ident, Properties: props, Stmts: stmts}
 	return node
 }
 

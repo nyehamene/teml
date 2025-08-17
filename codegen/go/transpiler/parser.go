@@ -43,21 +43,9 @@ func (p *parser) parseUsing(u ast.Using) func(func(TypeAlias) bool) {
 	}
 }
 
-func (p *parser) parseStruct(decl ast.Declaration) Struct {
-	var name string
-	var props []ast.Property
-
-	switch t := decl.(type) {
-	case ast.Component:
-		name = t.Ident.Name
-		props = t.Properties
-	case ast.Document:
-		name = t.Ident.Name
-		props = t.Properties
-
-	default:
-		panic(fmt.Sprintf("unexpected declaration type: %v", reflect.TypeOf(decl)))
-	}
+func (p *parser) parseStruct(decl ast.Template) Struct {
+	name := decl.Ident.Name
+	props := decl.Properties
 
 	fields := make([]StructField, 0, len(props))
 	for _, prop := range props {
@@ -68,7 +56,6 @@ func (p *parser) parseStruct(decl ast.Declaration) Struct {
 		Name:   Var(name),
 		Fields: fields,
 	}
-
 	return node
 }
 
@@ -96,29 +83,13 @@ func (m typeinfo) getMember(name Var) Var {
 	return member
 }
 
-func (p *parser) parseMethod(decl ast.Declaration) RenderMethod {
-	var typename string
-	var stmts []ast.Stmt
-
-	switch t := decl.(type) {
-	case ast.Component:
-		typename = t.Ident.Name
-		stmts = t.Stmts
-
-	case ast.Document:
-		typename = t.Ident.Name
-		stmts = t.Stmts
-
-	default:
-		panic(fmt.Sprintf("unexpected declaration type: %v", reflect.TypeOf(decl)))
-	}
+func (p *parser) parseMethod(decl ast.Template) RenderMethod {
+	typename := decl.Ident.Name
+	stmts := decl.Stmts
+	t := typeinfo{name: typename}
 
 	// + the return statement at the end of the function
 	body := make([]Stmt, 0, len(stmts)+1)
-
-	t := typeinfo{
-		name: typename,
-	}
 	for _, stmt := range stmts {
 		p.parseStmt(t, stmt.Element, &body)
 	}
@@ -128,7 +99,6 @@ func (p *parser) parseMethod(decl ast.Declaration) RenderMethod {
 
 	// add return statement
 	body = append(body, ReturnNil{})
-
 	node := RenderMethod{
 		Name:     NameComponentRenderMethod,
 		Type:     Var(typename),
