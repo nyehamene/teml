@@ -11,20 +11,14 @@ import (
 )
 
 type errmessage = string
-type templateKind int
 
 type parser struct {
 	src          *token.File
 	dst          *File
 	cur          int
 	flag         cflags.Flag
-	templateKind templateKind
+	templateKind TemplateKind
 }
-
-const (
-	tkDocument templateKind = iota
-	tkComponent
-)
 
 var (
 	eof token.Token = token.Token{Kind: -1, Pos: -1}
@@ -71,18 +65,18 @@ func (p *parser) parse(flag cflags.Flag) {
 				p.addError("missing import declaration")
 			}
 
-		case Document:
-			p.dst.Document = d
-			if hasDocument {
-				p.addError("duplicate document declaration")
+		case Template:
+			if d.Kind == KindDocument {
+				p.dst.Document = d
+				if hasDocument {
+					p.addError("duplicate document declaration")
+				}
+				lastOrder = OrderDeclaration
+				hasDocument = true
+			} else {
+				p.dst.Components = append(p.dst.Components, d)
+				lastOrder = OrderDeclaration
 			}
-
-			lastOrder = OrderDeclaration
-			hasDocument = true
-
-		case Component:
-			p.dst.Components = append(p.dst.Components, d)
-			lastOrder = OrderDeclaration
 
 		default:
 			p.addError("invalid declaration")
@@ -194,7 +188,7 @@ func (p *parser) parseUsing() (Using, bool) {
 	return u, true
 }
 
-func (p *parser) parseComponent() (Component, bool) {
+func (p *parser) parseComponent() (Template, bool) {
 	assert.Assert(p.peek().Kind == token.Component, "expected component keyword")
 
 	var ident Var
@@ -202,17 +196,17 @@ func (p *parser) parseComponent() (Component, bool) {
 	var children []Content
 	var ok bool
 
-	p.templateKind = tkComponent
+	p.templateKind = KindComponent
 
 	// consume component keyword
 	p.advance()
 
 	if ident, ok = p.parseVar(); !ok {
-		return Component{}, false
+		return Template{}, false
 	}
 
 	if properties, ok = p.parseProperties(); !ok {
-		return Component{}, false
+		return Template{}, false
 	}
 
 	for !p.eof() {
@@ -222,17 +216,17 @@ func (p *parser) parseComponent() (Component, bool) {
 
 		templ, ok := p.parseTemplate()
 		if !ok {
-			return Component{}, false
+			return Template{}, false
 		}
 		children = append(children, templ)
 	}
 
-	c := Component{Ident: ident, Properties: properties, Children: children}
+	c := Template{Kind: KindComponent, Ident: ident, Properties: properties, Children: children}
 
 	return c, true
 }
 
-func (p *parser) parseDocument() (Document, bool) {
+func (p *parser) parseDocument() (Template, bool) {
 	assert.Assert(p.peek().Kind == token.Document, "expected document keyword")
 
 	var ident Var
@@ -240,7 +234,7 @@ func (p *parser) parseDocument() (Document, bool) {
 	var children []Content
 	var ok bool
 
-	p.templateKind = tkDocument
+	p.templateKind = KindDocument
 
 	// consume document keyword
 	p.advance()
@@ -250,7 +244,7 @@ func (p *parser) parseDocument() (Document, bool) {
 	}
 
 	if properties, ok = p.parseProperties(); !ok {
-		return Document{}, false
+		return Template{}, false
 	}
 
 	for !p.eof() {
@@ -260,12 +254,12 @@ func (p *parser) parseDocument() (Document, bool) {
 
 		templ, ok := p.parseTemplate()
 		if !ok {
-			return Document{}, false
+			return Template{}, false
 		}
 		children = append(children, templ)
 	}
 
-	d := Document{Ident: ident, Properties: properties, Children: children}
+	d := Template{Kind: KindDocument, Ident: ident, Properties: properties, Children: children}
 	return d, true
 }
 
@@ -616,7 +610,7 @@ loop:
 		return Element{}, false
 	}
 
-	if p.templateKind == tkComponent {
+	if p.templateKind == KindComponent {
 		for _, attr := range attributes {
 			switch attr := attr.(type) {
 			case TaggedAttributeSet:

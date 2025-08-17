@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-func (d Document) IsNamed() bool {
-	return d.Ident.Name != ""
+func (t Template) IsNamed() bool {
+	return t.Ident.Name != ""
 }
 
 func (t Text) StripDelimiter() string {

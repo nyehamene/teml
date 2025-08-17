@@ -7,8 +7,7 @@ type Node interface {
 func (Package) node()      {}
 func (Import) node()       {}
 func (Using) node()        {}
-func (Document) node()     {}
-func (Component) node()    {}
+func (Template) node()     {}
 func (IntErrorNode) node() {}
 
 type AttributeSet interface {
@@ -65,13 +64,15 @@ type Using struct {
 	From   Var
 }
 
-type Document struct {
-	Ident      Var
-	Properties []Property
-	Children   []Content
-}
+type TemplateKind uint8
 
-type Component struct {
+const (
+	KindDocument TemplateKind = iota
+	KindComponent
+)
+
+type Template struct {
+	Kind       TemplateKind
 	Ident      Var
 	Properties []Property
 	Children   []Content

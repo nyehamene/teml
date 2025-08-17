@@ -12,10 +12,10 @@ import (
 type File struct {
 	Name       string
 	Package    Package
-	Document   Document
+	Document   Template
 	Imports    []Import
 	Usings     []Using
-	Components []Component
+	Components []Template
 	Errors     []error
 	Comments   []Comment
 }

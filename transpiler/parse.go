@@ -119,18 +119,17 @@ func (p *parser) parseDeclarations() []Declaration {
 
 func (p *parser) parseDeclaration(n ast.Node) Declaration {
 	switch t := n.(type) {
-	case ast.Document:
-		node := p.parseDocument(t)
-		return node
-	case ast.Component:
-		node := p.parseComponent(t)
-		return node
+	case ast.Template:
+		if t.Kind == ast.KindDocument {
+			return p.parseDocument(t)
+		}
+		return p.parseComponent(t)
 	default:
 		panic(fmt.Sprintf("unexpected ast node type: %v", reflect.TypeOf(t)))
 	}
 }
 
-func (p *parser) parseDocument(d ast.Document) Document {
+func (p *parser) parseDocument(d ast.Template) Document {
 	var ident Var
 	if d.IsNamed() {
 		i := p.parseVar(d.Ident)
@@ -145,7 +144,7 @@ func (p *parser) parseDocument(d ast.Document) Document {
 	return node
 }
 
-func (p *parser) parseComponent(cmp ast.Component) Declaration {
+func (p *parser) parseComponent(cmp ast.Template) Declaration {
 	ident := p.parseVar(cmp.Ident)
 	props := p.parseProperties(cmp.Properties)
 	stmts := p.parseStmts(cmp.Children)
